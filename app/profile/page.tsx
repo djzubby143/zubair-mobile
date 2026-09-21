@@ -24,20 +24,22 @@ import {
   PhoneCall,
   Calendar,
   Layers,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { Order, getCustomerOrders, getOrders } from "@/lib/orders";
+import { Order, getCustomerOrders, getCustomerNotifications, OrderNotification } from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { isLoggedIn, user, loading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [notifications, setNotifications] = useState<OrderNotification[]>([]);
   const [paperWidth, setPaperWidth] = useState<ThermalPaperWidth>(68);
   const [copiedBilty, setCopiedBilty] = useState<string | null>(null);
   const [isGeneratingJpeg, setIsGeneratingJpeg] = useState<string | null>(null);
 
-  const loadUserOrders = () => {
+  const loadUserData = () => {
     if (!user) return;
     const userOrders = getCustomerOrders({
       customerId: user.id || user.username,
@@ -45,22 +47,30 @@ export default function ProfilePage() {
       username: user.username,
     });
     setOrders(userOrders);
+
+    const notifs = getCustomerNotifications({
+      customerId: user.id || user.username,
+      phone: user.phone,
+    });
+    setNotifications(notifs);
   };
 
   useEffect(() => {
     if (user) {
-      loadUserOrders();
+      loadUserData();
     }
 
     const handleUpdate = () => {
-      if (user) loadUserOrders();
+      if (user) loadUserData();
     };
 
     window.addEventListener("zubair_orders_updated", handleUpdate);
+    window.addEventListener("zubair_notifications_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
 
     return () => {
       window.removeEventListener("zubair_orders_updated", handleUpdate);
+      window.removeEventListener("zubair_notifications_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, [user]);
@@ -190,6 +200,63 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Live Dispatched Cargo Notifications */}
+      {notifications.length > 0 && (
+        <div className="space-y-3">
+          {notifications.map((notif) => (
+            <div
+              key={notif.id}
+              className="p-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center font-bold shrink-0 text-white shadow-inner">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-white/25 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                      Order #{notif.order_number} Dispatched!
+                    </span>
+                    <span className="text-white/80 text-[11px]">
+                      {new Date(notif.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black mt-1">
+                    Your parcel has been handed over to {notif.cargo_name}!
+                  </h3>
+                  <p className="text-xs text-purple-100 mt-0.5">
+                    Tracking / Bilty ID:{" "}
+                    <strong className="text-white font-mono bg-black/20 px-2 py-0.5 rounded border border-white/20">
+                      {notif.tracking_number}
+                    </strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => handleCopyBilty(notif.tracking_number)}
+                  className="px-3.5 py-2 rounded-xl bg-white text-purple-900 text-xs font-black hover:bg-purple-50 transition-colors shadow-2xs flex items-center gap-1.5"
+                >
+                  {copiedBilty === notif.tracking_number ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copy Bilty</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Orders & Cargo Tracking Section */}
       <div className="space-y-4">

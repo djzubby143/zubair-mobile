@@ -162,6 +162,62 @@ export function updateOrderStatus(orderId: string, newStatus: Order["status"]): 
 }
 
 /**
+ * Customer notification interface
+ */
+export interface OrderNotification {
+  id: string;
+  order_id: string;
+  order_number: string;
+  customer_phone: string;
+  customer_id?: string;
+  cargo_name: string;
+  tracking_number: string;
+  title: string;
+  message: string;
+  created_at: string;
+  read: boolean;
+}
+
+export const STORAGE_KEY_NOTIFICATIONS = "zubair_customer_notifications";
+
+export function saveNotification(notif: OrderNotification): void {
+  if (typeof window === "undefined") return;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
+    const list: OrderNotification[] = stored ? JSON.parse(stored) : [];
+    list.unshift(notif);
+    localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(list));
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("zubair_notifications_updated", { detail: list }));
+  } catch (err) {
+    console.warn("Error saving notification:", err);
+  }
+}
+
+export function getCustomerNotifications(identifier: {
+  customerId?: string;
+  phone?: string;
+}): OrderNotification[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
+    if (!stored) return [];
+    const list: OrderNotification[] = JSON.parse(stored);
+    const cleanPhone = identifier.phone?.replace(/[^0-9]/g, "");
+    return list.filter((n) => {
+      if (identifier.customerId && n.customer_id === identifier.customerId) return true;
+      if (cleanPhone && n.customer_phone) {
+        const p = n.customer_phone.replace(/[^0-9]/g, "");
+        if (p && (p.includes(cleanPhone) || cleanPhone.includes(p))) return true;
+      }
+      return false;
+    });
+  } catch (err) {
+    return [];
+  }
+}
+
+/**
  * Update an order's cargo dispatch details and tracking number
  */
 export function updateOrderDispatch(
@@ -174,6 +230,8 @@ export function updateOrderDispatch(
   try {
     const orders = getOrders();
     const dispatchDate = new Date().toISOString();
+    const targetOrder = orders.find((o) => o.id === orderId);
+
     const updated = orders.map((o) =>
       o.id === orderId
         ? {
@@ -188,6 +246,23 @@ export function updateOrderDispatch(
     localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updated));
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: updated }));
+
+    // Auto-create customer notification
+    if (targetOrder) {
+      saveNotification({
+        id: `notif-${Date.now()}`,
+        order_id: targetOrder.id,
+        order_number: targetOrder.order_number,
+        customer_phone: targetOrder.customer_phone,
+        customer_id: targetOrder.customer_id,
+        cargo_name: cargoName.trim(),
+        tracking_number: trackingNumber.trim(),
+        title: `Order #${targetOrder.order_number} Dispatched!`,
+        message: `Your order has been dispatched via ${cargoName.trim()} with Tracking/Bilty #: ${trackingNumber.trim()}`,
+        created_at: dispatchDate,
+        read: false,
+      });
+    }
   } catch (err) {
     console.error("Failed to update order dispatch details:", err);
   }

@@ -82,8 +82,21 @@ export default function AdminOrdersPage() {
       alert("Please enter the Cargo Service name (e.g. Daewoo, TCS, Leopard, Asia Cargo).");
       return;
     }
+    if (!trackingNumber.trim()) {
+      alert("Please enter the Tracking / Bilty number.");
+      return;
+    }
+
     updateOrderDispatch(dispatchOrder.id, cargoName, trackingNumber, "dispatched");
     loadOrders();
+
+    // Auto-notify customer via WhatsApp with Tracking ID
+    const cleanPhone = dispatchOrder.customer_phone.replace(/^0/, "92").replace(/[^0-9]/g, "");
+    const msg = encodeURIComponent(
+      `Assalam o Alaikum ${dispatchOrder.customer_name}!\n\nAap ka Zubair Mobile Order #${dispatchOrder.order_number} cargo par laga diya gaya hai.\n\n🚚 Cargo Service: ${cargoName.trim()}\n📦 Tracking / Bilty #: ${trackingNumber.trim()}\n\nAap website par apni profile me bhi live tracking check kar sakte hain. Shukriya!\n\nZubair Mobile Gujranwala\nWhatsApp: 0345-8032600`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
+
     setDispatchOrder(null);
   };
 

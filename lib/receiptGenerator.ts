@@ -29,7 +29,7 @@ export async function generateReceiptJpeg(
 
   // Calculate dynamic canvas height based on item count
   const itemHeightEstimate = order.items.length * 48;
-  const canvasHeight = 820 + itemHeightEstimate + (order.cargo_name ? 36 : 0);
+  const canvasHeight = 820 + itemHeightEstimate;
 
   const canvas = document.createElement("canvas");
   canvas.width = canvasWidth;
@@ -139,17 +139,6 @@ export async function generateReceiptJpeg(
   if (order.customer_address.length > maxAddrChars) {
     ctx.fillText(`          ${order.customer_address.slice(maxAddrChars, maxAddrChars * 2)}`, paddingX, y);
     y += 18;
-  }
-
-  // Cargo & Tracking if dispatched
-  if (order.cargo_name) {
-    ctx.font = "bold 13px 'Courier New', monospace";
-    ctx.fillText(`CARGO:    ${order.cargo_name.toUpperCase()}`, paddingX, y);
-    y += 18;
-    if (order.tracking_number) {
-      ctx.fillText(`BILTY NO: ${order.tracking_number}`, paddingX, y);
-      y += 18;
-    }
   }
 
   drawDoubleLine(y);
@@ -434,15 +423,6 @@ export function printThermalReceipt(
             margin: 4px 0;
           }
 
-          .cargo-banner {
-            border: 1.5px solid #000000;
-            padding: 3px 4px;
-            margin: 4px 0;
-            font-size: 11.5px;
-            font-weight: 900;
-            text-align: left;
-          }
-
           table {
             width: 100%;
             border-collapse: collapse;
@@ -551,18 +531,6 @@ export function printThermalReceipt(
           <div><strong>PHONE:</strong> ${order.customer_phone}</div>
           <div><strong>ADDRESS:</strong> ${order.customer_address}</div>
         </div>
-
-        <!-- Cargo Dispatch Notice on Bill if available -->
-        ${
-          order.cargo_name
-            ? `
-          <div class="cargo-banner">
-            <div>🚚 <strong>CARGO:</strong> ${order.cargo_name.toUpperCase()}</div>
-            ${order.tracking_number ? `<div>📦 <strong>BILTY / TRACKING #:</strong> ${order.tracking_number}</div>` : ""}
-          </div>
-        `
-            : ""
-        }
 
         <div class="double-divider"></div>
 
