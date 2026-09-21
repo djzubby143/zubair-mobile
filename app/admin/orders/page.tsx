@@ -21,12 +21,13 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { Order, getOrders, updateOrderStatus } from "@/lib/orders";
-import { generateReceiptJpeg, printThermalReceipt } from "@/lib/receiptGenerator";
+import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [paperWidth, setPaperWidth] = useState<ThermalPaperWidth>(68);
   const [isGeneratingJpeg, setIsGeneratingJpeg] = useState<string | null>(null);
   const [previewOrder, setPreviewOrder] = useState<Order | null>(null);
 
@@ -59,7 +60,7 @@ export default function AdminOrdersPage() {
   const handleDownloadJpeg = async (order: Order) => {
     setIsGeneratingJpeg(order.id);
     try {
-      await generateReceiptJpeg(order);
+      await generateReceiptJpeg(order, paperWidth);
     } catch (err) {
       console.error("Error generating JPEG receipt:", err);
       alert("Failed to generate receipt image.");
@@ -69,7 +70,7 @@ export default function AdminOrdersPage() {
   };
 
   const handlePrint = (order: Order) => {
-    printThermalReceipt(order);
+    printThermalReceipt(order, paperWidth);
   };
 
   // Filtered orders
@@ -175,6 +176,21 @@ export default function AdminOrdersPage() {
               {st}
             </button>
           ))}
+        </div>
+
+        {/* Paper Size Selector */}
+        <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 shrink-0 self-start md:self-center">
+          <Printer className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-[11px] font-bold text-slate-600">Printer Roll:</span>
+          <select
+            value={paperWidth}
+            onChange={(e) => setPaperWidth(Number(e.target.value) as ThermalPaperWidth)}
+            className="bg-white border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+          >
+            <option value={68}>68mm (Default / Your Printer)</option>
+            <option value={58}>58mm (Small 2-inch)</option>
+            <option value={80}>80mm (Wide 3-inch)</option>
+          </select>
         </div>
       </div>
 
@@ -439,7 +455,7 @@ export default function AdminOrdersPage() {
                 className="flex-1 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
               >
                 <Printer className="w-4 h-4" />
-                <span>Print Thermal Slip</span>
+                <span>Print Slip ({paperWidth}mm)</span>
               </button>
               <button
                 type="button"
@@ -447,7 +463,7 @@ export default function AdminOrdersPage() {
                 className="flex-1 py-2.5 px-3 rounded-xl bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
               >
                 <Download className="w-4 h-4" />
-                <span>Download JPEG</span>
+                <span>Download ({paperWidth}mm)</span>
               </button>
             </div>
           </div>

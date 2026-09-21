@@ -25,7 +25,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/lib/auth";
 import { Order, saveOrder } from "@/lib/orders";
-import { generateReceiptJpeg, printThermalReceipt } from "@/lib/receiptGenerator";
+import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
 export default function CartPage() {
   const { items, cartCount, cartSubtotal, updateQuantity, removeFromCart, clearCart, isLoaded } =
@@ -44,6 +44,7 @@ export default function CartPage() {
   const [showBillModal, setShowBillModal] = useState(false);
   const [isGeneratingJpeg, setIsGeneratingJpeg] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState("");
+  const [paperWidth, setPaperWidth] = useState<ThermalPaperWidth>(68);
 
   useEffect(() => {
     if (user) {
@@ -147,7 +148,7 @@ export default function CartPage() {
     setShowBillModal(true);
 
     // Auto-download bill JPEG for convenience
-    generateReceiptJpeg(newOrder).catch((err) => console.warn("Auto-download JPEG:", err));
+    generateReceiptJpeg(newOrder, paperWidth).catch((err) => console.warn("Auto-download JPEG:", err));
 
     // Open WhatsApp
     window.open(waLink, "_blank", "noopener,noreferrer");
@@ -157,7 +158,7 @@ export default function CartPage() {
     if (!placedOrder) return;
     setIsGeneratingJpeg(true);
     try {
-      await generateReceiptJpeg(placedOrder);
+      await generateReceiptJpeg(placedOrder, paperWidth);
     } catch (err) {
       console.error("Failed to generate receipt JPEG:", err);
       alert("Failed to download bill image.");
@@ -168,7 +169,7 @@ export default function CartPage() {
 
   const handlePrintSlip = () => {
     if (!placedOrder) return;
-    printThermalReceipt(placedOrder);
+    printThermalReceipt(placedOrder, paperWidth);
   };
 
   const handleCloseModal = () => {
@@ -698,6 +699,23 @@ export default function CartPage() {
               </p>
             </div>
 
+            {/* Paper Size Selector */}
+            <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-xl text-xs">
+              <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                <span>Printer Roll:</span>
+              </span>
+              <select
+                value={paperWidth}
+                onChange={(e) => setPaperWidth(Number(e.target.value) as ThermalPaperWidth)}
+                className="bg-white border border-slate-300 rounded-lg px-2 py-1 font-bold text-xs text-slate-800 focus:outline-none cursor-pointer"
+              >
+                <option value={68}>68mm (Default / Your Printer)</option>
+                <option value={58}>58mm (Small 2-inch)</option>
+                <option value={80}>80mm (Wide 3-inch)</option>
+              </select>
+            </div>
+
             {/* Action Buttons */}
             <div className="space-y-2 pt-1">
               {/* Download JPEG Bill Button */}
@@ -708,7 +726,7 @@ export default function CartPage() {
                 className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 <Download className="w-4 h-4" />
-                <span>{isGeneratingJpeg ? "Generating Image..." : "Download Bill (JPEG Image)"}</span>
+                <span>{isGeneratingJpeg ? "Generating Image..." : `Download Bill (JPEG - ${paperWidth}mm)`}</span>
               </button>
 
               {/* Print Thermal Slip Button */}
@@ -718,7 +736,7 @@ export default function CartPage() {
                 className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-slate-900 hover:bg-black text-white shadow-xs flex items-center justify-center gap-2 transition-all"
               >
                 <Printer className="w-4 h-4" />
-                <span>Print Thermal Receipt (80mm)</span>
+                <span>Print Thermal Slip ({paperWidth}mm)</span>
               </button>
 
               {/* WhatsApp Confirmation Button */}
