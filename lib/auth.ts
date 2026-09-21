@@ -13,6 +13,7 @@ export interface AuthUser {
   city?: string;
   email?: string;
   role?: string;
+  avatar_url?: string | null;
 }
 
 export function useAuth() {
@@ -114,6 +115,7 @@ export async function updateCustomerProfile(updatedData: {
   phone?: string;
   address?: string;
   city?: string;
+  avatar_url?: string | null;
 }): Promise<AuthUser | null> {
   if (typeof window === "undefined") return null;
 

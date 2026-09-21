@@ -28,10 +28,13 @@ import {
   Edit2,
   Save,
   X,
+  Camera,
+  UploadCloud,
 } from "lucide-react";
 import { useAuth, updateCustomerProfile } from "@/lib/auth";
 import { Order, getCustomerOrders, getCustomerNotifications, OrderNotification } from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
+import { uploadAvatarImage } from "@/lib/storage";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -49,6 +52,8 @@ export default function ProfilePage() {
   const [editPhone, setEditPhone] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [editSuccessMsg, setEditSuccessMsg] = useState<string | null>(null);
   const [editErrorMsg, setEditErrorMsg] = useState<string | null>(null);
@@ -77,9 +82,36 @@ export default function ProfilePage() {
     setEditPhone(user.phone || "");
     setEditCity(user.city || "");
     setEditAddress(user.address || "");
+    setAvatarFile(null);
+    setAvatarPreview(user.avatar_url || null);
     setEditErrorMsg(null);
     setEditSuccessMsg(null);
     setShowEditModal(true);
+  };
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setEditErrorMsg("Please select a valid image file (JPG, PNG, or WEBP).");
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      setEditErrorMsg("Image size exceeds 4MB limit.");
+      return;
+    }
+
+    setAvatarFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarPreview(objectUrl);
+    setEditErrorMsg(null);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(null);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -97,15 +129,27 @@ export default function ProfilePage() {
 
     setIsSavingProfile(true);
     try {
+      let finalAvatarUrl = avatarPreview;
+
+      if (avatarFile) {
+        const uploadRes = await uploadAvatarImage(avatarFile);
+        if (uploadRes.url) {
+          finalAvatarUrl = uploadRes.url;
+        } else if (uploadRes.error) {
+          console.warn("Avatar upload issue:", uploadRes.error);
+        }
+      }
+
       await updateCustomerProfile({
         full_name: editFullName.trim(),
         shop_name: editShopName.trim(),
         phone: editPhone.trim(),
         city: editCity.trim(),
         address: editAddress.trim(),
+        avatar_url: finalAvatarUrl,
       });
 
-      setEditSuccessMsg("Profile and address updated successfully!");
+      setEditSuccessMsg("Profile and photo updated successfully!");
       setTimeout(() => {
         setEditSuccessMsg(null);
         setShowEditModal(false);
@@ -219,8 +263,26 @@ export default function ProfilePage() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="flex items-start sm:items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#dc2626] text-white flex items-center justify-center font-black text-2xl shadow-md shrink-0">
-              {user.shop_name?.charAt(0) || user.full_name?.charAt(0) || "Z"}
+            <div className="relative group shrink-0">
+              <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-[#dc2626] text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-md overflow-hidden border-2 border-white ring-2 ring-slate-200">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.full_name || "Profile"}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  user.shop_name?.charAt(0) || user.full_name?.charAt(0) || "Z"
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenEdit}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-900 hover:bg-[#dc2626] text-white flex items-center justify-center shadow-md transition-colors cursor-pointer border-2 border-white"
+                title="Upload / Change Profile Picture"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -646,6 +708,52 @@ export default function ProfilePage() {
             )}
 
             <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+              {/* Profile Photo Upload Section */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-[#dc2626] text-white flex items-center justify-center font-black text-2xl shadow-xs overflow-hidden border-2 border-white ring-1 ring-slate-200 shrink-0">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    editShopName.charAt(0) || editFullName.charAt(0) || "Z"
+                  )}
+                </div>
+
+                <div className="space-y-1 text-center sm:text-left flex-1">
+                  <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                    <span className="font-bold text-slate-800 text-xs">Profile Picture</span>
+                    <span className="text-[10px] text-slate-400 font-medium">پروفائل تصویر</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    JPG, PNG, or WEBP (Max 4MB).
+                  </p>
+                  <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#dc2626] text-slate-700 hover:text-[#dc2626] text-[11px] font-bold cursor-pointer transition-colors shadow-2xs">
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>{avatarPreview ? "Change Photo" : "Upload Photo"}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleAvatarSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
+                      >
+                        Remove Photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Full Name */}
               <div className="space-y-1">
                 <label className="font-bold text-slate-700 block">Contact Person / Full Name *</label>

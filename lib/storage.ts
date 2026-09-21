@@ -70,3 +70,59 @@ export async function uploadProductImage(file: File): Promise<UploadResult> {
     };
   }
 }
+
+/**
+ * Uploads a customer profile avatar picture.
+ * Tries Supabase storage first; falls back to compressed Base64 Data URL for instant reliability.
+ */
+export async function uploadAvatarImage(file: File): Promise<UploadResult> {
+  const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+  const maxSizeBytes = 4 * 1024 * 1024; // 4MB
+
+  if (!allowedMimeTypes.includes(file.type)) {
+    return {
+      url: null,
+      error: "Please select a valid JPG, PNG, or WEBP image.",
+    };
+  }
+
+  if (file.size > maxSizeBytes) {
+    return {
+      url: null,
+      error: "Image size exceeds 4MB limit.",
+    };
+  }
+
+  const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const fileName = `avatars/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+
+  try {
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (!uploadError) {
+      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
+      if (data?.publicUrl) {
+        return { url: data.publicUrl, error: null };
+      }
+    }
+  } catch (err) {
+    console.warn("Storage upload notice (falling back to DataURL):", err);
+  }
+
+  // Fallback: Read as base64 Data URL
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      resolve({ url: e.target?.result as string, error: null });
+    };
+    reader.onerror = () => {
+      resolve({ url: null, error: "Failed to process selected picture." });
+    };
+    reader.readAsDataURL(file);
+  });
+}

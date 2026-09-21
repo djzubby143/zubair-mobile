@@ -27,7 +27,7 @@ import { supabase } from "@/lib/supabase";
 export default function Header() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [customerUser, setCustomerUser] = useState<{ full_name: string; shop_name: string } | null>(null);
+  const [customerUser, setCustomerUser] = useState<{ full_name: string; shop_name: string; avatar_url?: string | null } | null>(null);
   const { cartCount, isLoaded } = useCart();
 
   // Categories Hover Mega-Menu State
@@ -402,8 +402,12 @@ export default function Header() {
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:border-red-300 bg-slate-50/80 hover:bg-red-50/50 transition-colors group"
                 title="View My Profile & Order Tracking"
               >
-                <div className="w-6 h-6 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center font-bold text-xs shrink-0">
-                  <User className="w-3.5 h-3.5" />
+                <div className="w-6 h-6 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-red-200">
+                  {customerUser.avatar_url ? (
+                    <img src={customerUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-3.5 h-3.5" />
+                  )}
                 </div>
                 <div className="hidden sm:flex flex-col text-left">
                   <span className="text-[11px] font-bold text-[#111827] leading-tight group-hover:text-[#dc2626] transition-colors flex items-center gap-1">
@@ -493,7 +497,16 @@ export default function Header() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center justify-between py-2 text-[#dc2626] font-bold"
                 >
-                  <span>My Profile & Tracking</span>
+                  <span className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center overflow-hidden border border-red-200 shrink-0">
+                      {customerUser.avatar_url ? (
+                        <img src={customerUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-3 h-3" />
+                      )}
+                    </div>
+                    <span>My Profile & Tracking</span>
+                  </span>
                   <span className="bg-red-50 text-[#dc2626] text-[10px] px-2 py-0.5 rounded-full border border-red-200">
                     Live
                   </span>
