@@ -17,6 +17,7 @@ import {
   Search,
   Sparkles,
   Tag,
+  ArrowRight,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import AdvancedSearchBar from "@/components/AdvancedSearchBar";
@@ -33,6 +34,7 @@ export default function Header() {
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
   const [categoryFilterQuery, setCategoryFilterQuery] = useState("");
+  const [headerHoverCategory, setHeaderHoverCategory] = useState<LiveCategory | null>(null);
   const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadCategories = async () => {
@@ -62,7 +64,7 @@ export default function Header() {
 
     // 3. Realtime event listeners for instant category updates
     const handleStorageUpdate = (e: StorageEvent) => {
-      if (!e.key || e.key === "zubair_mobile_categories") {
+      if (!e.key || e.key === "zubair_mobile_categories" || e.key === "zubair_mobile_subcategories_map") {
         loadCategories();
       }
     };
@@ -113,6 +115,7 @@ export default function Header() {
   const handleMouseLeave = () => {
     dropdownTimerRef.current = setTimeout(() => {
       setCategoriesDropdownOpen(false);
+      setHeaderHoverCategory(null);
       setCategoryFilterQuery("");
     }, 200);
   };
@@ -127,6 +130,7 @@ export default function Header() {
 
   const selectCategory = (catName: string) => {
     setCategoriesDropdownOpen(false);
+    setHeaderHoverCategory(null);
     setCategoryFilterQuery("");
     setMobileMenuOpen(false);
     if (catName === "All") {
@@ -200,7 +204,7 @@ export default function Header() {
               type="button"
               onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
               className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-[#dc2626] text-[#111827] hover:text-white rounded-lg font-bold text-xs transition-colors shadow-2xs border border-slate-200 hover:border-[#dc2626] cursor-pointer"
-              title="Hover to view all categories"
+              title="Hover to view all categories and sub-categories"
             >
               <Layers className="w-4 h-4 text-[#dc2626] hover:text-white group-hover:text-white transition-colors" />
               <span>Categories</span>
@@ -211,76 +215,152 @@ export default function Header() {
               />
             </button>
 
-            {/* Hover Floating Mega-Menu */}
+            {/* Hover Floating Mega-Menu with Side Sub-Categories Flyout */}
             {categoriesDropdownOpen && (
               <div
-                className="absolute top-full left-0 mt-1.5 w-80 max-h-[520px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-150"
+                className="absolute top-full left-0 mt-1.5 flex z-50 animate-in fade-in slide-in-from-top-2 duration-150"
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
               >
-                {/* Header & Quick Filter */}
-                <div className="p-3 bg-slate-50 border-b border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-[#dc2626]" />
-                      All Categories ({categories.length})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => selectCategory("All")}
-                      className="text-[11px] text-[#dc2626] hover:underline font-bold"
-                    >
-                      View All
-                    </button>
-                  </div>
-
-                  {/* Filter input */}
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Search category (e.g. Sidekey)..."
-                      value={categoryFilterQuery}
-                      onChange={(e) => setCategoryFilterQuery(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 bg-white text-xs rounded-md border border-slate-200 focus:outline-none focus:border-[#dc2626] text-slate-800 placeholder-slate-400"
-                    />
-                  </div>
-                </div>
-
-                {/* Categories List */}
-                <div className="overflow-y-auto max-h-[400px] p-1.5 divide-y divide-slate-50">
-                  {filteredCategories.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-400">
-                      No category matches &quot;{categoryFilterQuery}&quot;
-                    </div>
-                  ) : (
-                    filteredCategories.map((cat) => (
+                {/* Primary Categories List Panel */}
+                <div className="w-80 max-h-[520px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+                  {/* Header & Quick Filter */}
+                  <div className="p-3 bg-slate-50 border-b border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 text-[#dc2626]" />
+                        All Categories ({categories.length})
+                      </span>
                       <button
-                        key={cat.id || cat.name}
                         type="button"
-                        onClick={() => selectCategory(cat.name)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium text-slate-700 hover:text-[#dc2626] hover:bg-red-50/80 transition-all group/item"
+                        onClick={() => selectCategory("All")}
+                        className="text-[11px] text-[#dc2626] hover:underline font-bold"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="w-6 h-6 rounded-md bg-slate-100 group-hover/item:bg-[#dc2626] group-hover/item:text-white text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors">
-                            {cat.name.charAt(0).toUpperCase()}
-                          </span>
-                          <div className="truncate">
-                            <p className="font-semibold truncate text-[#111827] group-hover/item:text-[#dc2626]">
-                              {cat.name}
-                            </p>
-                            {cat.description && (
-                              <p className="text-[10px] text-slate-400 truncate max-w-[200px]">
-                                {cat.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover/item:text-[#dc2626] group-hover/item:translate-x-0.5 transition-all shrink-0" />
+                        View All
                       </button>
-                    ))
-                  )}
+                    </div>
+
+                    {/* Filter input */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search category (e.g. LCD, Sidekey)..."
+                        value={categoryFilterQuery}
+                        onChange={(e) => setCategoryFilterQuery(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 bg-white text-xs rounded-md border border-slate-200 focus:outline-none focus:border-[#dc2626] text-slate-800 placeholder-slate-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Categories List */}
+                  <div className="overflow-y-auto max-h-[400px] p-1.5 divide-y divide-slate-50">
+                    {filteredCategories.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        No category matches &quot;{categoryFilterQuery}&quot;
+                      </div>
+                    ) : (
+                      filteredCategories.map((cat) => {
+                        const hasSub = cat.subcategories && cat.subcategories.length > 0;
+                        const isHovered =
+                          headerHoverCategory?.name.toLowerCase() ===
+                          cat.name.toLowerCase();
+
+                        return (
+                          <div
+                            key={cat.id || cat.name}
+                            onMouseEnter={() => setHeaderHoverCategory(cat)}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => selectCategory(cat.name)}
+                              className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium transition-all group/item ${
+                                isHovered
+                                  ? "bg-red-50 text-[#dc2626] font-bold"
+                                  : "text-slate-700 hover:text-[#dc2626] hover:bg-red-50/80"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span
+                                  className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors ${
+                                    isHovered
+                                      ? "bg-[#dc2626] text-white"
+                                      : "bg-slate-100 text-slate-600 group-hover/item:bg-[#dc2626] group-hover/item:text-white"
+                                  }`}
+                                >
+                                  {cat.name.charAt(0).toUpperCase()}
+                                </span>
+                                <div className="truncate">
+                                  <p className="font-semibold truncate text-[#111827] group-hover/item:text-[#dc2626]">
+                                    {cat.name}
+                                  </p>
+                                  {cat.description && (
+                                    <p className="text-[10px] text-slate-400 truncate max-w-[180px]">
+                                      {cat.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {hasSub ? (
+                                <ChevronRight
+                                  className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                                    isHovered
+                                      ? "text-[#dc2626] translate-x-1"
+                                      : "text-slate-300 group-hover/item:text-[#dc2626]"
+                                  }`}
+                                />
+                              ) : null}
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
+
+                {/* Sub-Category Flyout Side Menu for Header */}
+                {headerHoverCategory &&
+                  headerHoverCategory.subcategories &&
+                  headerHoverCategory.subcategories.length > 0 && (
+                    <div className="ml-1.5 w-60 bg-white rounded-xl shadow-2xl border border-slate-200 p-2.5 max-h-[520px] overflow-y-auto animate-in fade-in slide-in-from-left-2 duration-150">
+                      <div className="pb-2 mb-2 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                            Sub-Categories
+                          </span>
+                          <h4 className="text-xs font-black text-[#111827] uppercase truncate max-w-[140px]">
+                            {headerHoverCategory.name}
+                          </h4>
+                        </div>
+                        <span className="text-[10px] bg-red-50 text-[#dc2626] font-bold px-2 py-0.5 rounded-full border border-red-100">
+                          {headerHoverCategory.subcategories.length} Types
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => selectCategory(headerHoverCategory.name)}
+                        className="w-full text-left px-2.5 py-1.5 mb-1.5 rounded-lg text-[11px] font-bold text-[#dc2626] bg-red-50/60 hover:bg-red-50 transition-colors flex items-center justify-between group/all"
+                      >
+                        <span>View All {headerHoverCategory.name}</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover/all:translate-x-1 transition-transform" />
+                      </button>
+
+                      <div className="space-y-1">
+                        {headerHoverCategory.subcategories.map((sub, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => selectCategory(sub)}
+                            className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-[#dc2626] transition-all flex items-center justify-between group/sub"
+                          >
+                            <span className="truncate">{sub}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover/sub:text-[#dc2626] group-hover/sub:translate-x-0.5 transition-all shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -409,12 +489,12 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Mobile Categories Accordion / List */}
+            {/* Mobile Categories Accordion with Subcategories */}
             <div className="pt-2 border-t border-slate-100">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Categories ({categories.length})
+                Categories & Types ({categories.length})
               </p>
-              <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+              <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
                 <button
                   type="button"
                   onClick={() => selectCategory("All")}
@@ -423,15 +503,35 @@ export default function Header() {
                   All Categories
                 </button>
                 {categories.map((cat) => (
-                  <button
-                    key={cat.id || cat.name}
-                    type="button"
-                    onClick={() => selectCategory(cat.name)}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs text-slate-600 hover:bg-red-50 hover:text-[#dc2626]"
-                  >
-                    <span>{cat.name}</span>
-                    <ChevronRight className="w-3 h-3 text-slate-400" />
-                  </button>
+                  <div key={cat.id || cat.name} className="space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => selectCategory(cat.name)}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-[#dc2626]"
+                    >
+                      <span>{cat.name}</span>
+                      {cat.subcategories && cat.subcategories.length > 0 && (
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          {cat.subcategories.length} types
+                        </span>
+                      )}
+                    </button>
+                    {cat.subcategories && cat.subcategories.length > 0 && (
+                      <div className="pl-4 space-y-0.5">
+                        {cat.subcategories.map((sub, sIdx) => (
+                          <button
+                            key={sIdx}
+                            type="button"
+                            onClick={() => selectCategory(sub)}
+                            className="w-full text-left px-2 py-1 text-[11px] text-slate-500 hover:text-[#dc2626] hover:bg-red-50/50 rounded flex items-center gap-1.5"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                            <span>{sub}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
