@@ -17,9 +17,15 @@ import {
   Clock,
   Sparkles,
   Lock,
+  Printer,
+  Download,
+  Receipt,
+  FileDown,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/lib/auth";
+import { Order, saveOrder } from "@/lib/orders";
+import { generateReceiptJpeg, printThermalReceipt } from "@/lib/receiptGenerator";
 
 export default function CartPage() {
   const { items, cartCount, cartSubtotal, updateQuantity, removeFromCart, clearCart, isLoaded } =
@@ -33,6 +39,12 @@ export default function CartPage() {
   const [orderNotes, setOrderNotes] = useState("");
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
+  // Order Receipt & Bill States
+  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [showBillModal, setShowBillModal] = useState(false);
+  const [isGeneratingJpeg, setIsGeneratingJpeg] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState("");
+
   useEffect(() => {
     if (user) {
       if (user.full_name && !customerName) setCustomerName(user.full_name);
@@ -43,7 +55,7 @@ export default function CartPage() {
     }
   }, [user]);
 
-  const handleWhatsAppCheckout = (e: React.FormEvent) => {
+  const handleWhatsAppCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isLoggedIn) return;
@@ -67,6 +79,34 @@ export default function CartPage() {
 
     setFormErrors({});
 
+    // Generate Order Number
+    const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+    const orderNumber = `ZB-${randomSuffix}`;
+
+    const newOrder: Order = {
+      id: `ord-${Date.now()}`,
+      order_number: orderNumber,
+      customer_name: customerName.trim(),
+      customer_phone: customerPhone.trim(),
+      customer_address: customerAddress.trim(),
+      shop_name: user?.shop_name || undefined,
+      order_notes: orderNotes.trim() || undefined,
+      items: items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+        sku: i.sku,
+      })),
+      total_items: cartCount,
+      total_amount: cartSubtotal,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    };
+
+    // Save order
+    await saveOrder(newOrder);
+
     // Construct WhatsApp message
     const formattedSubtotal = cartSubtotal.toLocaleString("en-PK");
     const itemsManifest = items
@@ -78,7 +118,7 @@ export default function CartPage() {
       .join("\n");
 
     const messageLines = [
-      "Assalam o Alaikum Zubair Mobile! I want to place an order:",
+      `Assalam o Alaikum Zubair Mobile! I placed Order #${orderNumber}:`,
       "------------------------------",
       itemsManifest,
       "------------------------------",
@@ -96,14 +136,44 @@ export default function CartPage() {
     }
 
     messageLines.push("------------------------------");
-    messageLines.push("Please confirm my order and share cargo / payment details.");
+    messageLines.push("Please confirm my order and cargo dispatch.");
 
     const rawMessage = messageLines.join("\n");
     const encodedMessage = encodeURIComponent(rawMessage);
-    const whatsappUrl = `https://wa.me/923458032600?text=${encodedMessage}`;
+    const waLink = `https://wa.me/923458032600?text=${encodedMessage}`;
+
+    setWhatsappUrl(waLink);
+    setPlacedOrder(newOrder);
+    setShowBillModal(true);
+
+    // Auto-download bill JPEG for convenience
+    generateReceiptJpeg(newOrder).catch((err) => console.warn("Auto-download JPEG:", err));
 
     // Open WhatsApp
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    window.open(waLink, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownloadJpeg = async () => {
+    if (!placedOrder) return;
+    setIsGeneratingJpeg(true);
+    try {
+      await generateReceiptJpeg(placedOrder);
+    } catch (err) {
+      console.error("Failed to generate receipt JPEG:", err);
+      alert("Failed to download bill image.");
+    } finally {
+      setIsGeneratingJpeg(false);
+    }
+  };
+
+  const handlePrintSlip = () => {
+    if (!placedOrder) return;
+    printThermalReceipt(placedOrder);
+  };
+
+  const handleCloseModal = () => {
+    setShowBillModal(false);
+    clearCart();
   };
 
   if (!isLoaded) {
@@ -548,6 +618,128 @@ export default function CartPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Order Placed & Thermal Bill Modal */}
+      {showBillModal && placedOrder && (
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 my-8 animate-in fade-in zoom-in duration-200">
+            {/* Header / Success Indicator */}
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 shadow-xs">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-black text-[#111827] tracking-tight">
+                Order Placed Successfully!
+              </h3>
+              <p className="text-xs text-slate-500">
+                A high-resolution thermal bill has been generated for your order.
+              </p>
+            </div>
+
+            {/* Thermal POS Receipt Preview Card */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300 font-mono text-[11px] text-slate-800 space-y-2.5 shadow-inner">
+              {/* Receipt Header with Logo */}
+              <div className="text-center space-y-0.5 pb-1 border-b border-dashed border-slate-300">
+                <img
+                  src="/logo.jpg"
+                  alt="Zubair Mobile"
+                  className="w-12 h-12 object-contain mx-auto rounded bg-black border border-red-500/20"
+                />
+                <p className="font-black text-sm tracking-tight text-slate-900 mt-1">ZUBAIR MOBILE</p>
+                <p className="text-[10px] font-bold text-slate-600">REPAIR SERVICES & SPARE PARTS</p>
+                <p className="text-[9px] text-slate-500">Shop B16, Chand Plaza, Garjakhi Darwaza, Gujranwala</p>
+                <p className="font-bold text-[10px] text-[#dc2626]">WhatsApp: 0345-8032600</p>
+              </div>
+
+              {/* Order Info */}
+              <div className="text-[10.5px] space-y-0.5">
+                <div className="flex justify-between font-bold">
+                  <span>ORDER: #{placedOrder.order_number}</span>
+                  <span className="font-normal text-slate-500">
+                    {new Date(placedOrder.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+                <div>CUSTOMER: {placedOrder.customer_name}</div>
+                <div>PHONE: {placedOrder.customer_phone}</div>
+                <div className="truncate">ADDRESS: {placedOrder.customer_address}</div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border-t border-b border-dashed border-slate-300 py-1.5 space-y-1">
+                <div className="flex justify-between font-bold text-[10px] text-slate-500 uppercase">
+                  <span>Item</span>
+                  <span>Amount</span>
+                </div>
+                {placedOrder.items.map((it, idx) => (
+                  <div key={idx} className="flex justify-between items-start text-[10.5px]">
+                    <span className="truncate max-w-[210px]">
+                      {it.quantity}x {it.name}
+                    </span>
+                    <span className="font-bold shrink-0">
+                      Rs. {(it.price * it.quantity).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Grand Total */}
+              <div className="flex justify-between items-baseline font-black text-xs pt-1">
+                <span>GRAND TOTAL:</span>
+                <span className="text-sm text-[#16a34a]">
+                  Rs. {placedOrder.total_amount.toLocaleString()}
+                </span>
+              </div>
+
+              <p className="text-center text-[9px] text-slate-400 pt-1">
+                *** Tested Spare Parts • Shukriya ***
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-1">
+              {/* Download JPEG Bill Button */}
+              <button
+                type="button"
+                onClick={handleDownloadJpeg}
+                disabled={isGeneratingJpeg}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span>{isGeneratingJpeg ? "Generating Image..." : "Download Bill (JPEG Image)"}</span>
+              </button>
+
+              {/* Print Thermal Slip Button */}
+              <button
+                type="button"
+                onClick={handlePrintSlip}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-slate-900 hover:bg-black text-white shadow-xs flex items-center justify-center gap-2 transition-all"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Thermal Receipt (80mm)</span>
+              </button>
+
+              {/* WhatsApp Confirmation Button */}
+              <button
+                type="button"
+                onClick={() => window.open(whatsappUrl, "_blank", "noopener,noreferrer")}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-xs flex items-center justify-center gap-2 transition-all"
+              >
+                <PhoneCall className="w-4 h-4" />
+                <span>Send via WhatsApp (0345-8032600)</span>
+              </button>
+
+              {/* Dismiss / Continue Shopping */}
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="w-full py-2 text-center text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors pt-1"
+              >
+                Done & Clear Cart
+              </button>
+            </div>
           </div>
         </div>
       )}
