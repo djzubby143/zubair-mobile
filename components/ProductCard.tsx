@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Camera } from "lucide-react";
+import { ShoppingCart, Camera, Lock } from "lucide-react";
 import { Product } from "@/lib/types";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/lib/auth";
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +13,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { isLoggedIn, loading: authLoading } = useAuth();
   const [isAdded, setIsAdded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -79,32 +81,53 @@ export default function ProductCard({ product }: ProductCardProps) {
           </p>
         </div>
 
-        {/* Price (Screenshot: Green text, "Rs 0" or "Rs 2,650") */}
-        <div className="pt-1">
-          <div className="text-xs sm:text-sm font-bold text-[#16a34a] tracking-tight">
-            {formattedPrice}
-          </div>
+        {/* Price (Hidden if not logged in, shown only after login) */}
+        <div className="pt-0.5">
+          {isLoggedIn ? (
+            <div className="text-xs sm:text-sm font-bold text-[#16a34a] tracking-tight">
+              {formattedPrice}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#dc2626] bg-red-50 hover:bg-red-100/80 px-2 py-0.5 rounded border border-red-200/60 transition-colors"
+              title="Click to login and view wholesale prices"
+            >
+              <Lock className="w-3 h-3 text-[#dc2626]" />
+              <span>Login for Price</span>
+            </Link>
+          )}
         </div>
 
-        {/* Button: Vibrant Brand Red "Add to Cart" with cart icon */}
+        {/* Button: Add to Cart (Logged-in) or Login to Order (Guest) */}
         <div>
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={!isInStock}
-            className={`w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2.5 rounded-md text-white text-[11px] font-bold shadow-2xs transition-all duration-200 ${
-              !isInStock
-                ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                : isAdded
-                ? "bg-[#25D366] text-white"
-                : "bg-[#dc2626] hover:bg-[#b91c1c] active:scale-[0.98]"
-            }`}
-          >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>
-              {!isInStock ? "Out of Stock" : isAdded ? "Added!" : "Add to Cart"}
-            </span>
-          </button>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={!isInStock}
+              className={`w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2.5 rounded-md text-white text-[11px] font-bold shadow-2xs transition-all duration-200 ${
+                !isInStock
+                  ? "bg-slate-300 cursor-not-allowed text-slate-500"
+                  : isAdded
+                  ? "bg-[#25D366] text-white"
+                  : "bg-[#dc2626] hover:bg-[#b91c1c] active:scale-[0.98]"
+              }`}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>
+                {!isInStock ? "Out of Stock" : isAdded ? "Added!" : "Add to Cart"}
+              </span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2.5 rounded-md text-slate-700 bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] hover:border-red-200 border border-slate-200 text-[11px] font-bold shadow-2xs transition-all duration-200"
+            >
+              <Lock className="w-3.5 h-3.5 text-[#dc2626]" />
+              <span>Login to Order</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

@@ -11,13 +11,16 @@ import {
   Truck,
   CheckCircle2,
   Package,
+  Lock,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/lib/auth";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const { addToCart } = useCart();
+  const { isLoggedIn } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
@@ -33,6 +36,7 @@ export default function ProductDetailPage() {
   const sku = `ZB-${slug ? slug.toUpperCase().slice(0, 6) : "PART"}-01`;
 
   const handleAdd = () => {
+    if (!isLoggedIn) return;
     addToCart(
       {
         id: slug || "part-1",
@@ -58,7 +62,7 @@ export default function ProductDetailPage() {
       {/* Breadcrumb / Back Button */}
       <Link
         href="/"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-secondary mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#dc2626] mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Back to All Spare Parts</span>
@@ -74,7 +78,7 @@ export default function ProductDetailPage() {
             </span>
           </div>
           <div className="absolute top-4 left-4">
-            <span className="bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-md">
+            <span className="bg-[#111827] text-white text-xs font-bold px-2.5 py-1 rounded-md border border-slate-700">
               Zubair Mobile Tested
             </span>
           </div>
@@ -84,13 +88,13 @@ export default function ProductDetailPage() {
         <div className="flex flex-col justify-between space-y-6">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="bg-secondary/10 text-secondary font-semibold text-xs px-2.5 py-0.5 rounded-full">
+              <span className="bg-red-50 text-[#dc2626] font-bold text-xs px-2.5 py-0.5 rounded-full border border-red-100">
                 Mobile Spare Part
               </span>
               <span className="text-xs font-mono text-slate-400">SKU: {sku}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-primary tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
               {productName}
             </h1>
 
@@ -99,13 +103,36 @@ export default function ProductDetailPage() {
               <span>In Stock & Tested Ready to Ship</span>
             </div>
 
+            {/* Wholesale Price Tag (Hidden unless logged in) */}
             <div className="pt-3">
-              <span className="text-xs text-slate-400 uppercase font-semibold block">
+              <span className="text-xs text-slate-400 uppercase font-semibold block mb-1">
                 Wholesale Price
               </span>
-              <span className="text-3xl font-black text-primary">
-                Rs. {price.toLocaleString("en-PK")}
-              </span>
+              {isLoggedIn ? (
+                <span className="text-3xl font-black text-[#16a34a]">
+                  Rs. {price.toLocaleString("en-PK")}
+                </span>
+              ) : (
+                <div className="p-4 bg-red-50/80 border border-red-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#dc2626] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#111827]">Login Required to View Price</p>
+                      <p className="text-[11px] text-slate-500">
+                        Wholesale prices are available for verified shopkeepers & technicians.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-lg shadow-2xs transition-colors shrink-0"
+                  >
+                    <span>Login to View Rate</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             <p className="text-sm text-slate-500 leading-relaxed pt-2">
@@ -117,61 +144,88 @@ export default function ProductDetailPage() {
 
           {/* Action Row */}
           <div className="space-y-4 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-3">
-              <label htmlFor="qty" className="text-xs font-bold uppercase text-slate-400">
-                Quantity:
-              </label>
-              <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-charcoal font-bold text-sm"
+            {isLoggedIn ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="qty" className="text-xs font-bold uppercase text-slate-400">
+                    Quantity:
+                  </label>
+                  <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="px-4 py-1.5 text-sm font-bold text-slate-900 min-w-[2rem] text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white shadow-sm transition-all ${
+                      added ? "bg-[#25D366]" : "bg-[#dc2626] hover:bg-[#b91c1c]"
+                    }`}
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>{added ? "Added to Cart!" : "Add To Cart"}</span>
+                  </button>
+
+                  <a
+                    href={`https://wa.me/923458032600?text=${whatsappMessage}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm transition-all"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    <span>WhatsApp Order</span>
+                  </a>
+                </div>
+              </>
+            ) : (
+              <div className="pt-2">
+                <Link
+                  href="/login"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-xs transition-all"
                 >
-                  -
-                </button>
-                <span className="px-4 py-1.5 text-sm font-bold text-primary min-w-[2rem] text-center">
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-charcoal font-bold text-sm"
-                >
-                  +
-                </button>
+                  <Lock className="w-4 h-4" />
+                  <span>Login to Order this Spare Part</span>
+                </Link>
+                <div className="mt-2 text-center">
+                  <span className="text-xs text-slate-400">
+                    New Customer? Contact Zubair Mobile on WhatsApp:{" "}
+                    <a
+                      href="https://wa.me/923458032600"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#25D366] font-bold hover:underline"
+                    >
+                      03458032600
+                    </a>
+                  </span>
+                </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={handleAdd}
-                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white shadow-sm transition-all ${
-                  added ? "bg-whatsapp" : "bg-secondary hover:bg-secondary-hover"
-                }`}
-              >
-                <ShoppingCart className="w-4 h-4" />
-                <span>{added ? "Added to Cart!" : "Add To Cart"}</span>
-              </button>
-
-              <a
-                href={`https://wa.me/923458032600?text=${whatsappMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-whatsapp hover:bg-whatsapp-hover text-white shadow-sm transition-all"
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>WhatsApp Order</span>
-              </a>
-            </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-slate-500">
               <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-secondary" />
+                <ShieldCheck className="w-4 h-4 text-[#dc2626]" />
                 <span>Quality Tested Before Dispatch</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Truck className="w-4 h-4 text-secondary" />
+                <Truck className="w-4 h-4 text-[#dc2626]" />
                 <span>Fast Courier Across Pakistan</span>
               </div>
             </div>
