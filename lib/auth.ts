@@ -76,6 +76,18 @@ export function useAuth() {
     };
     window.addEventListener("storage", handleStorage);
 
+    // Listen to customer profile updates in same tab
+    const handleCustomerUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<AuthUser>;
+      if (customEvent.detail) {
+        setUser(customEvent.detail);
+        setIsLoggedIn(true);
+      } else {
+        checkAuth();
+      }
+    };
+    window.addEventListener("zubair_customer_updated", handleCustomerUpdate);
+
     // Listen to Supabase auth state change
     const {
       data: { subscription },
@@ -85,9 +97,77 @@ export function useAuth() {
 
     return () => {
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("zubair_customer_updated", handleCustomerUpdate);
       subscription.unsubscribe();
     };
   }, []);
 
   return { isLoggedIn, user, loading };
+}
+
+/**
+ * Update current logged-in customer profile (address, phone, name, city, shop_name)
+ */
+export async function updateCustomerProfile(updatedData: {
+  full_name?: string;
+  shop_name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+}): Promise<AuthUser | null> {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const stored = localStorage.getItem("zubair_customer_user");
+    const current: AuthUser = stored ? JSON.parse(stored) : {};
+
+    const updatedUser: AuthUser = {
+      ...current,
+      ...updatedData,
+    };
+
+    localStorage.setItem("zubair_customer_user", JSON.stringify(updatedUser));
+
+    // Update in cached customers directory
+    const localCustomers = localStorage.getItem("zubair_mobile_customers");
+    if (localCustomers) {
+      try {
+        const list = JSON.parse(localCustomers);
+        const idx = list.findIndex(
+          (c: { id?: string; username?: string; phone?: string }) =>
+            (current.id && c.id === current.id) ||
+            (current.username && c.username?.toLowerCase() === current.username?.toLowerCase()) ||
+            (current.phone && c.phone === current.phone)
+        );
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], ...updatedData };
+          localStorage.setItem("zubair_mobile_customers", JSON.stringify(list));
+        }
+      } catch (err) {
+        console.warn("Could not update local customer list:", err);
+      }
+    }
+
+    // Update in Supabase customers table if row exists
+    if (current.id || current.username) {
+      try {
+        if (current.id) {
+          await supabase.from("customers").update(updatedData).eq("id", current.id);
+        } else if (current.username) {
+          await supabase.from("customers").update(updatedData).eq("username", current.username);
+        }
+      } catch (err) {
+        console.warn("Supabase customer update notice:", err);
+      }
+    }
+
+    // Trigger update events
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("zubair_customer_updated", { detail: updatedUser }));
+
+    return updatedUser;
+  } catch (err) {
+    console.error("Failed to update customer profile:", err);
+    throw err;
+  }
 }

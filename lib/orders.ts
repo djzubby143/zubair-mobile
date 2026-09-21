@@ -166,23 +166,40 @@ export function getCustomerOrders(identifier: {
   customerId?: string;
   phone?: string;
   username?: string;
+  fullName?: string;
 }): Order[] {
   const allOrders = getOrders();
-  if (!identifier.customerId && !identifier.phone && !identifier.username) {
+  if (!identifier.customerId && !identifier.phone && !identifier.username && !identifier.fullName) {
     return [];
   }
 
-  const cleanPhone = identifier.phone?.replace(/[^0-9]/g, "");
+  const rawPhone = identifier.phone?.replace(/[^0-9]/g, "") || "";
+  const phoneTail = rawPhone.length >= 9 ? rawPhone.slice(-9) : rawPhone;
 
   return allOrders.filter((order) => {
-    if (identifier.customerId && order.customer_id === identifier.customerId) return true;
-    if (identifier.username && order.customer_id === identifier.username) return true;
-    if (cleanPhone && order.customer_phone) {
-      const orderPhoneClean = order.customer_phone.replace(/[^0-9]/g, "");
-      if (orderPhoneClean && (orderPhoneClean.includes(cleanPhone) || cleanPhone.includes(orderPhoneClean))) {
+    // 1. Direct ID or Username match
+    if (identifier.customerId && (order.customer_id === identifier.customerId || order.customer_id === identifier.username)) {
+      return true;
+    }
+    if (identifier.username && order.customer_id === identifier.username) {
+      return true;
+    }
+
+    // 2. Robust normalized Phone match (matches 0345... with 92345... or 345...)
+    if (phoneTail && order.customer_phone) {
+      const orderPhoneRaw = order.customer_phone.replace(/[^0-9]/g, "");
+      if (orderPhoneRaw.includes(phoneTail) || (orderPhoneRaw.length >= 9 && phoneTail.includes(orderPhoneRaw.slice(-9)))) {
         return true;
       }
     }
+
+    // 3. Name match fallback
+    if (identifier.fullName && order.customer_name) {
+      if (order.customer_name.trim().toLowerCase() === identifier.fullName.trim().toLowerCase()) {
+        return true;
+      }
+    }
+
     return false;
   });
 }

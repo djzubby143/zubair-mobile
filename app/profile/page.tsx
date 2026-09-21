@@ -25,8 +25,11 @@ import {
   Calendar,
   Layers,
   Bell,
+  Edit2,
+  Save,
+  X,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, updateCustomerProfile } from "@/lib/auth";
 import { Order, getCustomerOrders, getCustomerNotifications, OrderNotification } from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
@@ -39,12 +42,24 @@ export default function ProfilePage() {
   const [copiedBilty, setCopiedBilty] = useState<string | null>(null);
   const [isGeneratingJpeg, setIsGeneratingJpeg] = useState<string | null>(null);
 
+  // Profile Edit State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFullName, setEditFullName] = useState("");
+  const [editShopName, setEditShopName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editSuccessMsg, setEditSuccessMsg] = useState<string | null>(null);
+  const [editErrorMsg, setEditErrorMsg] = useState<string | null>(null);
+
   const loadUserData = () => {
     if (!user) return;
     const userOrders = getCustomerOrders({
       customerId: user.id || user.username,
       phone: user.phone,
       username: user.username,
+      fullName: user.full_name,
     });
     setOrders(userOrders);
 
@@ -53,6 +68,55 @@ export default function ProfilePage() {
       phone: user.phone,
     });
     setNotifications(notifs);
+  };
+
+  const handleOpenEdit = () => {
+    if (!user) return;
+    setEditFullName(user.full_name || "");
+    setEditShopName(user.shop_name || "");
+    setEditPhone(user.phone || "");
+    setEditCity(user.city || "");
+    setEditAddress(user.address || "");
+    setEditErrorMsg(null);
+    setEditSuccessMsg(null);
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditErrorMsg(null);
+
+    if (!editPhone.trim()) {
+      setEditErrorMsg("Please enter your primary WhatsApp / Phone number.");
+      return;
+    }
+    if (!editAddress.trim()) {
+      setEditErrorMsg("Please enter your delivery city and shop address.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      await updateCustomerProfile({
+        full_name: editFullName.trim(),
+        shop_name: editShopName.trim(),
+        phone: editPhone.trim(),
+        city: editCity.trim(),
+        address: editAddress.trim(),
+      });
+
+      setEditSuccessMsg("Profile and address updated successfully!");
+      setTimeout(() => {
+        setEditSuccessMsg(null);
+        setShowEditModal(false);
+      }, 1000);
+      loadUserData();
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      setEditErrorMsg("Failed to update profile. Please try again.");
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   useEffect(() => {
@@ -188,7 +252,16 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start md:self-center">
+          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
+            <button
+              type="button"
+              onClick={handleOpenEdit}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#dc2626] hover:bg-[#b91c1c] shadow-xs transition-colors cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit Profile & Address</span>
+            </button>
+
             <button
               type="button"
               onClick={handleLogout}
@@ -443,6 +516,22 @@ export default function ProfilePage() {
                       </div>
                     )}
 
+                    {/* Customer & Delivery Address for this order */}
+                    {order.customer_address && (
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-[#dc2626] shrink-0" />
+                          <span>Delivery Address: <strong className="text-slate-800">{order.customer_address}</strong></span>
+                        </div>
+                        {order.customer_phone && (
+                          <div className="flex items-center gap-1.5 text-slate-500">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>Contact: <strong className="text-slate-700">{order.customer_phone}</strong></span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Items Table */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
@@ -513,6 +602,148 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Edit Profile & Delivery Details Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-red-50 text-[#dc2626] flex items-center justify-center font-bold shadow-2xs">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base">
+                    Edit Profile & Delivery Details
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Update your primary phone number, shop name, and delivery address.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-base"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Error / Success feedback */}
+            {editErrorMsg && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{editErrorMsg}</span>
+              </div>
+            )}
+
+            {editSuccessMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{editSuccessMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">Contact Person / Full Name *</label>
+                <input
+                  type="text"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="e.g. Muhammad Ali"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-medium"
+                />
+              </div>
+
+              {/* Shop Name */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">Mobile Repair Shop Name</label>
+                <input
+                  type="text"
+                  value={editShopName}
+                  onChange={(e) => setEditShopName(e.target.value)}
+                  placeholder="e.g. Ali Mobile Repairing Center"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-medium"
+                />
+              </div>
+
+              {/* Primary Mobile / WhatsApp Number */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700">Primary Mobile / WhatsApp Number *</label>
+                  <span className="text-[10px] text-[#25D366] font-bold">پرائمری رابطہ نمبر</span>
+                </div>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="03001234567"
+                    required
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-mono font-bold"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Used for cargo dispatch updates and order tracking.
+                </p>
+              </div>
+
+              {/* City */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">City *</label>
+                <input
+                  type="text"
+                  value={editCity}
+                  onChange={(e) => setEditCity(e.target.value)}
+                  placeholder="e.g. Gujranwala / Lahore / Faisalabad"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-medium"
+                />
+              </div>
+
+              {/* Complete Delivery Address */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700">Complete Shop / Delivery Address *</label>
+                  <span className="text-[10px] text-[#dc2626] font-bold">کارگو ڈیلیوری ایڈریس</span>
+                </div>
+                <textarea
+                  rows={3}
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  placeholder="Shop #, Plaza name, Market or Street name, City..."
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626] font-medium leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={isSavingProfile}
+                  className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#dc2626] hover:bg-[#b91c1c] text-white font-bold text-xs shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSavingProfile ? "Saving Details..." : "Save Profile Changes"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
