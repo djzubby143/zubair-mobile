@@ -24,8 +24,16 @@ import {
   Check,
   TrendingUp,
   DollarSign,
+  Trash2,
 } from "lucide-react";
-import { Order, getOrders, updateOrderStatus, updateOrderDispatch, calculateOrderProfit } from "@/lib/orders";
+import {
+  Order,
+  getOrders,
+  updateOrderStatus,
+  updateOrderDispatch,
+  calculateOrderProfit,
+  deleteOrder,
+} from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
 export default function AdminOrdersPage() {
@@ -42,9 +50,28 @@ export default function AdminOrdersPage() {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [copiedBilty, setCopiedBilty] = useState(false);
 
+  // Deletion Modal State
+  const [deleteTargetOrder, setDeleteTargetOrder] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const loadOrders = () => {
     const list = getOrders();
     setOrders(list);
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteTargetOrder) return;
+    setIsDeleting(true);
+    try {
+      await deleteOrder(deleteTargetOrder.id);
+      setDeleteTargetOrder(null);
+      loadOrders();
+    } catch (err) {
+      console.error("Failed to delete order:", err);
+      alert("Failed to delete order.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   useEffect(() => {
@@ -365,6 +392,16 @@ export default function AdminOrdersPage() {
                       title="View Bill Slip Preview"
                     >
                       <span>Preview</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTargetOrder(order)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 transition-colors shadow-2xs"
+                      title="Delete unresponsive customer or fake order"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
@@ -756,6 +793,65 @@ export default function AdminOrdersPage() {
               >
                 <Download className="w-4 h-4" />
                 <span>Download ({paperWidth}mm)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Order Confirmation Modal */}
+      {deleteTargetOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-black text-slate-900">
+                Delete Order #{deleteTargetOrder.order_number}?
+              </h3>
+              <p className="text-xs text-slate-500">
+                Agar customer phone / WhatsApp par response nahi de raha ya yeh fake order hai, to aap is order ko permanently delete kar sakte hain.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Customer:</span>
+                <span className="font-bold text-slate-900">{deleteTargetOrder.customer_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Phone:</span>
+                <span className="font-mono font-bold text-slate-800">{deleteTargetOrder.customer_phone}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Items Count:</span>
+                <span className="font-bold text-slate-700">{deleteTargetOrder.total_items} Parts</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-200 pt-1">
+                <span className="text-slate-500 font-medium">Total Bill:</span>
+                <span className="font-black text-emerald-700">Rs. {deleteTargetOrder.total_amount.toLocaleString("en-PK")}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetOrder(null)}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteOrder}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isDeleting ? "Deleting..." : "Delete Order"}</span>
               </button>
             </div>
           </div>

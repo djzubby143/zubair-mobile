@@ -309,3 +309,27 @@ export function updateOrderDispatch(
     console.error("Failed to update order dispatch details:", err);
   }
 }
+
+/**
+ * Delete an order permanently (e.g. if customer doesn't respond or fake order)
+ */
+export async function deleteOrder(orderId: string): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      const orders = getOrders();
+      const filtered = orders.filter((o) => o.id !== orderId);
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(filtered));
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: filtered }));
+    } catch (err) {
+      console.error("Failed to delete order from localStorage:", err);
+    }
+  }
+
+  // Attempt to delete from Supabase if table is configured
+  try {
+    await supabase.from("orders").delete().eq("id", orderId);
+  } catch (err) {
+    console.warn("Notice: Supabase order deletion skipped/not available:", err);
+  }
+}
