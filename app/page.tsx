@@ -1,8 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ChevronRight, ChevronLeft, Layers, X, Sparkles, Filter } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  Layers,
+  X,
+  Sparkles,
+  Filter,
+  Tag,
+} from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import HeroBanner from "@/components/HeroBanner";
 import { Product } from "@/lib/types";
@@ -21,6 +30,18 @@ function HomeContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnterSidebar = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setSidebarHovered(true);
+  };
+
+  const handleMouseLeaveSidebar = () => {
+    hoverTimerRef.current = setTimeout(() => {
+      setSidebarHovered(false);
+    }, 150);
+  };
 
   // Sync selectedCategory with URL param if present
   useEffect(() => {
@@ -145,21 +166,13 @@ function HomeContent() {
   const handleSelectCategory = (catName: string) => {
     setSelectedCategory(catName);
     setCurrentPage(1);
+    setSidebarHovered(false);
     if (catName === "All") {
       router.push("/", { scroll: false });
     } else {
       router.push(`/?category=${encodeURIComponent(catName)}`, { scroll: false });
     }
   };
-
-  // Top circular categories dynamically built from live categories list
-  const circularCategories = useMemo(() => {
-    return categories.map((cat) => ({
-      name: cat.name,
-      initial: cat.name.charAt(0).toUpperCase(),
-      label: cat.name.length > 11 ? cat.name.slice(0, 9) + "..." : cat.name,
-    }));
-  }, [categories]);
 
   return (
     <div className="max-w-[1700px] mx-auto px-2 sm:px-4 py-4">
@@ -185,110 +198,118 @@ function HomeContent() {
         </div>
       )}
 
-      {/* 2-Column Storefront Layout: Left Sidebar + Right Catalog (Screenshot Style) */}
+      {/* 2-Column Storefront Layout: Left Sidebar Dropdown + Right Catalog */}
       <div className="flex flex-col lg:flex-row gap-4 items-start">
-        {/* Left Sidebar: Categories with Hover Effects and Real-time List */}
-        <aside
-          className="w-full lg:w-60 shrink-0 bg-white rounded-lg border border-slate-200/80 p-3 shadow-2xs transition-shadow hover:shadow-md"
-          onMouseEnter={() => setSidebarHovered(true)}
-          onMouseLeave={() => setSidebarHovered(false)}
+        {/* Left Side: Categories Bar with Hover Dropdown (Default: Hidden / Collapsed) */}
+        <div
+          className="relative w-full lg:w-64 shrink-0 z-30"
+          onMouseEnter={handleMouseEnterSidebar}
+          onMouseLeave={handleMouseLeaveSidebar}
         >
-          {/* Header */}
-          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 px-2 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-[#dc2626]" />
-              CATEGORIES ({categories.length})
-            </span>
-            {sidebarHovered && (
-              <span className="text-[9px] text-[#dc2626] font-bold animate-pulse">Live</span>
-            )}
-          </div>
-
-          {/* Active "All" Pill (Matches Logo Red) */}
-          <button
-            type="button"
-            onClick={() => handleSelectCategory("All")}
-            className={`w-full text-left px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-              selectedCategory === "All"
-                ? "bg-[#dc2626] text-white shadow-2xs"
-                : "text-slate-600 hover:bg-slate-100"
+          {/* Main Category Bar Trigger Button (Always visible, clean & branded) */}
+          <div
+            onClick={() => setSidebarHovered(!sidebarHovered)}
+            className={`w-full bg-white rounded-lg border p-3 shadow-2xs cursor-pointer transition-all flex items-center justify-between select-none ${
+              sidebarHovered
+                ? "border-[#dc2626] ring-2 ring-[#dc2626]/20 bg-red-50/30"
+                : "border-slate-200/80 hover:border-[#dc2626]"
             }`}
           >
-            All Products
-          </button>
-
-          {/* Vertical Category List with Smooth Hover Highlights */}
-          <div className="mt-2 space-y-0.5 max-h-[720px] overflow-y-auto pr-0.5 scrollbar-thin">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory.toLowerCase() === cat.name.toLowerCase();
-              return (
-                <button
-                  key={cat.id || cat.name}
-                  type="button"
-                  onClick={() => handleSelectCategory(cat.name)}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[11px] font-medium transition-all text-left group ${
-                    isSelected
-                      ? "bg-red-50 text-[#dc2626] font-bold shadow-2xs translate-x-1"
-                      : "text-slate-600 hover:text-[#dc2626] hover:bg-red-50/60 hover:translate-x-0.5"
-                  }`}
-                  title={cat.description || cat.name}
-                >
-                  <span className="truncate uppercase">{cat.name}</span>
-                  <ChevronRight
-                    className={`w-3.5 h-3.5 shrink-0 transition-transform ${
-                      isSelected
-                        ? "text-[#dc2626] translate-x-0.5"
-                        : "text-slate-300 group-hover:text-[#dc2626] group-hover:translate-x-0.5"
-                    }`}
-                  />
-                </button>
-              );
-            })}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-[#dc2626] text-white flex items-center justify-center shadow-xs shrink-0">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-black text-[#111827] uppercase tracking-wide block leading-tight">
+                  CATEGORIES
+                </span>
+                <span className="text-[10.5px] text-slate-500 font-semibold block truncate">
+                  {selectedCategory !== "All"
+                    ? `Active: ${selectedCategory}`
+                    : `Hover to view (${categories.length})`}
+                </span>
+              </div>
+            </div>
+            <ChevronDown
+              className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${
+                sidebarHovered ? "rotate-180 text-[#dc2626]" : ""
+              }`}
+            />
           </div>
-        </aside>
 
-        {/* Right Area: Hero Banner + Circular Categories + 6-Col Grid + Pagination */}
+          {/* Categories Dropdown: Hidden normally, drops down when cursor hovers over it */}
+          {sidebarHovered && (
+            <div
+              className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-slate-200 shadow-2xl p-2 z-50 max-h-[620px] overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150"
+              onMouseEnter={handleMouseEnterSidebar}
+              onMouseLeave={handleMouseLeaveSidebar}
+            >
+              {/* "All Products" option */}
+              <div className="pb-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleSelectCategory("All")}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-between ${
+                    selectedCategory === "All"
+                      ? "bg-[#dc2626] text-white shadow-2xs"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="uppercase">ALL PRODUCTS</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                      selectedCategory === "All"
+                        ? "bg-red-700 text-white"
+                        : "bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {products.length}
+                  </span>
+                </button>
+              </div>
+
+              {/* Live Categories List */}
+              <div className="pt-1.5 space-y-0.5">
+                {categories.map((cat) => {
+                  const isSelected =
+                    selectedCategory.toLowerCase() === cat.name.toLowerCase();
+                  return (
+                    <button
+                      key={cat.id || cat.name}
+                      type="button"
+                      onClick={() => handleSelectCategory(cat.name)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11.5px] font-semibold transition-all text-left group ${
+                        isSelected
+                          ? "bg-red-50 text-[#dc2626] font-bold shadow-2xs"
+                          : "text-slate-700 hover:text-[#dc2626] hover:bg-red-50/70"
+                      }`}
+                      title={cat.description || cat.name}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        <span className="w-5 h-5 rounded bg-slate-100 group-hover:bg-[#dc2626] group-hover:text-white text-slate-600 flex items-center justify-center text-[9px] font-bold shrink-0 transition-colors">
+                          {cat.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="truncate uppercase">{cat.name}</span>
+                      </div>
+                      <ChevronRight
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          isSelected
+                            ? "text-[#dc2626]"
+                            : "text-slate-300 group-hover:text-[#dc2626]"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Area: Hero Banner + 6-Col Grid + Pagination */}
         <main className="flex-1 min-w-0 space-y-4">
           {/* Admin-Configurable Hero Promotional Offer Banner */}
           <HeroBanner />
-
-          {/* Top Horizontal Row of Circular Categories (Logo Red Theme) */}
-          <div className="bg-white rounded-lg border border-slate-200/80 p-3 shadow-2xs overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-3 sm:gap-4 min-w-max pb-1">
-              {circularCategories.map((item, idx) => {
-                const isSelected = selectedCategory.toLowerCase() === item.name.toLowerCase();
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleSelectCategory(item.name)}
-                    className="flex flex-col items-center gap-1.5 group shrink-0"
-                    title={item.name}
-                  >
-                    {/* Circle button (Brand Red) */}
-                    <div
-                      className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-sm shadow-xs transition-all group-hover:scale-105 ${
-                        isSelected
-                          ? "bg-[#111827] text-white ring-2 ring-[#dc2626] ring-offset-2 scale-105"
-                          : "bg-[#dc2626] hover:bg-[#b91c1c] text-white"
-                      }`}
-                    >
-                      {item.initial}
-                    </div>
-                    {/* Label below */}
-                    <span
-                      className={`text-[9.5px] font-semibold uppercase tracking-tight text-center max-w-[65px] truncate transition-colors ${
-                        isSelected
-                          ? "text-[#dc2626] font-bold"
-                          : "text-slate-500 group-hover:text-[#dc2626]"
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
           {/* Product Cards Grid: 6 Columns on Desktop (Screenshot Style) */}
           {filteredProducts.length === 0 ? (
