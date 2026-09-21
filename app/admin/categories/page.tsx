@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Category } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
+import { broadcastCategoryChange, getLiveCategories, LiveCategory } from "@/lib/categories";
 
 // Fallback initial categories for immediate preview
 const INITIAL_CATEGORIES: Category[] = [
@@ -201,9 +202,7 @@ export default function CategoriesPage() {
             : c
         );
         setCategories(updated);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("zubair_mobile_categories", JSON.stringify(updated));
-        }
+        broadcastCategoryChange(updated as LiveCategory[]);
         showToast(`Category "${formName.trim()}" updated successfully.`);
       } else {
         // Create
@@ -235,9 +234,7 @@ export default function CategoriesPage() {
         }
 
         setCategories(updated);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("zubair_mobile_categories", JSON.stringify(updated));
-        }
+        broadcastCategoryChange(updated as LiveCategory[]);
         showToast(`New category "${formName.trim()}" created successfully.`);
       }
 
@@ -290,9 +287,7 @@ export default function CategoriesPage() {
       // Remove from state
       const updated = categories.filter((c) => c.id !== deleteTarget.id);
       setCategories(updated);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("zubair_mobile_categories", JSON.stringify(updated));
-      }
+      broadcastCategoryChange(updated as LiveCategory[]);
       showToast(`Category "${deleteTarget.name}" deleted.`);
       setDeleteTarget(null);
     } catch (err: unknown) {

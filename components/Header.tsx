@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShoppingCart,
   User,
@@ -9,18 +10,47 @@ import {
   Menu,
   X,
   MapPin,
-  Building2,
   LogOut,
+  Layers,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import AdvancedSearchBar from "@/components/AdvancedSearchBar";
+import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categories";
+import { supabase } from "@/lib/supabase";
 
 export default function Header() {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customerUser, setCustomerUser] = useState<{ full_name: string; shop_name: string } | null>(null);
   const { cartCount, isLoaded } = useCart();
 
+  // Categories Hover Mega-Menu State
+  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
+  const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
+  const [categoryFilterQuery, setCategoryFilterQuery] = useState("");
+  const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadCategories = async () => {
+    try {
+      const data = await getLiveCategories();
+      if (data && data.length > 0) {
+        setCategories(data);
+      }
+    } catch (err) {
+      console.warn("Could not load categories in header:", err);
+    }
+  };
+
   useEffect(() => {
+    // 1. Initial Load
+    loadCategories();
+
+    // 2. Load customer session
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("zubair_customer_user");
       if (stored) {
@@ -29,7 +59,63 @@ export default function Header() {
         } catch {}
       }
     }
+
+    // 3. Realtime event listeners for instant category updates
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (!e.key || e.key === "zubair_mobile_categories") {
+        loadCategories();
+      }
+    };
+
+    const handleCustomUpdate = () => {
+      loadCategories();
+    };
+
+    const handleFocus = () => {
+      loadCategories();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorageUpdate);
+      window.addEventListener("zubair_category_updated", handleCustomUpdate);
+      window.addEventListener("focus", handleFocus);
+    }
+
+    // 4. Supabase Realtime Subscription for Categories
+    const channel = supabase
+      .channel("header-categories-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "categories" },
+        () => {
+          loadCategories();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", handleStorageUpdate);
+        window.removeEventListener("zubair_category_updated", handleCustomUpdate);
+        window.removeEventListener("focus", handleFocus);
+      }
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const handleMouseEnter = () => {
+    if (dropdownTimerRef.current) {
+      clearTimeout(dropdownTimerRef.current);
+    }
+    setCategoriesDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    dropdownTimerRef.current = setTimeout(() => {
+      setCategoriesDropdownOpen(false);
+      setCategoryFilterQuery("");
+    }, 200);
+  };
 
   const handleCustomerLogout = () => {
     if (typeof window !== "undefined") {
@@ -38,6 +124,21 @@ export default function Header() {
       window.location.reload();
     }
   };
+
+  const selectCategory = (catName: string) => {
+    setCategoriesDropdownOpen(false);
+    setCategoryFilterQuery("");
+    setMobileMenuOpen(false);
+    if (catName === "All") {
+      router.push("/");
+    } else {
+      router.push(`/?category=${encodeURIComponent(catName)}`);
+    }
+  };
+
+  const filteredCategories = categories.filter((c) =>
+    c.name.toLowerCase().includes(categoryFilterQuery.toLowerCase().trim())
+  );
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white shadow-xs border-b border-slate-200">
@@ -67,12 +168,12 @@ export default function Header() {
       </div>
 
       {/* Main Top Bar (Matches Screenshot with User's Official Logo) */}
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4">
-        {/* Left: Official Logo + Search Bar */}
-        <div className="flex items-center gap-5 flex-1 max-w-2xl">
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3 sm:gap-4">
+        {/* Left: Official Logo + Categories Dropdown + Search Bar */}
+        <div className="flex items-center gap-3 sm:gap-5 flex-1 max-w-3xl">
           {/* Official Brand Logo */}
-          <Link href="/" className="flex items-center gap-3 shrink-0 group">
-            <div className="relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-white p-0.5 group-hover:scale-105 transition-transform">
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 shrink-0 group">
+            <div className="relative h-11 w-11 sm:h-14 sm:w-14 shrink-0 rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-white p-0.5 group-hover:scale-105 transition-transform">
               <img
                 src="/logo.jpg"
                 alt="Zubair Mobile Repair Services"
@@ -80,7 +181,7 @@ export default function Header() {
               />
             </div>
             <div className="flex flex-col justify-center">
-              <span className="font-black text-lg sm:text-xl tracking-tight text-[#111827] leading-none">
+              <span className="font-black text-base sm:text-xl tracking-tight text-[#111827] leading-none">
                 ZUBAIR <span className="text-[#dc2626]">MOBILE</span>
               </span>
               <span className="bg-[#dc2626] text-white text-[8px] sm:text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded mt-1 w-fit">
@@ -89,12 +190,107 @@ export default function Header() {
             </div>
           </Link>
 
+          {/* Categories Hover Dropdown Menu Button ("jab cursor category par ly kar jao") */}
+          <div
+            className="relative hidden md:block"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <button
+              type="button"
+              onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
+              className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-[#dc2626] text-[#111827] hover:text-white rounded-lg font-bold text-xs transition-colors shadow-2xs border border-slate-200 hover:border-[#dc2626] cursor-pointer"
+              title="Hover to view all categories"
+            >
+              <Layers className="w-4 h-4 text-[#dc2626] hover:text-white group-hover:text-white transition-colors" />
+              <span>Categories</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  categoriesDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Hover Floating Mega-Menu */}
+            {categoriesDropdownOpen && (
+              <div
+                className="absolute top-full left-0 mt-1.5 w-80 max-h-[520px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-150"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                {/* Header & Quick Filter */}
+                <div className="p-3 bg-slate-50 border-b border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-[#dc2626]" />
+                      All Categories ({categories.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => selectCategory("All")}
+                      className="text-[11px] text-[#dc2626] hover:underline font-bold"
+                    >
+                      View All
+                    </button>
+                  </div>
+
+                  {/* Filter input */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search category (e.g. Sidekey)..."
+                      value={categoryFilterQuery}
+                      onChange={(e) => setCategoryFilterQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 bg-white text-xs rounded-md border border-slate-200 focus:outline-none focus:border-[#dc2626] text-slate-800 placeholder-slate-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Categories List */}
+                <div className="overflow-y-auto max-h-[400px] p-1.5 divide-y divide-slate-50">
+                  {filteredCategories.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400">
+                      No category matches &quot;{categoryFilterQuery}&quot;
+                    </div>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <button
+                        key={cat.id || cat.name}
+                        type="button"
+                        onClick={() => selectCategory(cat.name)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium text-slate-700 hover:text-[#dc2626] hover:bg-red-50/80 transition-all group/item"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-6 h-6 rounded-md bg-slate-100 group-hover/item:bg-[#dc2626] group-hover/item:text-white text-slate-600 flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors">
+                            {cat.name.charAt(0).toUpperCase()}
+                          </span>
+                          <div className="truncate">
+                            <p className="font-semibold truncate text-[#111827] group-hover/item:text-[#dc2626]">
+                              {cat.name}
+                            </p>
+                            {cat.description && (
+                              <p className="text-[10px] text-slate-400 truncate max-w-[200px]">
+                                {cat.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover/item:text-[#dc2626] group-hover/item:translate-x-0.5 transition-all shrink-0" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Advanced Search Bar with Instant Dropdown, Images & Details */}
           <AdvancedSearchBar className="flex-1 max-w-lg hidden sm:block" />
         </div>
 
         {/* Right: Cart Button + Login Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           {/* WhatsApp Direct CTA */}
           <a
             href="https://wa.me/923458032600"
@@ -173,7 +369,7 @@ export default function Header() {
             className="fixed inset-0 bg-black/40 backdrop-blur-2xs"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative ml-auto w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 p-5 space-y-4">
+          <div className="relative ml-auto w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 p-5 space-y-4 overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <img src="/logo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
@@ -185,7 +381,8 @@ export default function Header() {
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
-            <div className="space-y-2 text-sm">
+
+            <div className="space-y-1 text-sm">
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
@@ -211,6 +408,34 @@ export default function Header() {
                 Admin Login
               </Link>
             </div>
+
+            {/* Mobile Categories Accordion / List */}
+            <div className="pt-2 border-t border-slate-100">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Categories ({categories.length})
+              </p>
+              <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                <button
+                  type="button"
+                  onClick={() => selectCategory("All")}
+                  className="w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  All Categories
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id || cat.name}
+                    type="button"
+                    onClick={() => selectCategory(cat.name)}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs text-slate-600 hover:bg-red-50 hover:text-[#dc2626]"
+                  >
+                    <span>{cat.name}</span>
+                    <ChevronRight className="w-3 h-3 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="pt-4 border-t border-slate-100">
               <a
                 href="https://wa.me/923458032600"
