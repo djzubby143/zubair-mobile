@@ -397,19 +397,26 @@ export default function Header() {
           {/* Customer / Admin Login Status */}
           {customerUser ? (
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-[11px] font-bold text-[#111827] leading-tight flex items-center gap-1 justify-end">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {customerUser.shop_name}
-                </span>
-                <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
-                  {customerUser.full_name}
-                </span>
-              </div>
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:border-red-300 bg-slate-50/80 hover:bg-red-50/50 transition-colors group"
+                title="View My Profile & Order Tracking"
+              >
+                <div className="w-6 h-6 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center font-bold text-xs shrink-0">
+                  <User className="w-3.5 h-3.5" />
+                </div>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-[11px] font-bold text-[#111827] leading-tight group-hover:text-[#dc2626] transition-colors flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="truncate max-w-[120px]">{customerUser.shop_name || customerUser.full_name}</span>
+                  </span>
+                  <span className="text-[9.5px] text-slate-500 font-medium">Orders & Tracking</span>
+                </div>
+              </Link>
               <button
                 type="button"
                 onClick={handleCustomerLogout}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-slate-200 hover:border-red-300 text-slate-500 hover:text-[#dc2626] text-xs font-semibold bg-white shadow-2xs transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-red-300 text-slate-500 hover:text-[#dc2626] text-xs font-semibold bg-white shadow-2xs transition-colors"
                 title="Log Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -419,7 +426,7 @@ export default function Header() {
           ) : (
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md border border-red-200 hover:border-[#dc2626] text-[#dc2626] hover:bg-red-50 text-xs font-semibold transition-colors bg-white shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-red-200 hover:border-[#dc2626] text-[#dc2626] hover:bg-red-50 text-xs font-semibold transition-colors bg-white shadow-2xs"
             >
               <User className="w-4 h-4 text-[#dc2626]" />
               <span>Login</span>
@@ -480,13 +487,26 @@ export default function Header() {
                   {cartCount}
                 </span>
               </Link>
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-slate-700 font-semibold hover:text-[#dc2626]"
-              >
-                Admin Login
-              </Link>
+              {customerUser ? (
+                <Link
+                  href="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between py-2 text-[#dc2626] font-bold"
+                >
+                  <span>My Profile & Tracking</span>
+                  <span className="bg-red-50 text-[#dc2626] text-[10px] px-2 py-0.5 rounded-full border border-red-200">
+                    Live
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-2 text-slate-700 font-semibold hover:text-[#dc2626]"
+                >
+                  Customer / Admin Login
+                </Link>
+              )}
             </div>
 
             {/* Mobile Categories Accordion with Subcategories */}

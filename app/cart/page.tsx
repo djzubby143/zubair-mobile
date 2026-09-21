@@ -103,6 +103,7 @@ export default function CartPage() {
       total_amount: cartSubtotal,
       status: "pending",
       created_at: new Date().toISOString(),
+      customer_id: user?.id || user?.username || user?.phone || undefined,
     };
 
     // Save order

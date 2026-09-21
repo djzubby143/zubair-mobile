@@ -5,6 +5,7 @@ export type ThermalPaperWidth = 68 | 58 | 80;
 /**
  * Generate and download high-resolution Thermal Receipt JPEG image
  * Width tailored for thermal printers (Default 68mm = 480px canvas at 203 DPI)
+ * Featuring large, high-legibility bold typography
  */
 export async function generateReceiptJpeg(
   order: Order,
@@ -23,16 +24,12 @@ export async function generateReceiptJpeg(
   });
 
   // Canvas dimensions based on paper width
-  // 68mm paper -> 480px printable width (203 DPI)
-  // 58mm paper -> 384px printable width
-  // 80mm paper -> 576px printable width
   const canvasWidth = paperWidth === 58 ? 384 : paperWidth === 80 ? 576 : 480;
-  const paddingX = 16;
-  const contentWidth = canvasWidth - paddingX * 2;
+  const paddingX = 14;
 
   // Calculate dynamic canvas height based on item count
-  const itemHeightEstimate = order.items.length * 40;
-  const canvasHeight = 720 + itemHeightEstimate;
+  const itemHeightEstimate = order.items.length * 48;
+  const canvasHeight = 820 + itemHeightEstimate + (order.cargo_name ? 36 : 0);
 
   const canvas = document.createElement("canvas");
   canvas.width = canvasWidth;
@@ -52,36 +49,36 @@ export async function generateReceiptJpeg(
 
   // 1. Draw Official Logo if available
   if (logoImg.complete && logoImg.naturalWidth > 0) {
-    const logoSize = paperWidth === 58 ? 48 : 58;
+    const logoSize = paperWidth === 58 ? 52 : 64;
     ctx.drawImage(logoImg, (canvasWidth - logoSize) / 2, y, logoSize, logoSize);
-    y += logoSize + 8;
+    y += logoSize + 10;
   }
 
-  // 2. Shop Header
+  // 2. Shop Header (Large & Bold)
   ctx.textAlign = "center";
-  ctx.font = "bold 20px 'Courier New', monospace";
+  ctx.font = "bold 23px 'Courier New', monospace";
   ctx.fillText("ZUBAIR MOBILE", canvasWidth / 2, y);
-  y += 24;
-
-  ctx.font = "bold 11px 'Courier New', monospace";
-  ctx.fillText("REPAIR SERVICES & SPARE PARTS", canvasWidth / 2, y);
-  y += 16;
-
-  ctx.font = "10.5px 'Courier New', monospace";
-  ctx.fillText("Shop No. B16, Chand Plaza, Garjakhi Darwaza", canvasWidth / 2, y);
-  y += 14;
-  ctx.fillText("Gujranwala, Punjab, Pakistan", canvasWidth / 2, y);
-  y += 16;
+  y += 28;
 
   ctx.font = "bold 13px 'Courier New', monospace";
-  ctx.fillText("WhatsApp / Call: 0345-8032600", canvasWidth / 2, y);
-  y += 22;
+  ctx.fillText("REPAIR SERVICES & SPARE PARTS", canvasWidth / 2, y);
+  y += 18;
 
-  // Vector Dashed and Double Lines (Never wrap or misalign)
+  ctx.font = "bold 11.5px 'Courier New', monospace";
+  ctx.fillText("Shop No. B16, Chand Plaza, Garjakhi Darwaza", canvasWidth / 2, y);
+  y += 16;
+  ctx.fillText("Gujranwala, Punjab, Pakistan", canvasWidth / 2, y);
+  y += 18;
+
+  ctx.font = "bold 15px 'Courier New', monospace";
+  ctx.fillText("WhatsApp / Call: 0345-8032600", canvasWidth / 2, y);
+  y += 24;
+
+  // Vector Dashed and Double Lines
   const drawDashedLine = (currY: number) => {
     ctx.beginPath();
-    ctx.setLineDash([4, 3]);
-    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 3]);
+    ctx.lineWidth = 1.5;
     ctx.moveTo(paddingX, currY);
     ctx.lineTo(canvasWidth - paddingX, currY);
     ctx.stroke();
@@ -91,22 +88,22 @@ export async function generateReceiptJpeg(
   const drawDoubleLine = (currY: number) => {
     ctx.beginPath();
     ctx.setLineDash([]);
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.moveTo(paddingX, currY);
     ctx.lineTo(canvasWidth - paddingX, currY);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(paddingX, currY + 3);
-    ctx.lineTo(canvasWidth - paddingX, currY + 3);
+    ctx.moveTo(paddingX, currY + 3.5);
+    ctx.lineTo(canvasWidth - paddingX, currY + 3.5);
     ctx.stroke();
   };
 
   drawDashedLine(y);
-  y += 12;
+  y += 14;
 
-  // 3. Order & Customer Info
+  // 3. Order & Customer Info (Enlarged)
   ctx.textAlign = "left";
-  ctx.font = "bold 11px 'Courier New', monospace";
+  ctx.font = "bold 13px 'Courier New', monospace";
   const dateStr = new Date(order.created_at).toLocaleDateString("en-PK", {
     month: "short",
     day: "numeric",
@@ -120,62 +117,72 @@ export async function generateReceiptJpeg(
   ctx.fillText(`ORDER: #${order.order_number}`, paddingX, y);
   ctx.textAlign = "right";
   ctx.fillText(`${dateStr} ${timeStr}`, canvasWidth - paddingX, y);
-  y += 18;
+  y += 20;
 
   ctx.textAlign = "left";
-  ctx.font = "11px 'Courier New', monospace";
+  ctx.font = "bold 12.5px 'Courier New', monospace";
   ctx.fillText(`CUSTOMER: ${order.customer_name}`, paddingX, y);
-  y += 16;
+  y += 18;
 
   if (order.shop_name) {
     ctx.fillText(`SHOP:     ${order.shop_name}`, paddingX, y);
-    y += 16;
+    y += 18;
   }
 
   ctx.fillText(`PHONE:    ${order.customer_phone}`, paddingX, y);
-  y += 16;
+  y += 18;
 
-  // Address (with clean truncation or wrapping)
-  const maxAddrChars = paperWidth === 58 ? 32 : 40;
+  // Address
+  const maxAddrChars = paperWidth === 58 ? 28 : 36;
   ctx.fillText(`ADDRESS:  ${order.customer_address.slice(0, maxAddrChars)}`, paddingX, y);
-  y += 16;
+  y += 18;
   if (order.customer_address.length > maxAddrChars) {
     ctx.fillText(`          ${order.customer_address.slice(maxAddrChars, maxAddrChars * 2)}`, paddingX, y);
-    y += 16;
+    y += 18;
+  }
+
+  // Cargo & Tracking if dispatched
+  if (order.cargo_name) {
+    ctx.font = "bold 13px 'Courier New', monospace";
+    ctx.fillText(`CARGO:    ${order.cargo_name.toUpperCase()}`, paddingX, y);
+    y += 18;
+    if (order.tracking_number) {
+      ctx.fillText(`BILTY NO: ${order.tracking_number}`, paddingX, y);
+      y += 18;
+    }
   }
 
   drawDoubleLine(y);
-  y += 14;
+  y += 16;
 
-  // 4. Table Header
-  // Columns: QTY (left) | ITEM (left) | RATE (right) | TOTAL (right)
+  // 4. Table Header (Enlarged)
   const colQtyX = paddingX;
-  const colItemX = paddingX + 38;
-  const colRateX = canvasWidth - paddingX - 90;
+  const colItemX = paddingX + 42;
+  const colRateX = canvasWidth - paddingX - 100;
   const colTotalX = canvasWidth - paddingX;
 
-  ctx.font = "bold 11px 'Courier New', monospace";
+  ctx.font = "bold 13px 'Courier New', monospace";
   ctx.textAlign = "left";
   ctx.fillText("QTY", colQtyX, y);
   ctx.fillText("ITEM DESCRIPTION", colItemX, y);
   ctx.textAlign = "right";
   ctx.fillText("RATE", colRateX, y);
   ctx.fillText("TOTAL", colTotalX, y);
-  y += 16;
+  y += 18;
 
   drawDashedLine(y);
-  y += 12;
+  y += 14;
 
-  // 5. Items Loop
+  // 5. Items Loop (Large Bold text)
   order.items.forEach((item) => {
     // Qty
     ctx.textAlign = "left";
-    ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.font = "bold 13.5px 'Courier New', monospace";
     ctx.fillText(`${item.quantity}x`, colQtyX, y);
 
-    // Item Name (fit within column width without overflowing)
-    ctx.font = "10.5px 'Courier New', monospace";
-    const maxTitleLength = paperWidth === 58 ? 16 : 22;
+    // Item Name
+    ctx.font = "bold 12px 'Courier New', monospace";
+    const maxTitleLength = paperWidth === 58 ? 14 : 20;
     const displayName =
       item.name.length > maxTitleLength ? item.name.slice(0, maxTitleLength - 1) + "…" : item.name;
     ctx.fillText(displayName.toUpperCase(), colItemX, y);
@@ -184,72 +191,72 @@ export async function generateReceiptJpeg(
     ctx.textAlign = "right";
     ctx.fillText(`${item.price.toLocaleString()}`, colRateX, y);
 
-    // Amount
+    // Total Amount
     const amount = item.price * item.quantity;
-    ctx.font = "bold 11px 'Courier New', monospace";
+    ctx.font = "bold 13.5px 'Courier New', monospace";
     ctx.fillText(`Rs.${amount.toLocaleString()}`, colTotalX, y);
-    y += 20;
+    y += 22;
 
-    // SKU sub-line if available
+    // SKU sub-line
     if (item.sku) {
       ctx.textAlign = "left";
-      ctx.font = "9px 'Courier New', monospace";
-      ctx.fillText(`    [SKU: ${item.sku}]`, colItemX, y - 5);
-      y += 12;
+      ctx.font = "bold 10px 'Courier New', monospace";
+      ctx.fillText(`    [SKU: ${item.sku}]`, colItemX, y - 4);
+      y += 14;
     }
   });
 
   drawDoubleLine(y);
-  y += 14;
+  y += 16;
 
   // 6. Totals
   ctx.textAlign = "left";
-  ctx.font = "11px 'Courier New', monospace";
+  ctx.font = "bold 13px 'Courier New', monospace";
   ctx.fillText(`TOTAL ITEMS: ${order.total_items}`, paddingX, y);
   ctx.textAlign = "right";
   ctx.fillText(`SUBTOTAL: Rs. ${order.total_amount.toLocaleString()}`, canvasWidth - paddingX, y);
-  y += 18;
+  y += 20;
 
   ctx.textAlign = "left";
   ctx.fillText("CARGO / DELIVERY:", paddingX, y);
   ctx.textAlign = "right";
   ctx.fillText("PAY ON ARRIVAL", canvasWidth - paddingX, y);
-  y += 20;
+  y += 22;
 
   drawDashedLine(y);
-  y += 14;
+  y += 16;
 
-  // Grand Total in Large Bold
+  // Grand Total in Extra Large Bold
   ctx.textAlign = "left";
-  ctx.font = "bold 15px 'Courier New', monospace";
+  ctx.font = "bold 17px 'Courier New', monospace";
   ctx.fillText("GRAND TOTAL:", paddingX, y);
   ctx.textAlign = "right";
-  ctx.font = "bold 17px 'Courier New', monospace";
+  ctx.font = "bold 19px 'Courier New', monospace";
   ctx.fillText(`Rs. ${order.total_amount.toLocaleString()}`, canvasWidth - paddingX, y);
-  y += 26;
+  y += 28;
 
   drawDoubleLine(y);
-  y += 16;
+  y += 18;
 
   // 7. Footer Notice
   ctx.textAlign = "center";
-  ctx.font = "bold 11px 'Courier New', monospace";
+  ctx.font = "bold 13px 'Courier New', monospace";
   ctx.fillText("*** SHUKRIYA / THANK YOU ***", canvasWidth / 2, y);
-  y += 16;
+  y += 18;
 
-  ctx.font = "9.5px 'Courier New', monospace";
-  ctx.fillText("Genuine Mobile Spare Parts Guaranteed", canvasWidth / 2, y);
-  y += 14;
+  ctx.font = "bold 11px 'Courier New', monospace";
+  ctx.fillText("Tested Genuine Spare Parts Guaranteed", canvasWidth / 2, y);
+  y += 16;
   ctx.fillText("No returns/exchange without original bill slip.", canvasWidth / 2, y);
-  y += 14;
+  y += 16;
   ctx.fillText("Zubair Mobile | Gujranwala | 0345-8032600", canvasWidth / 2, y);
-  y += 20;
+  y += 22;
 
   // Simulated POS Barcode
-  ctx.font = "16px monospace";
+  ctx.font = "18px monospace";
   ctx.fillText(`||| | ||||| |||| || |||||| | |||`, canvasWidth / 2, y);
-  y += 16;
-  ctx.font = "10px 'Courier New', monospace";
+  y += 18;
+  ctx.font = "bold 12px 'Courier New', monospace";
   ctx.fillText(`* ${order.order_number} *`, canvasWidth / 2, y);
 
   // 8. Convert to JPEG blob and download
@@ -272,7 +279,7 @@ export async function generateReceiptJpeg(
 
 /**
  * Print order directly to standard Thermal POS Printer
- * Specially formatted for 68mm (and compatible with 58mm / 80mm rolls)
+ * Formatted with Large, Crisp, Bold text specially for 68mm rolls (and compatible with 58mm / 80mm)
  */
 export function printThermalReceipt(
   order: Order,
@@ -291,7 +298,7 @@ export function printThermalReceipt(
     minute: "2-digit",
   });
 
-  const printWindow = window.open("", "_blank", "width=400,height=600");
+  const printWindow = window.open("", "_blank", "width=440,height=650");
   if (!printWindow) {
     alert("Please allow popups to print the thermal receipt.");
     return;
@@ -348,14 +355,15 @@ export function printThermalReceipt(
 
           body {
             font-family: 'Courier New', Courier, monospace, monospace;
-            font-size: 10px;
-            line-height: 1.25;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.35;
             color: #000000;
             background: #ffffff;
             width: ${bodyCssWidth};
             max-width: ${bodyCssWidth};
             margin: 0 auto;
-            padding: 4px 2px;
+            padding: 4px 1px;
             word-break: break-word;
             overflow: hidden;
           }
@@ -363,18 +371,18 @@ export function printThermalReceipt(
           .text-center { text-align: center; }
           .text-right { text-align: right; }
           .text-left { text-align: left; }
-          .font-bold { font-weight: bold; }
+          .font-bold { font-weight: 900; }
           .nowrap { white-space: nowrap; }
 
           .divider {
-            border-top: 1px dashed #000000;
-            margin: 4px 0;
+            border-top: 1.5px dashed #000000;
+            margin: 5px 0;
             width: 100%;
           }
 
           .double-divider {
-            border-top: 2px solid #000000;
-            margin: 4px 0;
+            border-top: 2.5px solid #000000;
+            margin: 5px 0;
             width: 100%;
           }
 
@@ -386,90 +394,107 @@ export function printThermalReceipt(
           }
 
           .logo-img {
-            max-width: 48px;
-            max-height: 48px;
+            max-width: 55px;
+            max-height: 55px;
             object-fit: contain;
             margin: 0 auto 3px auto;
             display: block;
           }
 
           .shop-title {
-            font-size: 16px;
+            font-size: 21px;
             font-weight: 900;
             letter-spacing: 0.5px;
             line-height: 1.1;
           }
 
           .shop-sub {
-            font-size: 9px;
-            font-weight: bold;
-            margin-top: 1px;
+            font-size: 11.5px;
+            font-weight: 900;
+            margin-top: 2px;
           }
 
           .shop-addr {
-            font-size: 8.5px;
+            font-size: 11px;
+            font-weight: 700;
             margin-top: 2px;
-            line-height: 1.2;
+            line-height: 1.25;
           }
 
           .shop-phone {
-            font-size: 10px;
-            font-weight: bold;
-            margin-top: 2px;
+            font-size: 13.5px;
+            font-weight: 900;
+            margin-top: 3px;
           }
 
           .meta-section {
-            font-size: 9.5px;
-            line-height: 1.3;
-            margin: 3px 0;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.35;
+            margin: 4px 0;
+          }
+
+          .cargo-banner {
+            border: 1.5px solid #000000;
+            padding: 3px 4px;
+            margin: 4px 0;
+            font-size: 11.5px;
+            font-weight: 900;
+            text-align: left;
           }
 
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9.5px;
-            margin: 2px 0;
+            font-size: 12px;
+            font-weight: 700;
+            margin: 3px 0;
           }
 
           th {
-            border-bottom: 1px dashed #000000;
-            padding: 2px 0;
-            font-weight: bold;
-            font-size: 9px;
+            border-bottom: 2px solid #000000;
+            padding: 3px 0;
+            font-weight: 900;
+            font-size: 12px;
           }
 
           td {
-            padding: 2.5px 0;
+            padding: 3px 0;
             vertical-align: top;
           }
 
           .col-qty {
-            width: 13%;
-            font-weight: bold;
+            width: 14%;
+            font-size: 13px;
+            font-weight: 900;
             text-align: left;
             white-space: nowrap;
           }
 
           .col-item {
-            width: 47%;
+            width: 46%;
             padding-right: 2px;
           }
 
           .item-name {
-            font-size: 9.5px;
-            line-height: 1.15;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.2;
             word-break: break-word;
           }
 
           .item-sku {
-            font-size: 8px;
-            color: #222222;
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #000000;
             margin-top: 1px;
           }
 
           .col-rate {
             width: 18%;
             text-align: right;
+            font-size: 11.5px;
+            font-weight: 700;
             white-space: nowrap;
             padding-right: 2px;
           }
@@ -477,26 +502,29 @@ export function printThermalReceipt(
           .col-total {
             width: 22%;
             text-align: right;
-            font-weight: bold;
+            font-size: 13px;
+            font-weight: 900;
             white-space: nowrap;
           }
 
           .grand-total {
-            font-size: 13px;
+            font-size: 16.5px;
             font-weight: 900;
             margin-top: 2px;
           }
 
           .footer-section {
-            font-size: 8.5px;
-            line-height: 1.2;
-            margin-top: 4px;
+            font-size: 10.5px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-top: 5px;
           }
 
           .barcode {
-            font-size: 13px;
+            font-size: 15px;
             letter-spacing: 2px;
-            margin-top: 4px;
+            margin-top: 5px;
+            font-weight: bold;
           }
         </style>
       </head>
@@ -512,7 +540,7 @@ export function printThermalReceipt(
 
         <div class="divider"></div>
 
-        <!-- Order & Customer Meta -->
+        <!-- Order & Customer Meta (Large & Clear) -->
         <div class="meta-section">
           <div class="flex-between">
             <span class="font-bold">ORDER #${order.order_number}</span>
@@ -524,14 +552,26 @@ export function printThermalReceipt(
           <div><strong>ADDRESS:</strong> ${order.customer_address}</div>
         </div>
 
+        <!-- Cargo Dispatch Notice on Bill if available -->
+        ${
+          order.cargo_name
+            ? `
+          <div class="cargo-banner">
+            <div>🚚 <strong>CARGO:</strong> ${order.cargo_name.toUpperCase()}</div>
+            ${order.tracking_number ? `<div>📦 <strong>BILTY / TRACKING #:</strong> ${order.tracking_number}</div>` : ""}
+          </div>
+        `
+            : ""
+        }
+
         <div class="double-divider"></div>
 
-        <!-- Itemized Table -->
+        <!-- Itemized Table (Large Text) -->
         <table>
           <thead>
             <tr>
-              <th class="text-left" style="width: 13%;">QTY</th>
-              <th class="text-left" style="width: 47%;">ITEM</th>
+              <th class="text-left" style="width: 14%;">QTY</th>
+              <th class="text-left" style="width: 46%;">ITEM</th>
               <th class="text-right" style="width: 18%;">RATE</th>
               <th class="text-right" style="width: 22%;">TOTAL</th>
             </tr>
@@ -543,8 +583,8 @@ export function printThermalReceipt(
 
         <div class="double-divider"></div>
 
-        <!-- Totals -->
-        <div style="font-size: 9.5px; line-height: 1.35;">
+        <!-- Totals (Large Text) -->
+        <div style="font-size: 12px; font-weight: 700; line-height: 1.4;">
           <div class="flex-between">
             <span>TOTAL ITEMS:</span>
             <span class="font-bold">${order.total_items}</span>
@@ -570,11 +610,11 @@ export function printThermalReceipt(
 
         <!-- Footer Notice -->
         <div class="text-center footer-section">
-          <div class="font-bold" style="font-size: 10px;">*** SHUKRIYA / THANK YOU ***</div>
-          <div style="margin-top: 2px;">Genuine Tested Spare Parts Guaranteed</div>
+          <div class="font-bold" style="font-size: 12px;">*** SHUKRIYA / THANK YOU ***</div>
+          <div style="margin-top: 2px;">Tested Genuine Spare Parts Guaranteed</div>
           <div>No return or claim without original bill slip.</div>
           <div class="barcode">||| | |||| | |||| ||||</div>
-          <div>* ${order.order_number} *</div>
+          <div style="font-size: 11.5px; font-weight: bold; margin-top: 2px;">* ${order.order_number} *</div>
         </div>
 
         <script>

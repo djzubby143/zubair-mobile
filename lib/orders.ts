@@ -21,11 +21,16 @@ export interface Order {
   total_amount: number;
   status: "pending" | "confirmed" | "dispatched" | "completed";
   created_at: string;
+  // Cargo Delivery & Tracking details
+  cargo_name?: string;
+  tracking_number?: string;
+  dispatch_date?: string;
+  customer_id?: string;
 }
 
 export const STORAGE_KEY_ORDERS = "zubair_mobile_orders";
 
-// Initial demo order for preview
+// Initial demo orders for preview
 export const INITIAL_ORDERS: Order[] = [
   {
     id: "ord-demo-1",
@@ -42,8 +47,11 @@ export const INITIAL_ORDERS: Order[] = [
     ],
     total_items: 17,
     total_amount: 8700,
-    status: "confirmed",
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    status: "dispatched",
+    cargo_name: "Daewoo Cargo Express",
+    tracking_number: "DW-982410-LHR",
+    dispatch_date: new Date(Date.now() - 3600000 * 4).toISOString(),
+    created_at: new Date(Date.now() - 3600000 * 6).toISOString(),
   },
 ];
 
@@ -79,6 +87,10 @@ export async function saveOrder(order: Order): Promise<void> {
         total_items: order.total_items,
         total_amount: order.total_amount,
         status: order.status,
+        cargo_name: order.cargo_name || null,
+        tracking_number: order.tracking_number || null,
+        dispatch_date: order.dispatch_date || null,
+        customer_id: order.customer_id || null,
       },
     ]);
   } catch (err) {
@@ -106,6 +118,34 @@ export function getOrders(): Order[] {
 }
 
 /**
+ * Get orders for a specific logged-in customer
+ */
+export function getCustomerOrders(identifier: {
+  customerId?: string;
+  phone?: string;
+  username?: string;
+}): Order[] {
+  const allOrders = getOrders();
+  if (!identifier.customerId && !identifier.phone && !identifier.username) {
+    return [];
+  }
+
+  const cleanPhone = identifier.phone?.replace(/[^0-9]/g, "");
+
+  return allOrders.filter((order) => {
+    if (identifier.customerId && order.customer_id === identifier.customerId) return true;
+    if (identifier.username && order.customer_id === identifier.username) return true;
+    if (cleanPhone && order.customer_phone) {
+      const orderPhoneClean = order.customer_phone.replace(/[^0-9]/g, "");
+      if (orderPhoneClean && (orderPhoneClean.includes(cleanPhone) || cleanPhone.includes(orderPhoneClean))) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
  * Update an order's status
  */
 export function updateOrderStatus(orderId: string, newStatus: Order["status"]): void {
@@ -118,5 +158,37 @@ export function updateOrderStatus(orderId: string, newStatus: Order["status"]): 
     window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: updated }));
   } catch (err) {
     console.error("Failed to update order status:", err);
+  }
+}
+
+/**
+ * Update an order's cargo dispatch details and tracking number
+ */
+export function updateOrderDispatch(
+  orderId: string,
+  cargoName: string,
+  trackingNumber: string,
+  status: Order["status"] = "dispatched"
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const orders = getOrders();
+    const dispatchDate = new Date().toISOString();
+    const updated = orders.map((o) =>
+      o.id === orderId
+        ? {
+            ...o,
+            cargo_name: cargoName.trim(),
+            tracking_number: trackingNumber.trim(),
+            dispatch_date: dispatchDate,
+            status,
+          }
+        : o
+    );
+    localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updated));
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: updated }));
+  } catch (err) {
+    console.error("Failed to update order dispatch details:", err);
   }
 }
