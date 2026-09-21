@@ -14,7 +14,8 @@ export interface Product {
   sku: string;
   category_id?: string | null;
   category?: Category | null;
-  price: number;
+  price: number; // Wholesale / Selling Price
+  purchase_price?: number | null; // Cost / Purchase Price (Admin-only)
   stock_quantity: number;
   short_description?: string | null;
   description?: string | null;
@@ -29,6 +30,7 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
+  purchase_price?: number | null;
   image_url?: string | null;
   quantity: number;
   stock_quantity: number;

@@ -96,6 +96,7 @@ export default function CartPage() {
         id: i.id,
         name: i.name,
         price: i.price,
+        purchase_price: i.purchase_price ?? undefined,
         quantity: i.quantity,
         sku: i.sku,
       })),

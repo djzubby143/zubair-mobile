@@ -27,6 +27,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     category_id: "cat-1",
     category: { id: "cat-1", name: "LCD & Touch Units", slug: "lcd-units" },
     price: 2650,
+    purchase_price: 1950,
     stock_quantity: 45,
     is_active: true,
     featured: true,
@@ -39,6 +40,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     category_id: "cat-1",
     category: { id: "cat-1", name: "LCD & Touch Units", slug: "lcd-units" },
     price: 2850,
+    purchase_price: 2100,
     stock_quantity: 30,
     is_active: true,
     featured: true,
@@ -51,6 +53,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     category_id: "cat-3",
     category: { id: "cat-3", name: "OCA Glass & Lens", slug: "oca-glass" },
     price: 450,
+    purchase_price: 280,
     stock_quantity: 4, // Low stock demo
     is_active: true,
     featured: false,
@@ -63,6 +66,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     category_id: "cat-2",
     category: { id: "cat-2", name: "Charging Flex & Boards", slug: "charging-flex" },
     price: 650,
+    purchase_price: 420,
     stock_quantity: 65,
     is_active: true,
     featured: false,
@@ -75,6 +79,7 @@ const SAMPLE_PRODUCTS: Product[] = [
     category_id: "cat-1",
     category: { id: "cat-1", name: "LCD & Touch Units", slug: "lcd-units" },
     price: 2150,
+    purchase_price: 1600,
     stock_quantity: 0, // Out of stock demo
     is_active: false,
     featured: false,
@@ -276,7 +281,7 @@ export default function AdminProductsPage() {
                   <th className="py-3.5 px-4 sm:px-6">Image</th>
                   <th className="py-3.5 px-4">Part Title & SKU</th>
                   <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Wholesale Rate</th>
+                  <th className="py-3.5 px-4">Rates & Profit</th>
                   <th className="py-3.5 px-4">Stock Status</th>
                   <th className="py-3.5 px-4">Store Status</th>
                   <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
@@ -286,6 +291,9 @@ export default function AdminProductsPage() {
                 {filteredProducts.map((product) => {
                   const inStock = product.stock_quantity > 0;
                   const isLow = product.stock_quantity > 0 && product.stock_quantity <= 5;
+                  const unitCost = product.purchase_price ?? null;
+                  const unitProfit = unitCost !== null ? product.price - unitCost : null;
+                  const marginPct = unitCost !== null && product.price > 0 ? ((unitProfit! / product.price) * 100).toFixed(0) : null;
 
                   return (
                     <tr key={product.id} className="hover:bg-slate-50/70 transition-colors">
@@ -329,9 +337,23 @@ export default function AdminProductsPage() {
                         </span>
                       </td>
 
-                      {/* Wholesale Price */}
-                      <td className="py-3.5 px-4 font-black text-primary text-xs sm:text-sm">
-                        Rs. {product.price.toLocaleString("en-PK")}
+                      {/* Rates & Profit */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-black text-primary text-xs sm:text-sm">
+                          Rs. {product.price.toLocaleString("en-PK")}
+                        </div>
+                        {unitCost !== null ? (
+                          <div className="mt-0.5 space-y-0.5">
+                            <div className="text-[10px] text-slate-500 font-medium">
+                              Cost: <span className="font-mono font-bold text-slate-700">Rs. {unitCost.toLocaleString("en-PK")}</span>
+                            </div>
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              +{unitProfit! >= 0 ? `Rs. ${unitProfit!.toLocaleString("en-PK")}` : `-Rs. ${Math.abs(unitProfit!).toLocaleString("en-PK")}`} ({marginPct}%)
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">No cost set</span>
+                        )}
                       </td>
 
                       {/* Stock Badge */}

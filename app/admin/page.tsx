@@ -15,14 +15,18 @@ import {
   Users,
   UserPlus,
   Image as ImageIcon,
+  Receipt,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getOrders, calculateOrderProfit } from "@/lib/orders";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
     categoriesCount: 5,
     productsCount: 12,
     usersCount: 3,
+    ordersCount: 0,
+    totalProfit: 0,
     loading: true,
   });
 
@@ -51,15 +55,29 @@ export default function AdminDashboardPage() {
           }
         }
 
+        const ordersList = getOrders();
+        const profit = ordersList.reduce((sum, o) => sum + calculateOrderProfit(o).totalProfit, 0);
+
         setStats({
           categoriesCount: catCount ?? 5,
           productsCount: prodCount ?? 12,
           usersCount: localUsersCount ?? 3,
+          ordersCount: ordersList.length,
+          totalProfit: profit,
           loading: false,
         });
       } catch (err) {
         console.warn("Failed to load live counts, using defaults:", err);
-        setStats({ categoriesCount: 5, productsCount: 12, usersCount: 3, loading: false });
+        const ordersList = getOrders();
+        const profit = ordersList.reduce((sum, o) => sum + calculateOrderProfit(o).totalProfit, 0);
+        setStats({
+          categoriesCount: 5,
+          productsCount: 12,
+          usersCount: 3,
+          ordersCount: ordersList.length,
+          totalProfit: profit,
+          loading: false,
+        });
       }
     }
 
@@ -83,8 +101,15 @@ export default function AdminDashboardPage() {
           </p>
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
-              href="/admin/banner"
+              href="/admin/orders"
               className="inline-flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-colors"
+            >
+              <Receipt className="w-4 h-4" />
+              <span>Orders & Bills ({stats.ordersCount})</span>
+            </Link>
+            <Link
+              href="/admin/banner"
+              className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
             >
               <ImageIcon className="w-4 h-4" />
               <span>Hero Offer Banner</span>
@@ -120,7 +145,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Metric 1: Registered Users */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
@@ -206,6 +231,28 @@ export default function AdminDashboardPage() {
           </div>
           <div className="w-12 h-12 rounded-2xl bg-whatsapp/10 text-whatsapp flex items-center justify-center">
             <PhoneCall className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Metric 5: Net Profit & Orders */}
+        <div className="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-white rounded-2xl border border-emerald-300 p-5 shadow-xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+              Total Net Profit
+            </span>
+            <div className="text-2xl font-black text-emerald-700">
+              Rs. {stats.totalProfit.toLocaleString("en-PK")}
+            </div>
+            <Link
+              href="/admin/orders"
+              className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline pt-1"
+            >
+              <span>View {stats.ordersCount} Orders</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+            <TrendingUp className="w-6 h-6" />
           </div>
         </div>
       </div>

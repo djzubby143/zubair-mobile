@@ -6,6 +6,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   sku?: string;
+  purchase_price?: number; // Cost / Purchase Price (Admin-only)
 }
 
 export interface Order {
@@ -19,6 +20,8 @@ export interface Order {
   items: OrderItem[];
   total_items: number;
   total_amount: number;
+  total_cost?: number; // Total Purchase Cost for Admin
+  total_profit?: number; // Total Net Profit (total_amount - total_cost)
   status: "pending" | "confirmed" | "dispatched" | "completed";
   created_at: string;
   // Cargo Delivery & Tracking details
@@ -26,6 +29,34 @@ export interface Order {
   tracking_number?: string;
   dispatch_date?: string;
   customer_id?: string;
+}
+
+/**
+ * Calculate net profit, cost, and margin percent for an order
+ */
+export function calculateOrderProfit(order: Order): {
+  totalCost: number;
+  totalProfit: number;
+  marginPercent: number;
+} {
+  let costSum = 0;
+  for (const item of order.items) {
+    // If purchase_price is available use it, else default to realistic 78% of sale price
+    const unitCost =
+      item.purchase_price !== undefined && item.purchase_price !== null && item.purchase_price > 0
+        ? item.purchase_price
+        : Math.round(item.price * 0.78);
+    costSum += unitCost * item.quantity;
+  }
+
+  const profit = Math.max(0, order.total_amount - costSum);
+  const margin = order.total_amount > 0 ? (profit / order.total_amount) * 100 : 0;
+
+  return {
+    totalCost: costSum,
+    totalProfit: profit,
+    marginPercent: Math.round(margin * 10) / 10,
+  };
 }
 
 export const STORAGE_KEY_ORDERS = "zubair_mobile_orders";
@@ -41,12 +72,14 @@ export const INITIAL_ORDERS: Order[] = [
     shop_name: "Ali Mobile Repairing",
     order_notes: "Urgent delivery via local cargo please",
     items: [
-      { id: "p-1", name: "VIVO Y20 SUNLONG BLACK UNIT", price: 2650, quantity: 2, sku: "ZB-LCD-V20S" },
-      { id: "p-9", name: "VIVO Y20 IC CHARGING FLEX", price: 320, quantity: 5, sku: "ZB-FLX-VY20" },
-      { id: "p-6", name: "VIVO Y20 BLACK OCA GLASS", price: 180, quantity: 10, sku: "ZB-OCA-VY20" },
+      { id: "p-1", name: "VIVO Y20 SUNLONG BLACK UNIT", price: 2650, purchase_price: 2050, quantity: 2, sku: "ZB-LCD-V20S" },
+      { id: "p-9", name: "VIVO Y20 IC CHARGING FLEX", price: 320, purchase_price: 220, quantity: 5, sku: "ZB-FLX-VY20" },
+      { id: "p-6", name: "VIVO Y20 BLACK OCA GLASS", price: 180, purchase_price: 110, quantity: 10, sku: "ZB-OCA-VY20" },
     ],
     total_items: 17,
     total_amount: 8700,
+    total_cost: 6300,
+    total_profit: 2400,
     status: "dispatched",
     cargo_name: "Daewoo Cargo Express",
     tracking_number: "DW-982410-LHR",
@@ -59,12 +92,19 @@ export const INITIAL_ORDERS: Order[] = [
  * Save an order to localStorage and optionally to Supabase if table exists
  */
 export async function saveOrder(order: Order): Promise<void> {
+  const { totalCost, totalProfit } = calculateOrderProfit(order);
+  const orderWithProfit: Order = {
+    ...order,
+    total_cost: order.total_cost ?? totalCost,
+    total_profit: order.total_profit ?? totalProfit,
+  };
+
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_ORDERS);
       const orders: Order[] = stored ? JSON.parse(stored) : [];
       // Prepend so newest is first
-      orders.unshift(order);
+      orders.unshift(orderWithProfit);
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: orders }));
@@ -77,20 +117,22 @@ export async function saveOrder(order: Order): Promise<void> {
   try {
     await supabase.from("orders").insert([
       {
-        id: order.id,
-        order_number: order.order_number,
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
-        customer_address: order.customer_address,
-        shop_name: order.shop_name || null,
-        items: order.items,
-        total_items: order.total_items,
-        total_amount: order.total_amount,
-        status: order.status,
-        cargo_name: order.cargo_name || null,
-        tracking_number: order.tracking_number || null,
-        dispatch_date: order.dispatch_date || null,
-        customer_id: order.customer_id || null,
+        id: orderWithProfit.id,
+        order_number: orderWithProfit.order_number,
+        customer_name: orderWithProfit.customer_name,
+        customer_phone: orderWithProfit.customer_phone,
+        customer_address: orderWithProfit.customer_address,
+        shop_name: orderWithProfit.shop_name || null,
+        items: orderWithProfit.items,
+        total_items: orderWithProfit.total_items,
+        total_amount: orderWithProfit.total_amount,
+        total_cost: orderWithProfit.total_cost,
+        total_profit: orderWithProfit.total_profit,
+        status: orderWithProfit.status,
+        cargo_name: orderWithProfit.cargo_name || null,
+        tracking_number: orderWithProfit.tracking_number || null,
+        dispatch_date: orderWithProfit.dispatch_date || null,
+        customer_id: orderWithProfit.customer_id || null,
       },
     ]);
   } catch (err) {

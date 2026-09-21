@@ -22,8 +22,10 @@ import {
   Send,
   Copy,
   Check,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react";
-import { Order, getOrders, updateOrderStatus, updateOrderDispatch } from "@/lib/orders";
+import { Order, getOrders, updateOrderStatus, updateOrderDispatch, calculateOrderProfit } from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
 export default function AdminOrdersPage() {
@@ -131,6 +133,9 @@ export default function AdminOrdersPage() {
 
   // Analytics
   const totalRevenue = orders.reduce((sum, o) => sum + o.total_amount, 0);
+  const totalProfit = orders.reduce((sum, o) => sum + calculateOrderProfit(o).totalProfit, 0);
+  const totalCost = orders.reduce((sum, o) => sum + calculateOrderProfit(o).totalCost, 0);
+  const overallMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : "0.0";
   const pendingCount = orders.filter((o) => o.status === "pending").length;
   const completedCount = orders.filter((o) => o.status === "completed" || o.status === "confirmed").length;
 
@@ -144,7 +149,7 @@ export default function AdminOrdersPage() {
             <span>Customer Orders & POS Bills</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage wholesale orders, download thermal JPEG bills, and print slips on 80mm/58mm POS receipt printers.
+            Manage wholesale orders, track profit margins, download thermal JPEG bills, and print slips on 80mm/68mm/58mm POS receipt printers.
           </p>
         </div>
 
@@ -157,8 +162,8 @@ export default function AdminOrdersPage() {
         </button>
       </div>
 
-      {/* Analytics KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Analytics KPI Row (4 Cards including Net Profit) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-red-50 text-[#dc2626] flex items-center justify-center shrink-0">
             <Receipt className="w-6 h-6" />
@@ -180,12 +185,29 @@ export default function AdminOrdersPage() {
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Order Volume</p>
-            <p className="text-2xl font-black text-slate-900">Rs. {totalRevenue.toLocaleString("en-PK")}</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Sales Volume</p>
+            <p className="text-xl font-black text-slate-900">Rs. {totalRevenue.toLocaleString("en-PK")}</p>
+          </div>
+        </div>
+
+        {/* Net Profit Card */}
+        <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white p-4 sm:p-5 rounded-2xl border border-emerald-200 shadow-2xs flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Total Net Profit</p>
+              <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded">
+                {overallMargin}%
+              </span>
+            </div>
+            <p className="text-xl font-black text-emerald-700">Rs. {totalProfit.toLocaleString("en-PK")}</p>
+            <p className="text-[10px] text-slate-400 font-medium">Cost: Rs. {totalCost.toLocaleString("en-PK")}</p>
           </div>
         </div>
       </div>
@@ -415,48 +437,83 @@ export default function AdminOrdersPage() {
 
                   {/* Items List (8 cols) */}
                   <div className="lg:col-span-8 space-y-3">
-                    <p className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center justify-between">
-                      <span>Order Items ({order.total_items})</span>
-                      <span className="text-[#16a34a] font-black text-sm">
-                        Total: Rs. {order.total_amount.toLocaleString("en-PK")}
-                      </span>
-                    </p>
+                    {(() => {
+                      const profitData = calculateOrderProfit(order);
+                      return (
+                        <>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <p className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
+                              Order Items ({order.total_items})
+                            </p>
+                            
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-bold">
+                                Total: Rs. {order.total_amount.toLocaleString("en-PK")}
+                              </span>
+                              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5 shadow-2xs">
+                                <span>💰 Net Profit:</span>
+                                <span className="font-mono text-emerald-700 font-black">+Rs. {profitData.totalProfit.toLocaleString("en-PK")}</span>
+                                <span className="text-[10px] bg-emerald-200/70 px-1 rounded text-emerald-900 font-mono">({profitData.marginPercent}%)</span>
+                              </span>
+                              <span className="text-slate-400 text-[11px]">
+                                (Cost: Rs. {profitData.totalCost.toLocaleString("en-PK")})
+                              </span>
+                            </div>
+                          </div>
 
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 text-[11px]">
-                          <tr>
-                            <th className="py-2 px-3">Item Description</th>
-                            <th className="py-2 px-3 text-center">Qty</th>
-                            <th className="py-2 px-3 text-right">Rate</th>
-                            <th className="py-2 px-3 text-right">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {order.items.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50/50">
-                              <td className="py-2 px-3">
-                                <span className="font-semibold text-slate-800">{item.name}</span>
-                                {item.sku && (
-                                  <span className="block text-[10px] text-slate-400 font-mono">
-                                    SKU: {item.sku}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2 px-3 text-center font-bold text-slate-700">
-                                {item.quantity}x
-                              </td>
-                              <td className="py-2 px-3 text-right text-slate-600">
-                                Rs. {item.price.toLocaleString("en-PK")}
-                              </td>
-                              <td className="py-2 px-3 text-right font-bold text-slate-900">
-                                Rs. {(item.price * item.quantity).toLocaleString("en-PK")}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          <div className="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+                            <table className="w-full text-xs text-left">
+                              <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 text-[11px]">
+                                <tr>
+                                  <th className="py-2 px-3">Item Description</th>
+                                  <th className="py-2 px-3 text-center">Qty</th>
+                                  <th className="py-2 px-3 text-right">Sale Rate</th>
+                                  <th className="py-2 px-3 text-right text-emerald-700 bg-emerald-50/50">Cost Rate</th>
+                                  <th className="py-2 px-3 text-right">Subtotal</th>
+                                  <th className="py-2 px-3 text-right text-emerald-700 bg-emerald-50/50">Net Profit</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {order.items.map((item, idx) => {
+                                  const itemCost = item.purchase_price ?? Math.round(item.price * 0.78);
+                                  const lineTotal = item.price * item.quantity;
+                                  const lineCost = itemCost * item.quantity;
+                                  const lineProfit = lineTotal - lineCost;
+
+                                  return (
+                                    <tr key={idx} className="hover:bg-slate-50/50">
+                                      <td className="py-2 px-3">
+                                        <span className="font-semibold text-slate-800">{item.name}</span>
+                                        {item.sku && (
+                                          <span className="block text-[10px] text-slate-400 font-mono">
+                                            SKU: {item.sku}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-2 px-3 text-center font-bold text-slate-700">
+                                        {item.quantity}x
+                                      </td>
+                                      <td className="py-2 px-3 text-right text-slate-600">
+                                        Rs. {item.price.toLocaleString("en-PK")}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-mono text-slate-600 bg-emerald-50/20">
+                                        Rs. {itemCost.toLocaleString("en-PK")}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-bold text-slate-900">
+                                        Rs. {lineTotal.toLocaleString("en-PK")}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-mono font-bold text-emerald-700 bg-emerald-50/20">
+                                        +Rs. {lineProfit.toLocaleString("en-PK")}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

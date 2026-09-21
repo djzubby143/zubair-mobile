@@ -32,6 +32,7 @@ export default function EditProductPage() {
   const [sku, setSku] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [price, setPrice] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
@@ -78,6 +79,7 @@ export default function EditProductPage() {
           setSlug("vivo-y20-sunlong-black-unit");
           setSku("ZB-LCD-V20S");
           setPrice("2650");
+          setPurchasePrice("1950");
           setStockQuantity("45");
           setShortDescription("Tested Sunlong high-clarity LCD screen assembly.");
           setIsActive(true);
@@ -87,6 +89,7 @@ export default function EditProductPage() {
           setSku(prodData.sku || "");
           setCategoryId(prodData.category_id || "");
           setPrice(String(prodData.price || ""));
+          setPurchasePrice(prodData.purchase_price ? String(prodData.purchase_price) : "");
           setStockQuantity(String(prodData.stock_quantity ?? ""));
           setShortDescription(prodData.short_description || "");
           setDescription(prodData.description || "");
@@ -166,12 +169,14 @@ export default function EditProductPage() {
         }
       }
 
+      const numPurchasePrice = purchasePrice ? parseFloat(purchasePrice) : null;
       const updatedRecord = {
         name: name.trim(),
         slug: slug.trim(),
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
         price: numPrice,
+        purchase_price: numPurchasePrice,
         stock_quantity: numStock,
         short_description: shortDescription.trim() || null,
         description: description.trim() || null,
@@ -180,13 +185,18 @@ export default function EditProductPage() {
         featured: isFeatured,
       };
 
-      const { error: updateError } = await supabase
+      let updateResponse = await supabase
         .from("products")
         .update(updatedRecord)
         .eq("id", productId);
 
-      if (updateError) {
-        console.warn("Update error in Supabase:", updateError);
+      if (updateResponse.error) {
+        console.warn("Update error in Supabase:", updateResponse.error);
+        if (updateResponse.error.message && updateResponse.error.message.includes("purchase_price")) {
+          const fallbackRecord = { ...updatedRecord };
+          delete (fallbackRecord as Record<string, unknown>).purchase_price;
+          updateResponse = await supabase.from("products").update(fallbackRecord).eq("id", productId);
+        }
       }
 
       setSuccessToast(true);
@@ -311,10 +321,10 @@ export default function EditProductPage() {
               </select>
             </div>
 
-            {/* Price (PKR) */}
+            {/* Selling Price (PKR) */}
             <div className="space-y-1">
               <label className="font-bold text-charcoal block">
-                Wholesale Price in PKR *
+                Wholesale Selling Price (PKR) *
               </label>
               <div className="relative">
                 <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">
@@ -332,8 +342,55 @@ export default function EditProductPage() {
               </div>
             </div>
 
-            {/* Stock Quantity */}
+            {/* Purchase Price (PKR) - Admin Only */}
             <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-charcoal">
+                  Purchase Price / Cost (PKR)
+                </label>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  خریداری ریٹ • Admin Only
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">
+                  Rs.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  placeholder="e.g. 1950"
+                  className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-emerald-300 bg-emerald-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Live Profit Preview Banner */}
+            {price && purchasePrice && (
+              <div className="sm:col-span-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💰</span>
+                  <div>
+                    <span className="text-slate-600 font-medium">Estimated Net Profit per Unit: </span>
+                    <strong className={`font-mono text-sm ${parseFloat(price) - parseFloat(purchasePrice) >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                      {parseFloat(price) - parseFloat(purchasePrice) >= 0 ? "+" : ""}
+                      Rs. {(parseFloat(price) - parseFloat(purchasePrice)).toLocaleString("en-PK")}
+                    </strong>
+                  </div>
+                </div>
+                {parseFloat(price) > 0 && (
+                  <span className="font-mono font-bold text-emerald-800 bg-emerald-200/70 px-2 py-0.5 rounded text-[11px]">
+                    Margin: {(((parseFloat(price) - parseFloat(purchasePrice)) / parseFloat(price)) * 100).toFixed(1)}%
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Stock Quantity */}
+            <div className="space-y-1 sm:col-span-2">
               <label className="font-bold text-charcoal block">Stock Quantity *</label>
               <input
                 type="number"

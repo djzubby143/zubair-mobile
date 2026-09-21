@@ -72,6 +72,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           id: product.id,
           name: product.name,
           price: Number(product.price) || 0,
+          purchase_price: "purchase_price" in product ? (product.purchase_price ?? null) : null,
           image_url: product.image_url ?? null,
           quantity: quantity,
           stock_quantity: "stock_quantity" in product ? product.stock_quantity : 99,
