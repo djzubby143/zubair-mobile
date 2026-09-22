@@ -12,11 +12,12 @@ export interface LiveCategory {
 // Complete base category catalog matching reference layout with realistic subcategories
 export const DEFAULT_CATEGORIES: LiveCategory[] = [
   {
-    id: "cat-sidekey",
-    name: "Sidekey",
-    slug: "sidekey",
-    description: "Mobile side button plastic buttons, volume keys & power keys",
-    subcategories: ["Power Key", "Volume Key", "Key Flex Ribbon", "SIM Tray"],
+    id: "cat-sidekeys",
+    name: "Side Keys",
+    slug: "side-keys",
+    description:
+      "Original mobile power and volume side key buttons for Samsung, Vivo, Infinix, Oppo, Tecno, Redmi, and Itel.",
+    subcategories: ["Samsung", "Vivo", "Infinix", "Oppo", "Tecno", "Redmi", "Itel", "Power Key", "Volume Key"],
   },
   {
     id: "cat-lcd-units",

@@ -142,11 +142,20 @@ function HomeContent() {
 
     return products.filter((p) => {
       const catName = (p.category?.name || "").toLowerCase();
+      const catSlug = (p.category?.slug || "").toLowerCase();
       const prodName = p.name.toLowerCase();
       const desc = (p.short_description || "").toLowerCase();
 
-      // Direct category name match
-      if (catName.includes(query)) return true;
+      // Direct category name or slug match
+      if (
+        catName === query ||
+        catSlug === query ||
+        catName.includes(query) ||
+        catSlug.includes(query) ||
+        (query.includes("side") && (catName.includes("side") || catSlug.includes("side") || prodName.includes("side")))
+      ) {
+        return true;
+      }
 
       // Smart subcategory matching
       if (query.includes("incell")) {

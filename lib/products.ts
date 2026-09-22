@@ -1,6 +1,7 @@
 import { Product } from "./types";
+import { SIDE_KEY_PRODUCTS } from "./sidekeysData";
 
-export const DEFAULT_CATALOG_PRODUCTS: Product[] = [
+const BASE_CATALOG_PRODUCTS: Product[] = [
   // Samsung Charging Flexes (Specifically requested by user)
   {
     id: "p-flx-sam-1",
@@ -246,6 +247,11 @@ export const DEFAULT_CATALOG_PRODUCTS: Product[] = [
     category: { id: "cat-lcd", name: "LCD UNIT", slug: "lcd-unit" },
     is_active: true,
   },
+];
+
+export const DEFAULT_CATALOG_PRODUCTS: Product[] = [
+  ...BASE_CATALOG_PRODUCTS,
+  ...SIDE_KEY_PRODUCTS,
 ];
 
 // Stopwords in Urdu, Roman Urdu & English to filter out
