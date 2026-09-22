@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { uploadProductImage } from "@/lib/storage";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getLiveCategories } from "@/lib/categories";
+import { saveProduct, getCustomProducts } from "@/lib/customProducts";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -73,9 +74,12 @@ export default function EditProductPage() {
           .single();
 
         if (prodError || !prodData) {
-          // If not in Supabase, check DEFAULT_CATALOG_PRODUCTS (including all 240 Side Keys)
-          console.warn("Product not found in Supabase, searching catalog:", prodError);
-          const localMatch = DEFAULT_CATALOG_PRODUCTS.find(
+          // If not in Supabase, check custom products and DEFAULT_CATALOG_PRODUCTS
+          console.warn("Product not found in Supabase, searching custom & catalog:", prodError);
+          const customMatch = getCustomProducts().find(
+            (p) => p.id === productId || p.slug === productId || p.sku === productId
+          );
+          const localMatch = customMatch || DEFAULT_CATALOG_PRODUCTS.find(
             (p) => p.id === productId || p.slug === productId || p.sku === productId
           );
 
@@ -243,45 +247,21 @@ export default function EditProductPage() {
         featured: isFeatured,
       };
 
-      let updateResponse = await supabase
-        .from("products")
-        .update(updatedRecord)
-        .eq("id", productId);
+      const saveResult = await saveProduct({
+        id: productId,
+        ...updatedRecord,
+      });
 
-      if (updateResponse.error) {
-        console.warn("Update error in Supabase:", updateResponse.error);
-        if (
-          updateResponse.error.message &&
-          (updateResponse.error.message.includes("purchase_price") ||
-            updateResponse.error.message.includes("technician_price") ||
-            updateResponse.error.message.includes("retail_price") ||
-            updateResponse.error.message.includes("wholesale_price") ||
-            updateResponse.error.message.includes("min_order_quantity"))
-        ) {
-          const fallbackRecord = { ...updatedRecord };
-          if (updateResponse.error.message.includes("min_order_quantity")) {
-            delete (fallbackRecord as Record<string, unknown>).min_order_quantity;
-          }
-          if (updateResponse.error.message.includes("wholesale_price")) {
-            delete (fallbackRecord as Record<string, unknown>).wholesale_price;
-          }
-          if (updateResponse.error.message.includes("purchase_price")) {
-            delete (fallbackRecord as Record<string, unknown>).purchase_price;
-          }
-          if (updateResponse.error.message.includes("technician_price")) {
-            delete (fallbackRecord as Record<string, unknown>).technician_price;
-          }
-          if (updateResponse.error.message.includes("retail_price")) {
-            delete (fallbackRecord as Record<string, unknown>).retail_price;
-          }
-          updateResponse = await supabase.from("products").update(fallbackRecord).eq("id", productId);
-        }
+      if (!saveResult.success && saveResult.error) {
+        setFormError(saveResult.error);
+        setSubmitting(false);
+        return;
       }
 
       setSuccessToast(true);
       setTimeout(() => {
         router.push("/admin/products");
-      }, 1200);
+      }, 1000);
     } catch (err) {
       console.error("Save error:", err);
       setFormError("An unexpected error occurred while saving.");

@@ -16,6 +16,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
 import { resolveUserTier, sanitizeProductForTier } from "@/lib/pricingSecurity";
+import { getCustomProducts } from "@/lib/customProducts";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { Product } from "@/lib/types";
@@ -56,9 +57,12 @@ export default function ProductDetailPage() {
           console.warn("API product detail fallback:", apiErr);
         }
 
-        // Try local mock
-        const localMatch = DEFAULT_CATALOG_PRODUCTS.find(
-          (p) => p.slug === slug || p.id === slug
+        // Try local custom products first, then local catalog mock
+        const customMatch = getCustomProducts().find(
+          (p) => p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase())
+        );
+        const localMatch = customMatch || DEFAULT_CATALOG_PRODUCTS.find(
+          (p) => p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase())
         );
 
         // Try Supabase

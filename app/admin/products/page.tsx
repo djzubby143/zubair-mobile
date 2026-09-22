@@ -20,6 +20,7 @@ import { Category, Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getLiveCategories } from "@/lib/categories";
+import { getCustomProducts, getDeletedProductKeys, deleteProduct } from "@/lib/customProducts";
 
 const SAMPLE_PRODUCTS: Product[] = [
   {
@@ -117,38 +118,67 @@ export default function AdminProductsPage() {
         setCategories(liveCats as Category[]);
       }
 
-      // 2. Fetch Products with category relation from Supabase
+      // 2. Fetch server-persisted custom products
+      let serverCustoms: Product[] = [];
+      try {
+        const sRes = await fetch("/api/admin/products");
+        if (sRes.ok) {
+          const sJson = await sRes.json();
+          if (sJson.success && Array.isArray(sJson.customProducts)) {
+            serverCustoms = sJson.customProducts;
+          }
+        }
+      } catch (e) {
+        console.warn("Notice fetching server custom products:", e);
+      }
+
+      // 3. Fetch Products with category relation from Supabase
       const { data: prodData, error: prodError } = await supabase
         .from("products")
         .select("*, category:categories(*)")
         .order("created_at", { ascending: false });
 
       // Retrieve deleted product IDs / SKUs to avoid reviving deleted items
-      let deletedSet = new Set<string>();
-      if (typeof window !== "undefined") {
-        try {
-          const raw = localStorage.getItem("zubair_admin_deleted_products");
-          if (raw) {
-            const arr = JSON.parse(raw);
-            if (Array.isArray(arr)) {
-              deletedSet = new Set(arr.map((x: string) => String(x).toLowerCase()));
-            }
-          }
-        } catch {}
-      }
+      const deletedSet = getDeletedProductKeys();
+
+      // Retrieve local custom products
+      const localCustoms = getCustomProducts();
 
       const mergedList: Product[] = [];
       const seenKeys = new Set<string>();
 
-      // Put Supabase remote products first
+      // Put custom products FIRST (newly added products appear immediately at row 1)
+      const combinedCustoms = [...localCustoms];
+      for (const sc of serverCustoms) {
+        const scKey = (sc.sku || sc.slug || sc.id || sc.name).toLowerCase();
+        if (!combinedCustoms.some((c) => (c.sku || c.slug || c.id || c.name).toLowerCase() === scKey)) {
+          combinedCustoms.push(sc);
+        }
+      }
+
+      for (const item of combinedCustoms) {
+        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+        const idKey = (item.id || "").toLowerCase();
+        const nameLower = item.name.toLowerCase();
+        if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key)) {
+          mergedList.push(item);
+          seenKeys.add(key);
+          seenKeys.add(idKey);
+          seenKeys.add(nameLower);
+        }
+      }
+
+      // Put Supabase remote products
       if (!prodError && prodData && prodData.length > 0) {
         for (let i = 0; i < prodData.length; i++) {
           const item = prodData[i];
           const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+          const idKey = (item.id || "").toLowerCase();
           const nameLower = item.name.toLowerCase();
-          if (!deletedSet.has(item.id.toLowerCase()) && !deletedSet.has(key)) {
+          if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
             mergedList.push(item);
             seenKeys.add(key);
+            seenKeys.add(idKey);
             seenKeys.add(nameLower);
           }
         }
@@ -164,6 +194,7 @@ export default function AdminProductsPage() {
         if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
           mergedList.push(def);
           seenKeys.add(key);
+          seenKeys.add(idKey);
           seenKeys.add(nameLower);
         }
       }
@@ -179,6 +210,33 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     loadData();
+
+    // Event listeners for instant updates when a product is added or edited
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (
+        !e.key ||
+        e.key === "zubair_admin_custom_products" ||
+        e.key === "zubair_admin_deleted_products"
+      ) {
+        loadData();
+      }
+    };
+
+    const handleCustomUpdate = () => {
+      loadData();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorageUpdate);
+      window.addEventListener("zubair_products_updated", handleCustomUpdate);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", handleStorageUpdate);
+        window.removeEventListener("zubair_products_updated", handleCustomUpdate);
+      }
+    };
   }, []);
 
   const handleDeleteConfirm = async () => {
@@ -186,30 +244,8 @@ export default function AdminProductsPage() {
     setDeleting(true);
 
     try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", deleteTarget.id);
-
-      if (error) {
-        console.warn("Delete error from Supabase, removing from state:", error);
-      }
-
-      // Persist deletion locally so default catalog item stays deleted
-      if (typeof window !== "undefined") {
-        try {
-          const raw = localStorage.getItem("zubair_admin_deleted_products") || "[]";
-          const list = JSON.parse(raw);
-          if (Array.isArray(list)) {
-            list.push(deleteTarget.id);
-            if (deleteTarget.slug) list.push(deleteTarget.slug);
-            if (deleteTarget.sku) list.push(deleteTarget.sku);
-            localStorage.setItem("zubair_admin_deleted_products", JSON.stringify(list));
-          }
-        } catch {}
-      }
-
-      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      await deleteProduct(deleteTarget.id, deleteTarget.sku, deleteTarget.slug);
+      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id && p.sku !== deleteTarget.sku));
       showToast(`Part "${deleteTarget.name}" was deleted successfully.`);
       setDeleteTarget(null);
     } catch (err) {

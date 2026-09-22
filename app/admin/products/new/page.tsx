@@ -16,6 +16,7 @@ import { Category } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { uploadProductImage } from "@/lib/storage";
 import { getLiveCategories } from "@/lib/categories";
+import { saveProduct } from "@/lib/customProducts";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -210,63 +211,23 @@ export default function NewProductPage() {
         featured: isFeatured,
       };
 
-      let insertResponse = await supabase
-        .from("products")
-        .insert([newProductRecord]);
+      // 2. Save product through unified customProducts system (syncs Server API, Supabase, and localStorage)
+      const saveResult = await saveProduct(newProductRecord);
 
-      if (insertResponse.error) {
-        console.warn("Database insert error:", insertResponse.error);
-        // If column purchase_price, technician_price, retail_price, wholesale_price, or min_order_quantity doesn't exist on remote table schema, retry without it
-        if (
-          insertResponse.error.message &&
-          (insertResponse.error.message.includes("purchase_price") ||
-            insertResponse.error.message.includes("technician_price") ||
-            insertResponse.error.message.includes("retail_price") ||
-            insertResponse.error.message.includes("wholesale_price") ||
-            insertResponse.error.message.includes("min_order_quantity"))
-        ) {
-          const fallbackRecord = { ...newProductRecord };
-          if (insertResponse.error.message.includes("min_order_quantity")) {
-            delete (fallbackRecord as Record<string, unknown>).min_order_quantity;
-          }
-          if (insertResponse.error.message.includes("wholesale_price")) {
-            delete (fallbackRecord as Record<string, unknown>).wholesale_price;
-          }
-          if (insertResponse.error.message.includes("purchase_price")) {
-            delete (fallbackRecord as Record<string, unknown>).purchase_price;
-          }
-          if (insertResponse.error.message.includes("technician_price")) {
-            delete (fallbackRecord as Record<string, unknown>).technician_price;
-          }
-          if (insertResponse.error.message.includes("retail_price")) {
-            delete (fallbackRecord as Record<string, unknown>).retail_price;
-          }
-          insertResponse = await supabase.from("products").insert([fallbackRecord]);
-        }
-      }
-
-      if (insertResponse.error) {
-        const insertError = insertResponse.error;
-        // If unique constraint error on SKU or slug
-        if (insertError.message.includes("sku")) {
-          setFormError(`A product with SKU "${sku}" already exists.`);
-          setSubmitting(false);
-          return;
-        }
-        if (insertError.message.includes("slug")) {
-          setFormError(`A product with slug "${slug}" already exists. Please choose another.`);
-          setSubmitting(false);
-          return;
-        }
+      if (!saveResult.success && saveResult.error) {
+        setFormError(saveResult.error);
+        setSubmitting(false);
+        return;
       }
 
       setSuccessToast(true);
       setTimeout(() => {
         router.push("/admin/products");
-      }, 1200);
-    } catch (err) {
+      }, 1000);
+    } catch (err: unknown) {
       console.error("Submission failed:", err);
-      setFormError("An unexpected error occurred while saving the product.");
+      const e = err as Error;
+      setFormError(e.message || "An unexpected error occurred while saving the product.");
     } finally {
       setSubmitting(false);
     }

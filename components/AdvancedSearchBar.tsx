@@ -50,9 +50,22 @@ export default function AdvancedSearchBar({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load products from Supabase with fallback to DEFAULT_CATALOG_PRODUCTS
+  // Load products from API / Supabase with fallback to DEFAULT_CATALOG_PRODUCTS
   useEffect(() => {
     async function loadCatalog() {
+      try {
+        const res = await fetch("/api/products");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.products) && json.products.length > 0) {
+            setProducts(json.products);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("API search catalog fallback:", err);
+      }
+
       try {
         const { data, error } = await supabase
           .from("products")
@@ -60,7 +73,6 @@ export default function AdvancedSearchBar({
           .eq("is_active", true);
 
         if (!error && data && data.length > 0) {
-          // Merge custom products with default catalog to ensure rich search
           const merged = [...data];
           for (const def of DEFAULT_CATALOG_PRODUCTS) {
             if (!merged.some((m) => m.name.toLowerCase() === def.name.toLowerCase())) {
@@ -77,6 +89,18 @@ export default function AdvancedSearchBar({
     }
 
     loadCatalog();
+
+    const handleUpdate = () => {
+      loadCatalog();
+    };
+
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("zubair_products_updated", handleUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("zubair_products_updated", handleUpdate);
+    };
   }, []);
 
   // Run smart search when query changes

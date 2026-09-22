@@ -4,6 +4,8 @@ import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { sanitizeProductForTier, RoleOrTier } from "@/lib/pricingSecurity";
 import { Product } from "@/lib/types";
 
+import { getServerCustomProducts } from "@/lib/serverProducts";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(
@@ -36,11 +38,20 @@ export async function GET(
       } catch {}
     }
 
-    // 1. Try local catalog first
+    // 1. Try server custom products first
+    const customList = getServerCustomProducts();
     let matchedProduct: Product | null =
-      DEFAULT_CATALOG_PRODUCTS.find(
+      customList.find(
         (p) => p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase())
       ) || null;
+
+    // 2. Try local catalog
+    if (!matchedProduct) {
+      matchedProduct =
+        DEFAULT_CATALOG_PRODUCTS.find(
+          (p) => p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase())
+        ) || null;
+    }
 
     // 2. Try Supabase
     try {

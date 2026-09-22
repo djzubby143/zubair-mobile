@@ -115,9 +115,15 @@ function HomeContent() {
   }, [user]);
 
   useEffect(() => {
-    // Event listeners for instant updates when a category is added in Admin
+    // Event listeners for instant updates when a category or product is added in Admin
     const handleStorageUpdate = (e: StorageEvent) => {
-      if (!e.key || e.key === "zubair_mobile_categories" || e.key === "zubair_mobile_subcategories_map") {
+      if (
+        !e.key ||
+        e.key === "zubair_mobile_categories" ||
+        e.key === "zubair_mobile_subcategories_map" ||
+        e.key === "zubair_admin_custom_products" ||
+        e.key === "zubair_admin_deleted_products"
+      ) {
         loadAllData();
       }
     };
@@ -133,6 +139,7 @@ function HomeContent() {
     if (typeof window !== "undefined") {
       window.addEventListener("storage", handleStorageUpdate);
       window.addEventListener("zubair_category_updated", handleCustomUpdate);
+      window.addEventListener("zubair_products_updated", handleCustomUpdate);
       window.addEventListener("focus", handleFocus);
     }
 
