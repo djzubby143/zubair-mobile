@@ -38,7 +38,7 @@ export interface CustomerUser {
   address: string;
   role: string;
   status: "active" | "inactive";
-  pricing_tier?: "wholesale" | "retail"; // "wholesale" (default) or "retail"
+  pricing_tier?: "retail" | "technician" | "wholesale"; // "retail", "technician", or "wholesale"
   notes?: string | null;
   created_at?: string;
 }
@@ -71,8 +71,8 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     address: "Hall Road, Shop 19, Basement Plaza",
     role: "customer",
     status: "active",
-    pricing_tier: "wholesale",
-    notes: "Requires regular Daewoo cargo dispatch",
+    pricing_tier: "technician",
+    notes: "Mobile technician customer",
     created_at: new Date(Date.now() - 86400000).toISOString(),
   },
   {
@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
     address: "",
     role: "customer",
     status: "active" as "active" | "inactive",
-    pricing_tier: "wholesale" as "wholesale" | "retail",
+    pricing_tier: "wholesale" as "retail" | "technician" | "wholesale",
     notes: "",
   });
   const [showModalPassword, setShowModalPassword] = useState(false);
@@ -367,9 +367,15 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Toggle Pricing Tier (Wholesale <-> Retail)
+  // Toggle Pricing Tier (Wholesale -> Technician -> Retail -> Wholesale)
   const handleTogglePricingTier = async (user: CustomerUser) => {
-    const nextTier: "wholesale" | "retail" = user.pricing_tier === "retail" ? "wholesale" : "retail";
+    const cycleMap: Record<"wholesale" | "technician" | "retail", "wholesale" | "technician" | "retail"> = {
+      wholesale: "technician",
+      technician: "retail",
+      retail: "wholesale",
+    };
+    const currentTier = user.pricing_tier || "wholesale";
+    const nextTier = cycleMap[currentTier] || "wholesale";
     const updatedList = users.map((u) => (u.id === user.id ? { ...u, pricing_tier: nextTier } : u));
     setUsers(updatedList);
     localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
@@ -768,24 +774,36 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
 
-                      {/* Col 5: Pricing Tier (Wholesale vs Retail) */}
+                      {/* Col 5: Pricing Tier (Wholesale vs Technician vs Retail) */}
                       <td className="py-3.5 px-4">
                         <button
                           type="button"
                           onClick={() => handleTogglePricingTier(user)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-bold border shadow-2xs transition-all ${
-                            isRetail
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-bold border shadow-2xs transition-all cursor-pointer ${
+                            user.pricing_tier === "technician"
+                              ? "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
+                              : user.pricing_tier === "retail"
                               ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                               : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                           }`}
-                          title="Click to switch price tier (Wholesale vs Retail)"
+                          title={`Current: ${user.pricing_tier || "wholesale"}. Click to cycle: Wholesale -> Technician -> Retail`}
                         >
                           <span
                             className={`w-2 h-2 rounded-full ${
-                              isRetail ? "bg-blue-500" : "bg-emerald-500"
+                              user.pricing_tier === "technician"
+                                ? "bg-amber-500"
+                                : user.pricing_tier === "retail"
+                                ? "bg-blue-500"
+                                : "bg-emerald-500"
                             }`}
                           />
-                          <span>{isRetail ? "Retail (پرچون)" : "Wholesale (ہول سیل)"}</span>
+                          <span>
+                            {user.pricing_tier === "technician"
+                              ? "Technician (ٹیکنیشن)"
+                              : user.pricing_tier === "retail"
+                              ? "Retail (پرچون)"
+                              : "Wholesale (ہول سیل)"}
+                          </span>
                         </button>
                       </td>
 
@@ -1019,14 +1037,15 @@ export default function AdminUsersPage() {
                 />
               </div>
 
-              {/* Pricing Tier Selection (Wholesale vs Retail) */}
+              {/* Pricing Tier Selection (Wholesale vs Technician vs Retail) */}
               <div className="space-y-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                 <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
                   Pricing Tier / کسٹمر ریٹ کی قسم <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Wholesale */}
                   <label
-                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                    className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
                       formData.pricing_tier === "wholesale"
                         ? "border-emerald-500 bg-white ring-2 ring-emerald-500/20 shadow-xs"
                         : "border-slate-200 bg-white hover:border-slate-300"
@@ -1042,16 +1061,43 @@ export default function AdminUsersPage() {
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                        Wholesale Rate (ہول سیل ریٹ)
+                        Wholesale (ہول سیل)
                       </span>
-                      <span className="text-[10px] text-slate-500 block leading-snug mt-0.5">
-                        For mobile technicians & shopkeepers. Shows original wholesale trade prices.
+                      <span className="text-[9.5px] text-slate-500 block leading-tight mt-0.5">
+                        For bulk shopkeepers. Shows lowest wholesale trade price.
                       </span>
                     </div>
                   </label>
 
+                  {/* Technician */}
                   <label
-                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                    className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      formData.pricing_tier === "technician"
+                        ? "border-amber-500 bg-white ring-2 ring-amber-500/20 shadow-xs"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="pricing_tier"
+                      value="technician"
+                      checked={formData.pricing_tier === "technician"}
+                      onChange={() => setFormData({ ...formData, pricing_tier: "technician" })}
+                      className="mt-0.5 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                        Technician (ٹیکنیشن)
+                      </span>
+                      <span className="text-[9.5px] text-slate-500 block leading-tight mt-0.5">
+                        For mobile repair technicians. Shows discounted technician rate.
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Retail */}
+                  <label
+                    className={`flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
                       formData.pricing_tier === "retail"
                         ? "border-blue-500 bg-white ring-2 ring-blue-500/20 shadow-xs"
                         : "border-slate-200 bg-white hover:border-slate-300"
@@ -1067,10 +1113,10 @@ export default function AdminUsersPage() {
                     />
                     <div>
                       <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
-                        Retail Rate (پرچون ریٹ)
+                        Retail (پرچون ریٹ)
                       </span>
-                      <span className="text-[10px] text-slate-500 block leading-snug mt-0.5">
-                        For walk-in end consumers. Shows retail selling price (+25% markup or custom retail rate).
+                      <span className="text-[9.5px] text-slate-500 block leading-tight mt-0.5">
+                        For walk-in consumers. Shows public retail selling price.
                       </span>
                     </div>
                   </label>

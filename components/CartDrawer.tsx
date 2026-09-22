@@ -216,8 +216,18 @@ export default function CartDrawer() {
                           (Rs. {item.price.toLocaleString("en-PK")} ea)
                         </span>
                         {item.pricing_tier === "retail" && (
-                          <span className="text-[8.5px] font-bold text-blue-600 bg-blue-50 px-1 py-0.2 rounded ml-1 border border-blue-200">
-                            Retail
+                          <span className="text-[8.5px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded ml-1 border border-blue-200">
+                            Retail / پرچون
+                          </span>
+                        )}
+                        {item.pricing_tier === "technician" && (
+                          <span className="text-[8.5px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded ml-1 border border-amber-200">
+                            Technician / ٹیکنیشن
+                          </span>
+                        )}
+                        {item.pricing_tier === "wholesale" && (
+                          <span className="text-[8.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded ml-1 border border-emerald-200">
+                            Wholesale / ہول سیل
                           </span>
                         )}
                       </div>

@@ -14,37 +14,128 @@ export interface AuthUser {
   email?: string;
   role?: string;
   avatar_url?: string | null;
-  pricing_tier?: "wholesale" | "retail"; // "wholesale" (default) or "retail"
+  pricing_tier?: "retail" | "technician" | "wholesale"; // "retail", "technician", or "wholesale"
 }
 
+export type PricingTier = "retail" | "technician" | "wholesale";
+
 /**
- * Calculates effective price based on user tier (Wholesale vs Retail).
- * - If user is wholesale (or admin/default), returns wholesale price.
- * - If user is retail, returns product's explicit retail_price or calculates +25% markup.
+ * Calculates effective price based on 3-tier system:
+ * 1. Retail: Publicly visible to all visitors without login.
+ * 2. Technician: Requires login (verified mobile technician rate).
+ * 3. Wholesale: Requires login (bulk dealer & shopkeeper trade rate).
  */
 export function getEffectiveProductPrice(
-  product: { price: number; retail_price?: number | null },
+  product: {
+    price: number;
+    technician_price?: number | null;
+    retail_price?: number | null;
+  },
   user?: AuthUser | null
 ): {
   price: number;
-  isRetail: boolean;
+  activeTier: PricingTier;
   tierName: string;
+  tierLabelUrdu: string;
+  isRetail: boolean;
+  isTechnician: boolean;
+  isWholesale: boolean;
+  isGuest: boolean;
+  canSeeTechnicianRate: boolean;
+  canSeeWholesaleRate: boolean;
   wholesalePrice: number;
+  technicianPrice: number;
   retailPrice: number;
 } {
   const wholesalePrice = Number(product.price) || 0;
+  const technicianPrice =
+    product.technician_price && Number(product.technician_price) > 0
+      ? Number(product.technician_price)
+      : Math.round(wholesalePrice * 1.12);
   const retailPrice =
     product.retail_price && Number(product.retail_price) > 0
       ? Number(product.retail_price)
       : Math.round(wholesalePrice * 1.25);
 
-  const isRetail = user?.pricing_tier === "retail";
+  const isGuest = !user || (!user.id && !user.username);
 
+  // If visitor is not logged in: they see the Public Retail Price
+  if (isGuest) {
+    return {
+      price: retailPrice,
+      activeTier: "retail",
+      tierName: "Retail",
+      tierLabelUrdu: "پرچون ریٹ",
+      isRetail: true,
+      isTechnician: false,
+      isWholesale: false,
+      isGuest: true,
+      canSeeTechnicianRate: false,
+      canSeeWholesaleRate: false,
+      wholesalePrice,
+      technicianPrice,
+      retailPrice,
+    };
+  }
+
+  // Logged-in user: determine their tier
+  const tier: PricingTier =
+    user.pricing_tier === "technician"
+      ? "technician"
+      : user.pricing_tier === "retail"
+      ? "retail"
+      : "wholesale"; // Default logged-in trade customer is wholesale
+
+  if (tier === "technician") {
+    return {
+      price: technicianPrice,
+      activeTier: "technician",
+      tierName: "Technician",
+      tierLabelUrdu: "ٹیکنیشن ریٹ",
+      isRetail: false,
+      isTechnician: true,
+      isWholesale: false,
+      isGuest: false,
+      canSeeTechnicianRate: true,
+      canSeeWholesaleRate: false,
+      wholesalePrice,
+      technicianPrice,
+      retailPrice,
+    };
+  }
+
+  if (tier === "retail") {
+    return {
+      price: retailPrice,
+      activeTier: "retail",
+      tierName: "Retail",
+      tierLabelUrdu: "پرچون ریٹ",
+      isRetail: true,
+      isTechnician: false,
+      isWholesale: false,
+      isGuest: false,
+      canSeeTechnicianRate: false,
+      canSeeWholesaleRate: false,
+      wholesalePrice,
+      technicianPrice,
+      retailPrice,
+    };
+  }
+
+  // Wholesale Tier (default for verified shopkeepers & admin)
   return {
-    price: isRetail ? retailPrice : wholesalePrice,
-    isRetail,
-    tierName: isRetail ? "Retail" : "Wholesale",
+    price: wholesalePrice,
+    activeTier: "wholesale",
+    tierName: "Wholesale",
+    tierLabelUrdu: "ہول سیل ریٹ",
+    isRetail: false,
+    isTechnician: false,
+    isWholesale: true,
+    isGuest: false,
+    canSeeTechnicianRate: true,
+    canSeeWholesaleRate: true,
     wholesalePrice,
+    technicianPrice,
     retailPrice,
   };
 }
@@ -149,7 +240,7 @@ export async function updateCustomerProfile(updatedData: {
   address?: string;
   city?: string;
   avatar_url?: string | null;
-  pricing_tier?: "wholesale" | "retail";
+  pricing_tier?: "retail" | "technician" | "wholesale";
 }): Promise<AuthUser | null> {
   if (typeof window === "undefined") return null;
 

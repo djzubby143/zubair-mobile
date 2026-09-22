@@ -18,7 +18,16 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
 
   const isInStock = (product.stock_quantity ?? 0) > 0;
-  const { price: effectivePrice, isRetail, tierName } = getEffectiveProductPrice(product, user);
+  const {
+    price: effectivePrice,
+    activeTier,
+    tierName,
+    tierLabelUrdu,
+    isRetail,
+    isTechnician,
+    isWholesale,
+    isGuest,
+  } = getEffectiveProductPrice(product, user);
   const formattedPrice = `Rs ${effectivePrice.toLocaleString("en-PK")}`;
   const minQty = product.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
 
@@ -32,6 +41,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {
         ...product,
         price: effectivePrice,
+        pricing_tier: activeTier,
       },
       minQty
     );
@@ -94,74 +104,71 @@ export default function ProductCard({ product }: ProductCardProps) {
           </p>
         </div>
 
-        {/* Price (Hidden if not logged in, shown only after login) */}
-        <div className="pt-0.5">
-          {isLoggedIn ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span
-                className={`text-xs sm:text-sm font-black tracking-tight ${
-                  isRetail ? "text-blue-600" : "text-[#16a34a]"
-                }`}
-              >
-                {formattedPrice}
-              </span>
-              <span
-                className={`text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
-                  isRetail
-                    ? "bg-blue-50 text-blue-700 border border-blue-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                }`}
-              >
-                {isRetail ? "Retail Rate" : "Wholesale"}
-              </span>
-            </div>
-          ) : (
+        {/* Price Section: Retail is public, Technician/Wholesale has login indicator */}
+        <div className="pt-0.5 space-y-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span
+              className={`text-xs sm:text-sm font-black tracking-tight ${
+                isWholesale
+                  ? "text-[#16a34a]"
+                  : isTechnician
+                  ? "text-amber-700"
+                  : "text-blue-600"
+              }`}
+            >
+              {formattedPrice}
+            </span>
+            <span
+              className={`text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
+                isWholesale
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : isTechnician
+                  ? "bg-amber-50 text-amber-800 border border-amber-200"
+                  : "bg-blue-50 text-blue-700 border border-blue-200"
+              }`}
+            >
+              {tierLabelUrdu}
+            </span>
+          </div>
+
+          {/* If visitor is guest, show teaser to login for wholesale/technician rates */}
+          {isGuest && (
             <Link
               href="/login"
-              className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#dc2626] bg-red-50 hover:bg-red-100/80 px-2 py-0.5 rounded border border-red-200/60 transition-colors"
-              title="Click to login and view wholesale prices"
+              className="inline-flex items-center gap-1 text-[9.5px] text-[#dc2626] hover:text-red-700 font-semibold transition-colors"
+              title="ٹیکنیشن و ہول سیل ڈسکاؤنٹ ریٹ کے لیے لاگ ان کریں"
             >
-              <Lock className="w-3 h-3 text-[#dc2626]" />
-              <span>Login for Price</span>
+              <Lock className="w-2.5 h-2.5" />
+              <span>ٹیکنیشن / ہول سیل ریٹ: لاگ ان کریں</span>
             </Link>
           )}
         </div>
 
-        {/* Button: Add to Cart (Logged-in) or Login to Order (Guest) */}
+        {/* Button: Add to Cart */}
         <div>
-          {isLoggedIn ? (
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={!isInStock}
-              className={`w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2.5 rounded-md text-white text-[11px] font-bold shadow-2xs transition-all duration-200 ${
-                !isInStock
-                  ? "bg-slate-300 cursor-not-allowed text-slate-500"
-                  : isAdded
-                  ? "bg-[#25D366] text-white"
-                  : "bg-[#dc2626] hover:bg-[#b91c1c] active:scale-[0.98]"
-              }`}
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>
-                {!isInStock
-                  ? "Out of Stock"
-                  : isAdded
-                  ? "Added!"
-                  : minQty > 1
-                  ? `Add ${minQty} Pcs`
-                  : "Add to Cart"}
-              </span>
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2.5 rounded-md text-slate-700 bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] hover:border-red-200 border border-slate-200 text-[11px] font-bold shadow-2xs transition-all duration-200"
-            >
-              <Lock className="w-3.5 h-3.5 text-[#dc2626]" />
-              <span>Login to Order</span>
-            </Link>
-          )}
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!isInStock}
+            className={`w-full flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-2.5 rounded-md text-white text-[11px] font-bold shadow-2xs transition-all duration-200 ${
+              !isInStock
+                ? "bg-slate-300 cursor-not-allowed text-slate-500"
+                : isAdded
+                ? "bg-[#25D366] text-white"
+                : "bg-[#dc2626] hover:bg-[#b91c1c] active:scale-[0.98]"
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>
+              {!isInStock
+                ? "Out of Stock"
+                : isAdded
+                ? "Added!"
+                : minQty > 1
+                ? `Add ${minQty} Pcs`
+                : "Add to Cart"}
+            </span>
+          </button>
         </div>
       </div>
     </div>

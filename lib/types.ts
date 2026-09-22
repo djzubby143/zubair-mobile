@@ -15,7 +15,8 @@ export interface Product {
   category_id?: string | null;
   category?: Category | null;
   price: number; // Wholesale / Base Trade Price
-  retail_price?: number | null; // Retail Selling Price (for Retail tier customers)
+  technician_price?: number | null; // Special Technician / Repairman Price
+  retail_price?: number | null; // Retail Selling Price (Publicly visible)
   purchase_price?: number | null; // Cost / Purchase Price (Admin-only)
   min_order_quantity?: number; // Minimum Order Quantity (MOQ)
   stock_quantity: number;
@@ -32,9 +33,10 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
+  technician_price?: number | null;
   retail_price?: number | null;
   purchase_price?: number | null;
-  pricing_tier?: "wholesale" | "retail";
+  pricing_tier?: "retail" | "technician" | "wholesale";
   image_url?: string | null;
   quantity: number;
   min_order_quantity?: number;

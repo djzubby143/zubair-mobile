@@ -89,21 +89,44 @@ export default function ProductDetailPage() {
 
   const moq = product?.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
   const productName = product?.name || "Mobile Spare Part";
-  const { price: effectivePrice, isRetail, tierName, wholesalePrice, retailPrice } =
-    product
-      ? getEffectiveProductPrice(product, user)
-      : { price: 2650, isRetail: false, tierName: "Wholesale", wholesalePrice: 2650, retailPrice: 3315 };
+  const priceInfo = product
+    ? getEffectiveProductPrice(product, user)
+    : {
+        price: 2650,
+        activeTier: "retail" as const,
+        tierName: "Retail",
+        tierLabelUrdu: "پرچون ریٹ",
+        isRetail: true,
+        isTechnician: false,
+        isWholesale: false,
+        isGuest: true,
+        canSeeTechnicianRate: false,
+        canSeeWholesaleRate: false,
+        wholesalePrice: 2650,
+        technicianPrice: 2950,
+        retailPrice: 3315,
+      };
+
   const sku = product?.sku || `ZB-${slug ? slug.toUpperCase().slice(0, 6) : "PART"}-01`;
 
   const handleAdd = () => {
-    if (!isLoggedIn || !product) return;
-    addToCart({ ...product, price: effectivePrice }, quantity);
+    if (!product) return;
+    addToCart(
+      {
+        ...product,
+        price: priceInfo.price,
+        retail_price: priceInfo.retailPrice,
+        technician_price: priceInfo.technicianPrice,
+        pricing_tier: priceInfo.activeTier,
+      },
+      quantity
+    );
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
 
   const whatsappMessage = encodeURIComponent(
-    `Hello Zubair Mobile! I am interested in ordering: ${productName} (SKU: ${sku}). Please confirm availability.`
+    `Hello Zubair Mobile! I am interested in ordering: ${productName} (SKU: ${sku}) at ${priceInfo.tierLabelUrdu} (Rs. ${priceInfo.price.toLocaleString("en-PK")}). Please confirm availability.`
   );
 
   return (
@@ -170,147 +193,238 @@ export default function ProductDetailPage() {
               <span>In Stock & Tested Ready to Ship</span>
             </div>
 
-            {/* Price Tag (Hidden unless logged in) */}
-            <div className="pt-3">
+            {/* Main Effective Price Display */}
+            <div className="pt-2">
               <div className="flex items-center gap-2 mb-1">
                 <span
                   className={`text-xs font-bold uppercase tracking-wider ${
-                    isRetail ? "text-blue-600" : "text-emerald-700"
+                    priceInfo.activeTier === "wholesale"
+                      ? "text-emerald-700"
+                      : priceInfo.activeTier === "technician"
+                      ? "text-amber-700"
+                      : "text-blue-600"
                   }`}
                 >
-                  {isRetail ? "Retail Price / پرچون ریٹ" : "Wholesale Price / ہول سیل ریٹ"}
+                  {priceInfo.tierName} Price / {priceInfo.tierLabelUrdu}
                 </span>
                 <span
                   className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
-                    isRetail
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-emerald-100 text-emerald-800"
+                    priceInfo.activeTier === "wholesale"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : priceInfo.activeTier === "technician"
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-blue-100 text-blue-800"
                   }`}
                 >
-                  {isRetail ? "Retail Customer" : "Shopkeeper / Technician"}
+                  {priceInfo.isGuest
+                    ? "عوامی ریٹ (عام خریدار)"
+                    : priceInfo.activeTier === "wholesale"
+                    ? "ہول سیل ڈیلر ریٹ"
+                    : priceInfo.activeTier === "technician"
+                    ? "موبائل ٹیکنیشن ریٹ"
+                    : "پرچون کسٹمر ریٹ"}
                 </span>
               </div>
-              {isLoggedIn ? (
+              <div className="flex items-baseline gap-2">
                 <span
-                  className={`text-3xl font-black ${
-                    isRetail ? "text-blue-600" : "text-[#16a34a]"
+                  className={`text-3xl sm:text-4xl font-black ${
+                    priceInfo.activeTier === "wholesale"
+                      ? "text-[#16a34a]"
+                      : priceInfo.activeTier === "technician"
+                      ? "text-amber-600"
+                      : "text-blue-600"
                   }`}
                 >
-                  Rs. {effectivePrice.toLocaleString("en-PK")}
+                  Rs. {priceInfo.price.toLocaleString("en-PK")}
                 </span>
-              ) : (
-                <div className="p-4 bg-red-50/80 border border-red-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#dc2626] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#111827]">Login Required to View Price</p>
-                      <p className="text-[11px] text-slate-500">
-                        Wholesale prices are available for verified shopkeepers & technicians.
-                      </p>
-                    </div>
-                  </div>
+                {priceInfo.isRetail && (
+                  <span className="text-xs text-slate-400 font-medium">
+                    (عام پرچون قیمت)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 3-Tier Price Comparison Grid */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 border-b border-slate-200/80 pb-1.5">
+                <span>3-Tier Rate Comparison (ریٹ تفصیل)</span>
+                {!isLoggedIn && (
                   <Link
                     href="/login"
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-lg shadow-2xs transition-colors shrink-0"
+                    className="text-[11px] text-[#dc2626] font-bold hover:underline inline-flex items-center gap-1"
                   >
-                    <span>Login to View Rate</span>
+                    <Lock className="w-3 h-3" />
+                    <span>لاگ ان کریں</span>
+                  </Link>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                {/* 1. Retail Price (Always visible) */}
+                <div
+                  className={`p-2 rounded-lg border transition-all ${
+                    priceInfo.activeTier === "retail"
+                      ? "bg-blue-50 border-blue-300 ring-2 ring-blue-400/30"
+                      : "bg-white border-slate-200"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-blue-700 uppercase">
+                    Retail (پرچون)
+                  </div>
+                  <div className="text-sm font-black text-blue-600 mt-0.5">
+                    Rs. {priceInfo.retailPrice.toLocaleString("en-PK")}
+                  </div>
+                  <div className="text-[9.5px] text-slate-400">سب کیلئے دستیاب</div>
+                </div>
+
+                {/* 2. Technician Price */}
+                <div
+                  className={`p-2 rounded-lg border transition-all ${
+                    priceInfo.activeTier === "technician"
+                      ? "bg-amber-50 border-amber-300 ring-2 ring-amber-400/30"
+                      : "bg-white border-slate-200"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-amber-700 uppercase">
+                    Technician (ٹیکنیشن)
+                  </div>
+                  {priceInfo.canSeeTechnicianRate ? (
+                    <>
+                      <div className="text-sm font-black text-amber-600 mt-0.5">
+                        Rs. {priceInfo.technicianPrice.toLocaleString("en-PK")}
+                      </div>
+                      <div className="text-[9.5px] text-amber-600 font-semibold">
+                        ٹیکنیشن رعایت
+                      </div>
+                    </>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="block mt-1 text-[11px] font-bold text-amber-700 hover:text-amber-800"
+                    >
+                      <span className="inline-flex items-center gap-0.5">
+                        <Lock className="w-3 h-3 text-amber-600" />
+                        لاگ ان
+                      </span>
+                      <div className="text-[9px] text-slate-400">ریٹ انلاک کریں</div>
+                    </Link>
+                  )}
+                </div>
+
+                {/* 3. Wholesale Price */}
+                <div
+                  className={`p-2 rounded-lg border transition-all ${
+                    priceInfo.activeTier === "wholesale"
+                      ? "bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/30"
+                      : "bg-white border-slate-200"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold text-emerald-700 uppercase">
+                    Wholesale (ہول سیل)
+                  </div>
+                  {priceInfo.canSeeWholesaleRate ? (
+                    <>
+                      <div className="text-sm font-black text-[#16a34a] mt-0.5">
+                        Rs. {priceInfo.wholesalePrice.toLocaleString("en-PK")}
+                      </div>
+                      <div className="text-[9.5px] text-emerald-600 font-semibold">
+                        ڈیلر ریٹ
+                      </div>
+                    </>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="block mt-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800"
+                    >
+                      <span className="inline-flex items-center gap-0.5">
+                        <Lock className="w-3 h-3 text-emerald-600" />
+                        لاگ ان
+                      </span>
+                      <div className="text-[9px] text-slate-400">ریٹ انلاک کریں</div>
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {!isLoggedIn && (
+                <div className="text-[11px] text-slate-500 bg-white/80 p-2 rounded-lg border border-slate-200/70 flex items-center justify-between">
+                  <span>
+                    موبائل دکاندار یا ٹیکنیشن ہیں؟ خصوصی ہول سیل ریٹ کیلئے لاگ ان کریں۔
+                  </span>
+                  <Link
+                    href="/login"
+                    className="text-[#dc2626] font-bold hover:underline shrink-0 ml-2"
+                  >
+                    لاگ ان &rarr;
                   </Link>
                 </div>
               )}
             </div>
 
-            <p className="text-sm text-slate-500 leading-relaxed pt-2">
+            <p className="text-sm text-slate-500 leading-relaxed pt-1">
               Original equipment grade replacement spare part for mobile phones. Tested for
               proper touch response, display clarity, flex continuity, and durability.
-              Available for wholesale and retail dispatch directly from Chand Plaza, Gujranwala.
+              Available for wholesale, technician, and retail dispatch directly from Chand Plaza, Gujranwala.
             </p>
           </div>
 
           {/* Action Row */}
           <div className="space-y-4 pt-4 border-t border-slate-100">
-            {isLoggedIn ? (
-              <>
-                <div className="flex items-center gap-3">
-                  <label htmlFor="qty" className="text-xs font-bold uppercase text-slate-400">
-                    Quantity:
-                  </label>
-                  <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(Math.max(moq, quantity - 1))}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-sm cursor-pointer"
-                      title={quantity <= moq ? `Minimum order quantity is ${moq}` : "Decrease quantity"}
-                    >
-                      -
-                    </button>
-                    <span className="px-4 py-1.5 text-sm font-bold text-slate-900 min-w-[2rem] text-center font-mono">
-                      {quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-sm cursor-pointer"
-                      title="Increase quantity"
-                    >
-                      +
-                    </button>
-                  </div>
-                  {moq > 1 && (
-                    <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
-                      Min: {moq} Pcs
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={handleAdd}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white shadow-sm transition-all ${
-                      added ? "bg-[#25D366]" : "bg-[#dc2626] hover:bg-[#b91c1c]"
-                    }`}
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>{added ? "Added to Cart!" : "Add To Cart"}</span>
-                  </button>
-
-                  <a
-                    href={`https://wa.me/923458032600?text=${whatsappMessage}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm transition-all"
-                  >
-                    <PhoneCall className="w-4 h-4" />
-                    <span>WhatsApp Order</span>
-                  </a>
-                </div>
-              </>
-            ) : (
-              <div className="pt-2">
-                <Link
-                  href="/login"
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-xs transition-all"
+            <div className="flex items-center gap-3">
+              <label htmlFor="qty" className="text-xs font-bold uppercase text-slate-400">
+                Quantity:
+              </label>
+              <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setQuantity(Math.max(moq, quantity - 1))}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-sm cursor-pointer"
+                  title={quantity <= moq ? `Minimum order quantity is ${moq}` : "Decrease quantity"}
                 >
-                  <Lock className="w-4 h-4" />
-                  <span>Login to Order this Spare Part</span>
-                </Link>
-                <div className="mt-2 text-center">
-                  <span className="text-xs text-slate-400">
-                    New Customer? Contact Zubair Mobile on WhatsApp:{" "}
-                    <a
-                      href="https://wa.me/923458032600"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#25D366] font-bold hover:underline"
-                    >
-                      03458032600
-                    </a>
-                  </span>
-                </div>
+                  -
+                </button>
+                <span className="px-4 py-1.5 text-sm font-bold text-slate-900 min-w-[2rem] text-center font-mono">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-sm cursor-pointer"
+                  title="Increase quantity"
+                >
+                  +
+                </button>
               </div>
-            )}
+              {moq > 1 && (
+                <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
+                  Min: {moq} Pcs
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={handleAdd}
+                className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white shadow-sm transition-all cursor-pointer ${
+                  added ? "bg-[#25D366]" : "bg-[#dc2626] hover:bg-[#b91c1c]"
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>{added ? "Added to Cart!" : "Add To Cart"}</span>
+              </button>
+
+              <a
+                href={`https://wa.me/923458032600?text=${whatsappMessage}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm transition-all"
+              >
+                <PhoneCall className="w-4 h-4" />
+                <span>WhatsApp Order</span>
+              </a>
+            </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-slate-500">
               <div className="flex items-center gap-1.5">

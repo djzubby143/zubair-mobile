@@ -29,6 +29,7 @@ export default function NewProductPage() {
   const [sku, setSku] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [price, setPrice] = useState("");
+  const [technicianPrice, setTechnicianPrice] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("25");
@@ -166,6 +167,7 @@ export default function NewProductPage() {
 
       // 2. Insert into Supabase Products table
       const numPurchasePrice = purchasePrice ? parseFloat(purchasePrice) : null;
+      const numTechnicianPrice = technicianPrice ? parseFloat(technicianPrice) : null;
       const numRetailPrice = retailPrice ? parseFloat(retailPrice) : null;
       const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
       const newProductRecord = {
@@ -174,6 +176,7 @@ export default function NewProductPage() {
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
         price: numPrice,
+        technician_price: numTechnicianPrice,
         retail_price: numRetailPrice,
         purchase_price: numPurchasePrice,
         min_order_quantity: numMinOrderQuantity > 0 ? numMinOrderQuantity : 1,
@@ -191,10 +194,11 @@ export default function NewProductPage() {
 
       if (insertResponse.error) {
         console.warn("Database insert error:", insertResponse.error);
-        // If column purchase_price, retail_price, or min_order_quantity doesn't exist on remote table schema, retry without it
+        // If column purchase_price, technician_price, retail_price, or min_order_quantity doesn't exist on remote table schema, retry without it
         if (
           insertResponse.error.message &&
           (insertResponse.error.message.includes("purchase_price") ||
+            insertResponse.error.message.includes("technician_price") ||
             insertResponse.error.message.includes("retail_price") ||
             insertResponse.error.message.includes("min_order_quantity"))
         ) {
@@ -204,6 +208,9 @@ export default function NewProductPage() {
           }
           if (insertResponse.error.message.includes("purchase_price")) {
             delete (fallbackRecord as Record<string, unknown>).purchase_price;
+          }
+          if (insertResponse.error.message.includes("technician_price")) {
+            delete (fallbackRecord as Record<string, unknown>).technician_price;
           }
           if (insertResponse.error.message.includes("retail_price")) {
             delete (fallbackRecord as Record<string, unknown>).retail_price;
@@ -374,6 +381,32 @@ export default function NewProductPage() {
                   placeholder="2650"
                   required
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Technician Selling Price (PKR) - Optional */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-charcoal">
+                  Technician Price (PKR)
+                </label>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  ٹیکنیشن ریٹ • اختیاری
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">
+                  Rs.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={technicianPrice}
+                  onChange={(e) => setTechnicianPrice(e.target.value)}
+                  placeholder={price ? `Auto markup (+12%): Rs. ${Math.round(parseFloat(price) * 1.12)}` : "e.g. 2950 (خالی رکھیں تو +12% لگے گا)"}
+                  className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-bold"
                 />
               </div>
             </div>

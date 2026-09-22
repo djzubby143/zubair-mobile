@@ -32,6 +32,7 @@ export default function EditProductPage() {
   const [sku, setSku] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [price, setPrice] = useState("");
+  const [technicianPrice, setTechnicianPrice] = useState("");
   const [retailPrice, setRetailPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
@@ -92,6 +93,7 @@ export default function EditProductPage() {
           setSku(prodData.sku || "");
           setCategoryId(prodData.category_id || "");
           setPrice(String(prodData.price || ""));
+          setTechnicianPrice(prodData.technician_price ? String(prodData.technician_price) : "");
           setRetailPrice(prodData.retail_price ? String(prodData.retail_price) : "");
           setPurchasePrice(prodData.purchase_price ? String(prodData.purchase_price) : "");
           setStockQuantity(String(prodData.stock_quantity ?? ""));
@@ -175,6 +177,7 @@ export default function EditProductPage() {
       }
 
       const numPurchasePrice = purchasePrice ? parseFloat(purchasePrice) : null;
+      const numTechnicianPrice = technicianPrice ? parseFloat(technicianPrice) : null;
       const numRetailPrice = retailPrice ? parseFloat(retailPrice) : null;
       const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
       const updatedRecord = {
@@ -183,6 +186,7 @@ export default function EditProductPage() {
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
         price: numPrice,
+        technician_price: numTechnicianPrice,
         retail_price: numRetailPrice,
         purchase_price: numPurchasePrice,
         min_order_quantity: numMinOrderQuantity > 0 ? numMinOrderQuantity : 1,
@@ -204,6 +208,7 @@ export default function EditProductPage() {
         if (
           updateResponse.error.message &&
           (updateResponse.error.message.includes("purchase_price") ||
+            updateResponse.error.message.includes("technician_price") ||
             updateResponse.error.message.includes("retail_price") ||
             updateResponse.error.message.includes("min_order_quantity"))
         ) {
@@ -213,6 +218,9 @@ export default function EditProductPage() {
           }
           if (updateResponse.error.message.includes("purchase_price")) {
             delete (fallbackRecord as Record<string, unknown>).purchase_price;
+          }
+          if (updateResponse.error.message.includes("technician_price")) {
+            delete (fallbackRecord as Record<string, unknown>).technician_price;
           }
           if (updateResponse.error.message.includes("retail_price")) {
             delete (fallbackRecord as Record<string, unknown>).retail_price;
@@ -360,6 +368,32 @@ export default function EditProductPage() {
                   onChange={(e) => setPrice(e.target.value)}
                   required
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Technician Selling Price (PKR) - Optional */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-charcoal">
+                  Technician Price (PKR)
+                </label>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  ٹیکنیشن ریٹ • اختیاری
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">
+                  Rs.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={technicianPrice}
+                  onChange={(e) => setTechnicianPrice(e.target.value)}
+                  placeholder={price ? `Auto markup (+12%): Rs. ${Math.round(parseFloat(price) * 1.12)}` : "e.g. 2950 (خالی رکھیں تو +12% لگے گا)"}
+                  className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-bold"
                 />
               </div>
             </div>
