@@ -15,6 +15,7 @@ import {
 import { Category } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { uploadProductImage } from "@/lib/storage";
+import { getLiveCategories } from "@/lib/categories";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -54,14 +55,10 @@ export default function NewProductPage() {
     async function loadCats() {
       setLoadingCategories(true);
       try {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("*")
-          .order("name", { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          setCategories(data);
-          setCategoryId(data[0].id);
+        const liveCats = await getLiveCategories();
+        if (liveCats && liveCats.length > 0) {
+          setCategories(liveCats as Category[]);
+          setCategoryId(liveCats[0].id);
         } else {
           // Fallback defaults
           const fallbackCats: Category[] = [

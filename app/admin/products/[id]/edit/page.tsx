@@ -16,6 +16,8 @@ import {
 import { Category, Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { uploadProductImage } from "@/lib/storage";
+import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
+import { getLiveCategories } from "@/lib/categories";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -57,17 +59,13 @@ export default function EditProductPage() {
     async function loadData() {
       setLoading(true);
       try {
-        // Fetch Categories
-        const { data: catData } = await supabase
-          .from("categories")
-          .select("*")
-          .order("name", { ascending: true });
-
-        if (catData && catData.length > 0) {
-          setCategories(catData);
+        // Fetch Categories (merged with defaults + local + Supabase)
+        const liveCats = await getLiveCategories();
+        if (liveCats && liveCats.length > 0) {
+          setCategories(liveCats as Category[]);
         }
 
-        // Fetch Product by ID
+        // Fetch Product by ID from Supabase
         const { data: prodData, error: prodError } = await supabase
           .from("products")
           .select("*")
@@ -75,18 +73,40 @@ export default function EditProductPage() {
           .single();
 
         if (prodError || !prodData) {
-          // If not in Supabase, check if mock ID
-          console.warn("Product not found in Supabase:", prodError);
-          // Set sensible fallback so page is testable
-          setName("VIVO Y20 SUNLONG BLACK UNIT");
-          setSlug("vivo-y20-sunlong-black-unit");
-          setSku("ZB-LCD-V20S");
-          setPrice("2650");
-          setPurchasePrice("1950");
-          setStockQuantity("45");
-          setMinOrderQuantity("1");
-          setShortDescription("Tested Sunlong high-clarity LCD screen assembly.");
-          setIsActive(true);
+          // If not in Supabase, check DEFAULT_CATALOG_PRODUCTS (including all 240 Side Keys)
+          console.warn("Product not found in Supabase, searching catalog:", prodError);
+          const localMatch = DEFAULT_CATALOG_PRODUCTS.find(
+            (p) => p.id === productId || p.slug === productId || p.sku === productId
+          );
+
+          if (localMatch) {
+            setName(localMatch.name || "");
+            setSlug(localMatch.slug || "");
+            setSku(localMatch.sku || "");
+            setCategoryId(localMatch.category_id || localMatch.category?.id || "");
+            setPrice(String(localMatch.price ?? ""));
+            setTechnicianPrice(localMatch.technician_price ? String(localMatch.technician_price) : "");
+            setRetailPrice(localMatch.retail_price ? String(localMatch.retail_price) : "");
+            setPurchasePrice(localMatch.purchase_price ? String(localMatch.purchase_price) : "");
+            setStockQuantity(String(localMatch.stock_quantity ?? ""));
+            setMinOrderQuantity(String(localMatch.min_order_quantity ?? "1"));
+            setShortDescription(localMatch.short_description || "");
+            setDescription(localMatch.description || "");
+            setIsActive(localMatch.is_active ?? true);
+            setIsFeatured(localMatch.featured ?? false);
+            setExistingImageUrl(localMatch.image_url || null);
+          } else {
+            // Sensible fallback so page is testable
+            setName("VIVO Y20 SUNLONG BLACK UNIT");
+            setSlug("vivo-y20-sunlong-black-unit");
+            setSku("ZB-LCD-V20S");
+            setPrice("2650");
+            setPurchasePrice("1950");
+            setStockQuantity("45");
+            setMinOrderQuantity("1");
+            setShortDescription("Tested Sunlong high-clarity LCD screen assembly.");
+            setIsActive(true);
+          }
         } else {
           setName(prodData.name || "");
           setSlug(prodData.slug || "");

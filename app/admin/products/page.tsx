@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Category, Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
+import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
+import { getLiveCategories } from "@/lib/categories";
 
 const SAMPLE_PRODUCTS: Product[] = [
   {
@@ -109,29 +111,67 @@ export default function AdminProductsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Fetch Categories
-      const { data: catData } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name", { ascending: true });
-
-      if (catData && catData.length > 0) {
-        setCategories(catData);
+      // 1. Fetch Categories (merged with defaults + local + Supabase)
+      const liveCats = await getLiveCategories();
+      if (liveCats && liveCats.length > 0) {
+        setCategories(liveCats as Category[]);
       }
 
-      // Fetch Products with category relation
+      // 2. Fetch Products with category relation from Supabase
       const { data: prodData, error: prodError } = await supabase
         .from("products")
         .select("*, category:categories(*)")
         .order("created_at", { ascending: false });
 
-      if (prodError || !prodData || prodData.length === 0) {
-        setProducts(SAMPLE_PRODUCTS);
-      } else {
-        setProducts(prodData);
+      // Retrieve deleted product IDs / SKUs to avoid reviving deleted items
+      let deletedSet = new Set<string>();
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("zubair_admin_deleted_products");
+          if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+              deletedSet = new Set(arr.map((x: string) => String(x).toLowerCase()));
+            }
+          }
+        } catch {}
       }
-    } catch {
-      setProducts(SAMPLE_PRODUCTS);
+
+      const mergedList: Product[] = [];
+      const seenKeys = new Set<string>();
+
+      // Put Supabase remote products first
+      if (!prodError && prodData && prodData.length > 0) {
+        for (let i = 0; i < prodData.length; i++) {
+          const item = prodData[i];
+          const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+          const nameLower = item.name.toLowerCase();
+          if (!deletedSet.has(item.id.toLowerCase()) && !deletedSet.has(key)) {
+            mergedList.push(item);
+            seenKeys.add(key);
+            seenKeys.add(nameLower);
+          }
+        }
+      }
+
+      // Merge DEFAULT_CATALOG_PRODUCTS (including all 240 Side Key items)
+      for (let i = 0; i < DEFAULT_CATALOG_PRODUCTS.length; i++) {
+        const def = DEFAULT_CATALOG_PRODUCTS[i];
+        const key = (def.sku || def.slug || def.id || def.name).toLowerCase();
+        const idKey = def.id.toLowerCase();
+        const nameLower = def.name.toLowerCase();
+
+        if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
+          mergedList.push(def);
+          seenKeys.add(key);
+          seenKeys.add(nameLower);
+        }
+      }
+
+      setProducts(mergedList.length > 0 ? mergedList : SAMPLE_PRODUCTS);
+    } catch (err) {
+      console.warn("Notice loading admin inventory data:", err);
+      setProducts(DEFAULT_CATALOG_PRODUCTS);
     } finally {
       setLoading(false);
     }
@@ -155,6 +195,20 @@ export default function AdminProductsPage() {
         console.warn("Delete error from Supabase, removing from state:", error);
       }
 
+      // Persist deletion locally so default catalog item stays deleted
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("zubair_admin_deleted_products") || "[]";
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            list.push(deleteTarget.id);
+            if (deleteTarget.slug) list.push(deleteTarget.slug);
+            if (deleteTarget.sku) list.push(deleteTarget.sku);
+            localStorage.setItem("zubair_admin_deleted_products", JSON.stringify(list));
+          }
+        } catch {}
+      }
+
       setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
       showToast(`Part "${deleteTarget.name}" was deleted successfully.`);
       setDeleteTarget(null);
@@ -168,8 +222,29 @@ export default function AdminProductsPage() {
   const filteredProducts = products.filter((p) => {
     // Category filter
     if (selectedCategory !== "all") {
+      const catObj = categories.find(
+        (c) => c.id === selectedCategory || c.slug === selectedCategory
+      );
+      const catName = catObj?.name.toLowerCase() || "";
+      const catSlug = catObj?.slug.toLowerCase() || "";
+      const selectedLower = selectedCategory.toLowerCase();
+
+      const pCatId = p.category_id || p.category?.id;
+      const pCatSlug = p.category?.slug?.toLowerCase() || "";
+      const pCatName = p.category?.name?.toLowerCase() || "";
+
       const matchCat =
-        p.category_id === selectedCategory || p.category?.slug === selectedCategory;
+        pCatId === selectedCategory ||
+        pCatSlug === selectedLower ||
+        pCatName === selectedLower ||
+        (catSlug && pCatSlug === catSlug) ||
+        (catName && pCatName === catName) ||
+        (selectedLower.includes("side") &&
+          (pCatName.includes("side") ||
+            pCatSlug.includes("side") ||
+            p.name.toLowerCase().includes("side key") ||
+            p.slug.toLowerCase().includes("sidekey")));
+
       if (!matchCat) return false;
     }
 
@@ -180,7 +255,8 @@ export default function AdminProductsPage() {
     return (
       p.name.toLowerCase().includes(q) ||
       p.sku?.toLowerCase().includes(q) ||
-      p.category?.name.toLowerCase().includes(q)
+      p.category?.name.toLowerCase().includes(q) ||
+      p.category?.slug?.toLowerCase().includes(q)
     );
   });
 

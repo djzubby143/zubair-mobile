@@ -328,6 +328,7 @@ async function runImport() {
       name: 'Side Keys',
       slug: 'side-keys',
     },
+    image_url: '/images/sidekey-placeholder.svg',
     is_active: true,
     featured: false,
   }));
@@ -388,11 +389,11 @@ function generateSqlBackup(categoryId, products) {
   sql += `VALUES ('${categoryId}', 'Side Keys', 'side-keys', 'Original mobile power and volume side key buttons for Samsung, Vivo, Infinix, Oppo, Tecno, Redmi, and Itel.')\n`;
   sql += `ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;\n\n`;
 
-  sql += `INSERT INTO public.products (name, slug, sku, category_id, price, stock_quantity, short_description, is_active, featured)\nVALUES\n`;
+  sql += `INSERT INTO public.products (name, slug, sku, category_id, price, stock_quantity, short_description, image_url, is_active, featured)\nVALUES\n`;
 
   const values = products.map((p) => {
     const esc = (str) => String(str).replace(/'/g, "''");
-    return `  ('${esc(p.name)}', '${esc(p.slug)}', '${esc(p.sku)}', '${categoryId}', ${p.price}, ${p.stock_quantity}, '${esc(p.short_description)}', true, false)`;
+    return `  ('${esc(p.name)}', '${esc(p.slug)}', '${esc(p.sku)}', '${categoryId}', ${p.price}, ${p.stock_quantity}, '${esc(p.short_description)}', '/images/sidekey-placeholder.svg', true, false)`;
   });
 
   sql += values.join(',\n');
@@ -401,6 +402,7 @@ function generateSqlBackup(categoryId, products) {
   sql += `  price = EXCLUDED.price,\n`;
   sql += `  stock_quantity = EXCLUDED.stock_quantity,\n`;
   sql += `  short_description = EXCLUDED.short_description,\n`;
+  sql += `  image_url = EXCLUDED.image_url,\n`;
   sql += `  is_active = true;\n`;
 
   return sql;

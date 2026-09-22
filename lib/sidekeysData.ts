@@ -19,7 +19,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-x652",
@@ -39,7 +40,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y29",
@@ -58,7 +60,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a52",
@@ -78,7 +81,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y7-2019",
@@ -98,7 +102,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-a04",
@@ -118,7 +123,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-a06",
@@ -138,7 +144,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-a53-5g",
@@ -158,7 +165,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-camon-17",
@@ -178,7 +186,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-camon-20-pro",
@@ -198,7 +207,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-f19",
@@ -218,7 +228,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-f19-pro",
@@ -238,7 +249,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-pop-7",
@@ -258,7 +270,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x612",
@@ -278,7 +291,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x650",
@@ -298,7 +312,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6511",
@@ -318,7 +333,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6512",
@@ -338,7 +354,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6515",
@@ -358,7 +375,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6516",
@@ -378,7 +396,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6517",
@@ -398,7 +417,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6525",
@@ -418,7 +438,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x653",
@@ -438,7 +459,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6531-hot-50",
@@ -458,7 +480,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6532",
@@ -478,7 +501,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x655",
@@ -498,7 +522,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x657",
@@ -518,7 +543,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x659",
@@ -538,7 +564,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x663",
@@ -558,7 +585,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x665",
@@ -578,7 +606,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6725-smart-10",
@@ -598,7 +627,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x680",
@@ -618,7 +648,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6810",
@@ -638,7 +669,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6811",
@@ -658,7 +690,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6812",
@@ -678,7 +711,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6816",
@@ -698,7 +732,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x682",
@@ -718,7 +753,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x683",
@@ -738,7 +774,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6831",
@@ -758,7 +795,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6833",
@@ -778,7 +816,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6836",
@@ -798,7 +837,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6840-smart-20",
@@ -818,7 +858,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6850-note-40-pro",
@@ -838,7 +879,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6860-zero-40",
@@ -858,7 +900,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6880-hot-50-pro-plus",
@@ -878,7 +921,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6881",
@@ -898,7 +942,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x6885",
@@ -918,7 +963,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x689",
@@ -938,7 +984,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x690",
@@ -958,7 +1005,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x693",
@@ -978,7 +1026,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-infinix-x695",
@@ -997,7 +1046,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a05",
@@ -1017,7 +1067,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a05s",
@@ -1037,7 +1088,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a23",
@@ -1057,7 +1109,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a26",
@@ -1077,7 +1130,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a27",
@@ -1097,7 +1151,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a33",
@@ -1117,7 +1172,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a49",
@@ -1137,7 +1193,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-a70",
@@ -1157,7 +1214,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-vision-2",
@@ -1177,7 +1235,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-itel-vision-3",
@@ -1197,7 +1256,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-mate-10-lite",
@@ -1217,7 +1277,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-nova-2",
@@ -1237,7 +1298,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-nova-3i",
@@ -1257,7 +1319,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oneplus-9-5g",
@@ -1277,7 +1340,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a15",
@@ -1297,7 +1361,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a1k",
@@ -1317,7 +1382,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a32",
@@ -1337,7 +1403,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a37",
@@ -1357,7 +1424,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a3s",
@@ -1377,7 +1445,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a5-pro",
@@ -1397,7 +1466,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a53",
@@ -1417,7 +1487,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a54",
@@ -1437,7 +1508,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a57-2020",
@@ -1457,7 +1529,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a58",
@@ -1477,7 +1550,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a60",
@@ -1497,7 +1571,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a6x",
@@ -1517,7 +1592,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a83",
@@ -1537,7 +1613,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-a9-2020",
@@ -1557,7 +1634,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-c15",
@@ -1577,7 +1655,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-c17",
@@ -1597,7 +1676,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-c20",
@@ -1617,7 +1697,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-c25",
@@ -1637,7 +1718,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f11",
@@ -1657,7 +1739,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f11-pro",
@@ -1677,7 +1760,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f15",
@@ -1697,7 +1781,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f1s",
@@ -1717,7 +1802,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f21-pro-5g",
@@ -1737,7 +1823,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f5",
@@ -1757,7 +1844,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f7",
@@ -1777,7 +1865,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-f9",
@@ -1797,7 +1886,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-reno-12f",
@@ -1817,7 +1907,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-oppo-reno-8",
@@ -1837,7 +1928,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-p10-lite",
@@ -1857,7 +1949,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-p20-lite",
@@ -1877,7 +1970,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-p30-lite",
@@ -1897,7 +1991,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-poco-x3-pro",
@@ -1917,7 +2012,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-realme-7i",
@@ -1937,7 +2033,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-realme-8",
@@ -1957,7 +2054,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-realme-c21",
@@ -1977,7 +2075,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-12c",
@@ -1997,7 +2096,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-13c",
@@ -2017,7 +2117,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-14c",
@@ -2037,7 +2138,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-15c",
@@ -2057,7 +2159,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-9a",
@@ -2077,7 +2180,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-a1",
@@ -2097,7 +2201,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-a1-plus",
@@ -2117,7 +2222,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-a2-plus",
@@ -2137,7 +2243,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-a3-a3x",
@@ -2157,7 +2264,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-a5",
@@ -2177,7 +2285,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-note-10-4g",
@@ -2197,7 +2306,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-note-14",
@@ -2217,7 +2327,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-note-14-pro",
@@ -2237,7 +2348,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-note-8-pro",
@@ -2257,7 +2369,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-redmi-poco-m3",
@@ -2277,7 +2390,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a02s",
@@ -2297,7 +2411,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a03",
@@ -2317,7 +2432,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a04s",
@@ -2337,7 +2453,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a05s",
@@ -2357,7 +2474,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a07",
@@ -2377,7 +2495,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a10",
@@ -2397,7 +2516,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a10s",
@@ -2417,7 +2537,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a12",
@@ -2437,7 +2558,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a13",
@@ -2457,7 +2579,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a14-5g",
@@ -2477,7 +2600,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a15-5g",
@@ -2497,7 +2621,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a16",
@@ -2517,7 +2642,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a17-4g",
@@ -2537,7 +2663,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a22",
@@ -2557,7 +2684,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a24",
@@ -2577,7 +2705,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a25",
@@ -2597,7 +2726,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a30",
@@ -2617,7 +2747,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a32",
@@ -2637,7 +2768,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a33-5g",
@@ -2657,7 +2789,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a35-5g",
@@ -2677,7 +2810,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a36-5g",
@@ -2697,7 +2831,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a37-5g",
@@ -2717,7 +2852,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a50",
@@ -2737,7 +2873,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a51",
@@ -2757,7 +2894,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a55-5g",
@@ -2777,7 +2915,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a57-5g",
@@ -2797,7 +2936,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a710",
@@ -2817,7 +2957,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-a720",
@@ -2837,7 +2978,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j4",
@@ -2857,7 +2999,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j5-prime",
@@ -2877,7 +3020,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j510",
@@ -2897,7 +3041,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j6",
@@ -2917,7 +3062,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j7",
@@ -2937,7 +3083,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j7-max",
@@ -2957,7 +3104,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j7-prime",
@@ -2977,7 +3125,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-j730",
@@ -2997,7 +3146,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-note-10",
@@ -3017,7 +3167,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-note-10-plus",
@@ -3037,7 +3188,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-note-8",
@@ -3057,7 +3209,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s10-plus",
@@ -3077,7 +3230,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s21-plus",
@@ -3097,7 +3251,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s21-ultra",
@@ -3117,7 +3272,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s22",
@@ -3137,7 +3293,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s22-ultra",
@@ -3157,7 +3314,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s23",
@@ -3177,7 +3335,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s23-ultra",
@@ -3197,7 +3356,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s23fe",
@@ -3217,7 +3377,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s24",
@@ -3237,7 +3398,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s24-fe",
@@ -3257,7 +3419,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s24-plus",
@@ -3277,7 +3440,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s25-plus",
@@ -3297,7 +3461,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s25fe",
@@ -3317,7 +3482,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s26",
@@ -3337,7 +3503,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s26-plus",
@@ -3357,7 +3524,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s26-ultra",
@@ -3377,7 +3545,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s8",
@@ -3397,7 +3566,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-sam-s9",
@@ -3417,7 +3587,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-samm-a17-5g",
@@ -3437,7 +3608,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-spark-20",
@@ -3457,7 +3629,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecnno-pop-4",
@@ -3477,7 +3650,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecnno-vision-1-pro",
@@ -3497,7 +3671,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-camon-16",
@@ -3517,7 +3692,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-camon-18",
@@ -3537,7 +3713,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-lc7",
@@ -3557,7 +3734,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-pop-4-lite",
@@ -3577,7 +3755,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-pop-5-lite",
@@ -3597,7 +3776,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-pova",
@@ -3617,7 +3797,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-pova2",
@@ -3637,7 +3818,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-10",
@@ -3657,7 +3839,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-10-pro",
@@ -3677,7 +3860,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-20-pro-plus",
@@ -3697,7 +3881,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-20c",
@@ -3717,7 +3902,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-40",
@@ -3737,7 +3923,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-40-pro",
@@ -3757,7 +3944,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-50",
@@ -3777,7 +3965,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-6-go",
@@ -3797,7 +3986,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-8c",
@@ -3817,7 +4007,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-go-2",
@@ -3837,7 +4028,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-go-2023",
@@ -3857,7 +4049,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-go-2024",
@@ -3877,7 +4070,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-spark-go-3",
@@ -3897,7 +4091,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-tecno-vision-1-plus",
@@ -3917,7 +4112,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-v11",
@@ -3937,7 +4133,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-v25e",
@@ -3957,7 +4154,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-v30",
@@ -3977,7 +4175,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-v50",
@@ -3997,7 +4196,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-s1",
@@ -4017,7 +4217,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-v29",
@@ -4037,7 +4238,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-v40",
@@ -4057,7 +4259,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-v7",
@@ -4077,7 +4280,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-v9-y85",
@@ -4097,7 +4301,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y01",
@@ -4117,7 +4322,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y02",
@@ -4137,7 +4343,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y02s",
@@ -4157,7 +4364,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y02t",
@@ -4177,7 +4385,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y03",
@@ -4197,7 +4406,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y16",
@@ -4217,7 +4427,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y17s",
@@ -4237,7 +4448,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y18",
@@ -4257,7 +4469,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y19",
@@ -4277,7 +4490,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y19s",
@@ -4297,7 +4511,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y21",
@@ -4317,7 +4532,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y22",
@@ -4337,7 +4553,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y27",
@@ -4357,7 +4574,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y27s",
@@ -4377,7 +4595,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y28",
@@ -4397,7 +4616,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y33s",
@@ -4417,7 +4637,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y400",
@@ -4437,7 +4658,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y51",
@@ -4457,7 +4679,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y53s",
@@ -4477,7 +4700,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y66",
@@ -4497,7 +4721,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y67",
@@ -4517,7 +4742,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y81",
@@ -4537,7 +4763,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-vivo-y91",
@@ -4557,7 +4784,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y11",
@@ -4577,7 +4805,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y20",
@@ -4597,7 +4826,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y31d",
@@ -4617,7 +4847,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y35",
@@ -4637,7 +4868,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y5-2018",
@@ -4657,7 +4889,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y6-2019",
@@ -4677,7 +4910,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y7-2018",
@@ -4697,7 +4931,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y9-2019",
@@ -4717,7 +4952,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y9-prime-2019",
@@ -4737,7 +4973,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y9a",
@@ -4757,7 +4994,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-y9s",
@@ -4777,7 +5015,8 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   },
   {
     "id": "p-sdk-sidekey-samsung-a12-black-unit-oled",
@@ -4797,6 +5036,7 @@ export const SIDE_KEY_PRODUCTS: Product[] = [
       "slug": "side-keys"
     },
     "is_active": true,
-    "featured": false
+    "featured": false,
+    "image_url": "/images/sidekey-placeholder.svg"
   }
 ];
