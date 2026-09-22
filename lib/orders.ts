@@ -232,23 +232,45 @@ export async function saveOrder(order: Order): Promise<void> {
   }
 }
 
+export const STORAGE_KEY_DELETED_ORDERS = "zubair_deleted_order_ids";
+
 /**
  * Get all orders merged from localStorage & initial orders
  */
 export function getOrders(): Order[] {
   if (typeof window === "undefined") return INITIAL_ORDERS;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_ORDERS);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+    let deletedIds: string[] = [];
+    const deletedRaw = localStorage.getItem(STORAGE_KEY_DELETED_ORDERS);
+    if (deletedRaw) {
+      try {
+        deletedIds = JSON.parse(deletedRaw);
+      } catch {}
     }
+
+    const stored = localStorage.getItem(STORAGE_KEY_ORDERS);
+    let list: Order[] = [];
+    if (stored !== null) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      }
+    } else {
+      // First time initialization: seed localStorage with INITIAL_ORDERS
+      list = [...INITIAL_ORDERS];
+      localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(list));
+    }
+
+    // Filter out any permanently deleted order IDs or order numbers
+    return list.filter(
+      (o) =>
+        !deletedIds.includes(o.id) &&
+        !deletedIds.includes(o.order_number)
+    );
   } catch (err) {
     console.warn("Error reading orders:", err);
+    return [];
   }
-  return INITIAL_ORDERS;
 }
 
 /**
@@ -425,8 +447,42 @@ export function updateOrderDispatch(
 export async function deleteOrder(orderId: string): Promise<void> {
   if (typeof window !== "undefined") {
     try {
-      const orders = getOrders();
-      const filtered = orders.filter((o) => o.id !== orderId);
+      // 1. Permanently track in deleted IDs list so it can never reappear
+      let deletedIds: string[] = [];
+      const deletedRaw = localStorage.getItem(STORAGE_KEY_DELETED_ORDERS);
+      if (deletedRaw) {
+        try {
+          deletedIds = JSON.parse(deletedRaw);
+        } catch {}
+      }
+      if (!deletedIds.includes(orderId)) {
+        deletedIds.push(orderId);
+      }
+
+      // If this is the demo order "Muhammad Ali" (ord-demo-1 or ZB-98241), record both
+      if (orderId === "ord-demo-1" || orderId === "ZB-98241") {
+        if (!deletedIds.includes("ord-demo-1")) deletedIds.push("ord-demo-1");
+        if (!deletedIds.includes("ZB-98241")) deletedIds.push("ZB-98241");
+      }
+
+      localStorage.setItem(STORAGE_KEY_DELETED_ORDERS, JSON.stringify(deletedIds));
+
+      // 2. Remove from active localStorage orders
+      const stored = localStorage.getItem(STORAGE_KEY_ORDERS);
+      let list: Order[] = [];
+      if (stored !== null) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) list = parsed;
+        } catch {}
+      } else {
+        list = [...INITIAL_ORDERS];
+      }
+
+      const filtered = list.filter(
+        (o) => o.id !== orderId && o.order_number !== orderId
+      );
+
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(filtered));
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: filtered }));
@@ -438,6 +494,7 @@ export async function deleteOrder(orderId: string): Promise<void> {
   // Attempt to delete from Supabase if table is configured
   try {
     await supabase.from("orders").delete().eq("id", orderId);
+    await supabase.from("orders").delete().eq("order_number", orderId);
   } catch (err) {
     console.warn("Notice: Supabase order deletion skipped/not available:", err);
   }

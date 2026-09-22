@@ -70,10 +70,16 @@ export default function AdminOrdersPage() {
 
   const handleDeleteOrder = async () => {
     if (!deleteTargetOrder) return;
+    const targetId = deleteTargetOrder.id;
+    const targetOrderNum = deleteTargetOrder.order_number;
     setIsDeleting(true);
     try {
-      await deleteOrder(deleteTargetOrder.id);
+      await deleteOrder(targetId);
+      if (targetOrderNum && targetOrderNum !== targetId) {
+        await deleteOrder(targetOrderNum);
+      }
       setDeleteTargetOrder(null);
+      setOrders((prev) => prev.filter((o) => o.id !== targetId && o.order_number !== targetOrderNum));
       loadOrders();
     } catch (err) {
       console.error("Failed to delete order:", err);
