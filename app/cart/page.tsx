@@ -224,21 +224,21 @@ export default function CartPage() {
 
       {/* Guest Login Alert Banner if not logged in */}
       {!isLoggedIn && items.length > 0 && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#dc2626] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-[#111827]">Login Required to View Prices & Checkout</h4>
+              <h4 className="text-sm font-bold text-[#111827]">Login Required to View Rates & Checkout</h4>
               <p className="text-xs text-slate-600">
-                Wholesale prices and cargo dispatch are reserved for verified mobile repair shops.
+                مخصوص ٹیکنیشن یا ہول سیل ریٹس دیکھنے اور آرڈر کنفرم کرنے کیلئے لاگ ان کریں۔
               </p>
             </div>
           </div>
           <Link
             href="/login"
-            className="px-4 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-lg shadow-2xs transition-colors shrink-0 text-center"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-colors shrink-0 text-center"
           >
             Login to View Rates
           </Link>
@@ -321,9 +321,26 @@ export default function CartPage() {
                               Min Order: {item.min_order_quantity} Pcs (کم از کم {item.min_order_quantity} پیس)
                             </span>
                           )}
-                          <div className="sm:hidden text-xs font-bold text-[#16a34a]">
+                          <div className="sm:hidden text-xs font-bold text-[#16a34a] flex flex-wrap items-center gap-1.5">
                             {isLoggedIn ? (
-                              `Rs. ${item.price.toLocaleString("en-PK")} each`
+                              <>
+                                <span>Rs. {item.price.toLocaleString("en-PK")} each</span>
+                                {item.pricing_tier === "technician" && (
+                                  <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                    ٹیکنیشن ریٹ
+                                  </span>
+                                )}
+                                {item.pricing_tier === "wholesale" && (
+                                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                    ہول سیل ریٹ
+                                  </span>
+                                )}
+                                {item.pricing_tier === "retail" && (
+                                  <span className="text-[9px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                    پرچون ریٹ
+                                  </span>
+                                )}
+                              </>
                             ) : (
                               <span className="text-[#dc2626] flex items-center gap-1">
                                 <Lock className="w-3 h-3" /> Login for Price
@@ -336,9 +353,26 @@ export default function CartPage() {
                       {/* Unit Price (Col 2 - Desktop) */}
                       <div className="hidden sm:block sm:col-span-2 text-center">
                         {isLoggedIn ? (
-                          <span className="text-xs font-bold text-slate-700">
-                            Rs. {item.price.toLocaleString("en-PK")}
-                          </span>
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs font-bold text-slate-700">
+                              Rs. {item.price.toLocaleString("en-PK")}
+                            </span>
+                            {item.pricing_tier === "technician" && (
+                              <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5">
+                                ٹیکنیشن ریٹ
+                              </span>
+                            )}
+                            {item.pricing_tier === "wholesale" && (
+                              <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
+                                ہول سیل ریٹ
+                              </span>
+                            )}
+                            {item.pricing_tier === "retail" && (
+                              <span className="text-[9px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 mt-0.5">
+                                پرچون ریٹ
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-[11px] font-bold text-[#dc2626] bg-red-50 px-2 py-0.5 rounded border border-red-100">
                             Login for Price

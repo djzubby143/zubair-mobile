@@ -193,9 +193,9 @@ export default function ProductDetailPage() {
               <span>In Stock & Tested Ready to Ship</span>
             </div>
 
-            {/* Main Effective Price Display */}
-            <div className="pt-2">
-              <div className="flex items-center gap-2 mb-1">
+            {/* Main Effective Price Display - Strict Single Tier Display */}
+            <div className="pt-2 space-y-2">
+              <div className="flex items-center gap-2">
                 <span
                   className={`text-xs font-bold uppercase tracking-wider ${
                     priceInfo.activeTier === "wholesale"
@@ -208,16 +208,16 @@ export default function ProductDetailPage() {
                   {priceInfo.tierName} Price / {priceInfo.tierLabelUrdu}
                 </span>
                 <span
-                  className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                     priceInfo.activeTier === "wholesale"
-                      ? "bg-emerald-100 text-emerald-800"
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                       : priceInfo.activeTier === "technician"
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-blue-100 text-blue-800"
+                      ? "bg-amber-100 text-amber-800 border border-amber-200"
+                      : "bg-blue-100 text-blue-800 border border-blue-200"
                   }`}
                 >
                   {priceInfo.isGuest
-                    ? "عوامی ریٹ (عام خریدار)"
+                    ? "عوامی پرچون قیمت"
                     : priceInfo.activeTier === "wholesale"
                     ? "ہول سیل ڈیلر ریٹ"
                     : priceInfo.activeTier === "technician"
@@ -225,6 +225,8 @@ export default function ProductDetailPage() {
                     : "پرچون کسٹمر ریٹ"}
                 </span>
               </div>
+
+              {/* Exact Price */}
               <div className="flex items-baseline gap-2">
                 <span
                   className={`text-3xl sm:text-4xl font-black ${
@@ -237,126 +239,34 @@ export default function ProductDetailPage() {
                 >
                   Rs. {priceInfo.price.toLocaleString("en-PK")}
                 </span>
-                {priceInfo.isRetail && (
-                  <span className="text-xs text-slate-400 font-medium">
-                    (عام پرچون قیمت)
-                  </span>
-                )}
               </div>
-            </div>
 
-            {/* 3-Tier Price Comparison Grid */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-700 border-b border-slate-200/80 pb-1.5">
-                <span>3-Tier Rate Comparison (ریٹ تفصیل)</span>
-                {!isLoggedIn && (
+              {/* Status Note: strictly relevant to this user tier only */}
+              {priceInfo.activeTier === "wholesale" && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-medium flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                  <span>آپ ہول سیل ڈیلر اکاؤنٹ پر لاگ ان ہیں، آپ کو خصوصی ہول سیل ریٹ دیا جا رہا ہے۔</span>
+                </div>
+              )}
+
+              {priceInfo.activeTier === "technician" && (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" />
+                  <span>آپ تصدیق شدہ موبائل ٹیکنیشن ہیں، آپ کو خصوصی ٹیکنیشن ریٹ دیا جا رہا ہے۔</span>
+                </div>
+              )}
+
+              {priceInfo.isGuest && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-[#dc2626] shrink-0" />
+                    <span>موبائل دکاندار یا ٹیکنیشن ہیں؟ اپنے خصوصی ریٹ کیلئے لاگ ان کریں۔</span>
+                  </div>
                   <Link
                     href="/login"
-                    className="text-[11px] text-[#dc2626] font-bold hover:underline inline-flex items-center gap-1"
+                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-[11px] font-bold rounded-lg shadow-2xs transition-colors shrink-0"
                   >
-                    <Lock className="w-3 h-3" />
-                    <span>لاگ ان کریں</span>
-                  </Link>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                {/* 1. Retail Price (Always visible) */}
-                <div
-                  className={`p-2 rounded-lg border transition-all ${
-                    priceInfo.activeTier === "retail"
-                      ? "bg-blue-50 border-blue-300 ring-2 ring-blue-400/30"
-                      : "bg-white border-slate-200"
-                  }`}
-                >
-                  <div className="text-[10px] font-bold text-blue-700 uppercase">
-                    Retail (پرچون)
-                  </div>
-                  <div className="text-sm font-black text-blue-600 mt-0.5">
-                    Rs. {priceInfo.retailPrice.toLocaleString("en-PK")}
-                  </div>
-                  <div className="text-[9.5px] text-slate-400">سب کیلئے دستیاب</div>
-                </div>
-
-                {/* 2. Technician Price */}
-                <div
-                  className={`p-2 rounded-lg border transition-all ${
-                    priceInfo.activeTier === "technician"
-                      ? "bg-amber-50 border-amber-300 ring-2 ring-amber-400/30"
-                      : "bg-white border-slate-200"
-                  }`}
-                >
-                  <div className="text-[10px] font-bold text-amber-700 uppercase">
-                    Technician (ٹیکنیشن)
-                  </div>
-                  {priceInfo.canSeeTechnicianRate ? (
-                    <>
-                      <div className="text-sm font-black text-amber-600 mt-0.5">
-                        Rs. {priceInfo.technicianPrice.toLocaleString("en-PK")}
-                      </div>
-                      <div className="text-[9.5px] text-amber-600 font-semibold">
-                        ٹیکنیشن رعایت
-                      </div>
-                    </>
-                  ) : (
-                    <Link
-                      href="/login"
-                      className="block mt-1 text-[11px] font-bold text-amber-700 hover:text-amber-800"
-                    >
-                      <span className="inline-flex items-center gap-0.5">
-                        <Lock className="w-3 h-3 text-amber-600" />
-                        لاگ ان
-                      </span>
-                      <div className="text-[9px] text-slate-400">ریٹ انلاک کریں</div>
-                    </Link>
-                  )}
-                </div>
-
-                {/* 3. Wholesale Price */}
-                <div
-                  className={`p-2 rounded-lg border transition-all ${
-                    priceInfo.activeTier === "wholesale"
-                      ? "bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/30"
-                      : "bg-white border-slate-200"
-                  }`}
-                >
-                  <div className="text-[10px] font-bold text-emerald-700 uppercase">
-                    Wholesale (ہول سیل)
-                  </div>
-                  {priceInfo.canSeeWholesaleRate ? (
-                    <>
-                      <div className="text-sm font-black text-[#16a34a] mt-0.5">
-                        Rs. {priceInfo.wholesalePrice.toLocaleString("en-PK")}
-                      </div>
-                      <div className="text-[9.5px] text-emerald-600 font-semibold">
-                        ڈیلر ریٹ
-                      </div>
-                    </>
-                  ) : (
-                    <Link
-                      href="/login"
-                      className="block mt-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800"
-                    >
-                      <span className="inline-flex items-center gap-0.5">
-                        <Lock className="w-3 h-3 text-emerald-600" />
-                        لاگ ان
-                      </span>
-                      <div className="text-[9px] text-slate-400">ریٹ انلاک کریں</div>
-                    </Link>
-                  )}
-                </div>
-              </div>
-
-              {!isLoggedIn && (
-                <div className="text-[11px] text-slate-500 bg-white/80 p-2 rounded-lg border border-slate-200/70 flex items-center justify-between">
-                  <span>
-                    موبائل دکاندار یا ٹیکنیشن ہیں؟ خصوصی ہول سیل ریٹ کیلئے لاگ ان کریں۔
-                  </span>
-                  <Link
-                    href="/login"
-                    className="text-[#dc2626] font-bold hover:underline shrink-0 ml-2"
-                  >
-                    لاگ ان &rarr;
+                    <span>لاگ ان کریں &rarr;</span>
                   </Link>
                 </div>
               )}
