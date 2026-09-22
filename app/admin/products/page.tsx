@@ -14,6 +14,7 @@ import {
   Trash2,
   ExternalLink,
   Sparkles,
+  UploadCloud,
 } from "lucide-react";
 import { Category, Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
@@ -205,13 +206,22 @@ export default function AdminProductsPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/products/new"
-          className="inline-flex items-center gap-2 bg-secondary hover:bg-secondary-hover text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all hover:shadow"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Part</span>
-        </Link>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            href="/admin/products/import"
+            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 hover:border-[#dc2626] hover:text-[#dc2626] px-4 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition-all cursor-pointer"
+          >
+            <UploadCloud className="w-4 h-4 text-[#dc2626]" />
+            <span>Import Products (CSV / Excel)</span>
+          </Link>
+          <Link
+            href="/admin/products/new"
+            className="inline-flex items-center gap-2 bg-secondary hover:bg-secondary-hover text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all hover:shadow cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Part</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search & Filter Controls */}

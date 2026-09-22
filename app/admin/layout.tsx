@@ -17,6 +17,7 @@ import {
   Image as ImageIcon,
   ShieldAlert,
   Receipt,
+  UploadCloud,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -84,6 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Categories", href: "/admin/categories", icon: Layers },
     { name: "Products", href: "/admin/products", icon: Package },
+    { name: "Import Products", href: "/admin/products/import", icon: UploadCloud },
   ];
 
   if (loading) {
