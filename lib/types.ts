@@ -15,6 +15,7 @@ export interface Product {
   category_id?: string | null;
   category?: Category | null;
   price: number; // Wholesale / Base Trade Price
+  wholesale_price?: number | null; // Explicit Wholesale Selling Price
   technician_price?: number | null; // Special Technician / Repairman Price
   retail_price?: number | null; // Retail Selling Price (Publicly visible)
   purchase_price?: number | null; // Cost / Purchase Price (Admin-only)

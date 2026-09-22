@@ -130,7 +130,7 @@ export default function NewProductPage() {
 
     // Validation
     if (!name.trim() || !sku.trim() || !price || !stockQuantity) {
-      setFormError("Please fill all required fields (Name, SKU, Price, and Stock).");
+      setFormError("Please fill all required fields (Name, SKU, Wholesale Price, and Stock).");
       return;
     }
 
@@ -138,13 +138,40 @@ export default function NewProductPage() {
     const numStock = parseInt(stockQuantity, 10);
 
     if (isNaN(numPrice) || numPrice < 0) {
-      setFormError("Price must be a valid positive number.");
+      setFormError("Wholesale Selling Price must be a valid non-negative number.");
       return;
     }
 
     if (isNaN(numStock) || numStock < 0) {
       setFormError("Stock Quantity must be a valid positive integer.");
       return;
+    }
+
+    let numTechnicianPrice: number | null = null;
+    if (technicianPrice && technicianPrice.trim() !== "") {
+      numTechnicianPrice = parseFloat(technicianPrice);
+      if (isNaN(numTechnicianPrice) || numTechnicianPrice < 0) {
+        setFormError("Technician Price must be a valid non-negative number.");
+        return;
+      }
+    }
+
+    let numRetailPrice: number | null = null;
+    if (retailPrice && retailPrice.trim() !== "") {
+      numRetailPrice = parseFloat(retailPrice);
+      if (isNaN(numRetailPrice) || numRetailPrice < 0) {
+        setFormError("Retail Price must be a valid non-negative number.");
+        return;
+      }
+    }
+
+    let numPurchasePrice: number | null = null;
+    if (purchasePrice && purchasePrice.trim() !== "") {
+      numPurchasePrice = parseFloat(purchasePrice);
+      if (isNaN(numPurchasePrice) || numPurchasePrice < 0) {
+        setFormError("Purchase Price must be a valid non-negative number.");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -163,9 +190,6 @@ export default function NewProductPage() {
       }
 
       // 2. Insert into Supabase Products table
-      const numPurchasePrice = purchasePrice ? parseFloat(purchasePrice) : null;
-      const numTechnicianPrice = technicianPrice ? parseFloat(technicianPrice) : null;
-      const numRetailPrice = retailPrice ? parseFloat(retailPrice) : null;
       const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
       const newProductRecord = {
         name: name.trim(),
@@ -173,6 +197,7 @@ export default function NewProductPage() {
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
         price: numPrice,
+        wholesale_price: numPrice,
         technician_price: numTechnicianPrice,
         retail_price: numRetailPrice,
         purchase_price: numPurchasePrice,
@@ -191,17 +216,21 @@ export default function NewProductPage() {
 
       if (insertResponse.error) {
         console.warn("Database insert error:", insertResponse.error);
-        // If column purchase_price, technician_price, retail_price, or min_order_quantity doesn't exist on remote table schema, retry without it
+        // If column purchase_price, technician_price, retail_price, wholesale_price, or min_order_quantity doesn't exist on remote table schema, retry without it
         if (
           insertResponse.error.message &&
           (insertResponse.error.message.includes("purchase_price") ||
             insertResponse.error.message.includes("technician_price") ||
             insertResponse.error.message.includes("retail_price") ||
+            insertResponse.error.message.includes("wholesale_price") ||
             insertResponse.error.message.includes("min_order_quantity"))
         ) {
           const fallbackRecord = { ...newProductRecord };
           if (insertResponse.error.message.includes("min_order_quantity")) {
             delete (fallbackRecord as Record<string, unknown>).min_order_quantity;
+          }
+          if (insertResponse.error.message.includes("wholesale_price")) {
+            delete (fallbackRecord as Record<string, unknown>).wholesale_price;
           }
           if (insertResponse.error.message.includes("purchase_price")) {
             delete (fallbackRecord as Record<string, unknown>).purchase_price;
@@ -360,11 +389,16 @@ export default function NewProductPage() {
               </select>
             </div>
 
-            {/* Selling Price (PKR) */}
+            {/* Wholesale Selling Price (PKR) */}
             <div className="space-y-1">
-              <label className="font-bold text-charcoal block">
-                Wholesale Selling Price (PKR) *
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-charcoal block">
+                  Wholesale Selling Price (PKR) *
+                </label>
+                <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                  بیس ہول سیل ریٹ
+                </span>
+              </div>
               <div className="relative">
                 <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">
                   Rs.
@@ -372,24 +406,24 @@ export default function NewProductPage() {
                 <input
                   type="number"
                   min="0"
-                  step="10"
+                  step="any"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="2650"
+                  placeholder="e.g. 50, 100, 99.50, 250.75"
                   required
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs font-bold"
                 />
               </div>
             </div>
 
-            {/* Technician Selling Price (PKR) - Optional */}
+            {/* Technician Selling Price (PKR) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-charcoal">
                   Technician Price (PKR)
                 </label>
                 <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                  ٹیکنیشن ریٹ • اختیاری
+                  ٹیکنیشن ریٹ • Manual
                 </span>
               </div>
               <div className="relative">
@@ -399,23 +433,23 @@ export default function NewProductPage() {
                 <input
                   type="number"
                   min="0"
-                  step="10"
+                  step="any"
                   value={technicianPrice}
                   onChange={(e) => setTechnicianPrice(e.target.value)}
-                  placeholder={price ? `Auto markup (+12%): Rs. ${Math.round(parseFloat(price) * 1.12)}` : "e.g. 2950 (خالی رکھیں تو +12% لگے گا)"}
+                  placeholder="Manual price (e.g. 100, 99.50, 250.75)"
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-bold"
                 />
               </div>
             </div>
 
-            {/* Retail Selling Price (PKR) - Optional */}
+            {/* Retail Selling Price (PKR) */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-charcoal">
                   Retail Price (PKR)
                 </label>
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                  پرچون گاہک ریٹ • اختیاری
+                  پرچون ریٹ • Manual
                 </span>
               </div>
               <div className="relative">
@@ -425,10 +459,10 @@ export default function NewProductPage() {
                 <input
                   type="number"
                   min="0"
-                  step="10"
+                  step="any"
                   value={retailPrice}
                   onChange={(e) => setRetailPrice(e.target.value)}
-                  placeholder={price ? `Auto markup (+25%): Rs. ${Math.round(parseFloat(price) * 1.25)}` : "e.g. 3200 (خالی رکھیں تو +25% لگے گا)"}
+                  placeholder="Manual price (e.g. 100, 99.50, 250.75)"
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-blue-200 bg-blue-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-bold"
                 />
               </div>
@@ -451,10 +485,10 @@ export default function NewProductPage() {
                 <input
                   type="number"
                   min="0"
-                  step="10"
+                  step="any"
                   value={purchasePrice}
                   onChange={(e) => setPurchasePrice(e.target.value)}
-                  placeholder="e.g. 1950"
+                  placeholder="Manual price (e.g. 50, 49.50, 180.25)"
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-emerald-300 bg-emerald-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-bold"
                 />
               </div>

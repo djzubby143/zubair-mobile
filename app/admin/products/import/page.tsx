@@ -304,7 +304,7 @@ export default function AdminImportProductsPage() {
       if (!cleanName) {
         status = "error";
         statusMessage = "Missing product name";
-      } else if (isNaN(numWholesale) || numWholesale <= 0) {
+      } else if (isNaN(numWholesale) || numWholesale < 0) {
         status = "error";
         statusMessage = "Invalid or missing wholesale price";
       } else if (!rawCat.trim() || !matchedCatId) {
@@ -417,6 +417,7 @@ export default function AdminImportProductsPage() {
         slug: p.slug,
         category_id: p.categoryId || null,
         price: p.price,
+        wholesale_price: p.price,
         technician_price: p.technicianPrice,
         retail_price: p.retailPrice,
         purchase_price: p.purchasePrice,
@@ -433,17 +434,19 @@ export default function AdminImportProductsPage() {
 
         if (error) {
           console.warn("Batch insert error, attempting schema fallback:", error.message);
-          // If columns purchase_price, technician_price, retail_price, or min_order_quantity are missing remotely
+          // If columns purchase_price, technician_price, retail_price, wholesale_price, or min_order_quantity are missing remotely
           if (
             error.message &&
             (error.message.includes("purchase_price") ||
               error.message.includes("technician_price") ||
               error.message.includes("retail_price") ||
+              error.message.includes("wholesale_price") ||
               error.message.includes("min_order_quantity"))
           ) {
             const fallbackRecords = recordsToInsert.map((rec) => {
               const copy = { ...rec } as Record<string, unknown>;
               if (error?.message.includes("min_order_quantity")) delete copy.min_order_quantity;
+              if (error?.message.includes("wholesale_price")) delete copy.wholesale_price;
               if (error?.message.includes("purchase_price")) delete copy.purchase_price;
               if (error?.message.includes("technician_price")) delete copy.technician_price;
               if (error?.message.includes("retail_price")) delete copy.retail_price;

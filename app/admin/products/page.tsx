@@ -426,20 +426,32 @@ export default function AdminProductsPage() {
                       {/* Rates & Profit */}
                       <td className="py-3.5 px-4">
                         <div className="font-black text-primary text-xs sm:text-sm">
-                          Rs. {product.price.toLocaleString("en-PK")}
+                          Rs. {Number(product.wholesale_price ?? product.price).toLocaleString("en-PK")}
                         </div>
-                        {unitCost !== null ? (
-                          <div className="mt-0.5 space-y-0.5">
-                            <div className="text-[10px] text-slate-500 font-medium">
-                              Cost: <span className="font-mono font-bold text-slate-700">Rs. {unitCost.toLocaleString("en-PK")}</span>
+                        <div className="mt-0.5 space-y-0.5 text-[10px]">
+                          {product.technician_price !== undefined && product.technician_price !== null ? (
+                            <div className="text-amber-800 font-medium">
+                              Tech: <span className="font-semibold font-mono">Rs. {Number(product.technician_price).toLocaleString("en-PK")}</span>
                             </div>
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                              +{unitProfit! >= 0 ? `Rs. ${unitProfit!.toLocaleString("en-PK")}` : `-Rs. ${Math.abs(unitProfit!).toLocaleString("en-PK")}`} ({marginPct}%)
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic">No cost set</span>
-                        )}
+                          ) : null}
+                          {product.retail_price !== undefined && product.retail_price !== null ? (
+                            <div className="text-blue-800 font-medium">
+                              Retail: <span className="font-semibold font-mono">Rs. {Number(product.retail_price).toLocaleString("en-PK")}</span>
+                            </div>
+                          ) : null}
+                          {unitCost !== null ? (
+                            <div className="text-slate-600">
+                              Cost: <span className="font-mono font-bold text-slate-700">Rs. {Number(unitCost).toLocaleString("en-PK")}</span>
+                              {marginPct !== null && (
+                                <span className="ml-1 inline-flex items-center text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                                  +{marginPct}%
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">No cost set</span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Stock Badge & MOQ */}

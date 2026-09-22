@@ -28,6 +28,7 @@ export type PricingTier = "retail" | "technician" | "wholesale";
 export function getEffectiveProductPrice(
   product: {
     price: number;
+    wholesale_price?: number | null;
     technician_price?: number | null;
     retail_price?: number | null;
   },
@@ -47,13 +48,18 @@ export function getEffectiveProductPrice(
   technicianPrice: number;
   retailPrice: number;
 } {
-  const wholesalePrice = Number(product.price) || 0;
+  const wholesalePrice =
+    product.wholesale_price !== undefined && product.wholesale_price !== null && !isNaN(Number(product.wholesale_price))
+      ? Number(product.wholesale_price)
+      : Number(product.price) || 0;
+
   const technicianPrice =
-    product.technician_price && Number(product.technician_price) > 0
+    product.technician_price !== undefined && product.technician_price !== null && !isNaN(Number(product.technician_price))
       ? Number(product.technician_price)
       : Math.round(wholesalePrice * 1.12);
+
   const retailPrice =
-    product.retail_price && Number(product.retail_price) > 0
+    product.retail_price !== undefined && product.retail_price !== null && !isNaN(Number(product.retail_price))
       ? Number(product.retail_price)
       : Math.round(wholesalePrice * 1.25);
 

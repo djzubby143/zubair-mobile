@@ -31,6 +31,11 @@ CREATE TABLE IF NOT EXISTS public.products (
     sku TEXT NOT NULL UNIQUE,
     category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
     price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
+    wholesale_price NUMERIC(10, 2) CHECK (wholesale_price >= 0),
+    technician_price NUMERIC(10, 2) CHECK (technician_price >= 0),
+    retail_price NUMERIC(10, 2) CHECK (retail_price >= 0),
+    purchase_price NUMERIC(10, 2) CHECK (purchase_price >= 0),
+    min_order_quantity INTEGER NOT NULL DEFAULT 1 CHECK (min_order_quantity >= 1),
     stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
     short_description TEXT,
     description TEXT,
@@ -40,6 +45,14 @@ CREATE TABLE IF NOT EXISTS public.products (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+-- Idempotent schema upgrades for existing database
+ALTER TABLE public.products
+    ADD COLUMN IF NOT EXISTS wholesale_price NUMERIC(10, 2) CHECK (wholesale_price >= 0),
+    ADD COLUMN IF NOT EXISTS technician_price NUMERIC(10, 2) CHECK (technician_price >= 0),
+    ADD COLUMN IF NOT EXISTS retail_price NUMERIC(10, 2) CHECK (retail_price >= 0),
+    ADD COLUMN IF NOT EXISTS purchase_price NUMERIC(10, 2) CHECK (purchase_price >= 0),
+    ADD COLUMN IF NOT EXISTS min_order_quantity INTEGER NOT NULL DEFAULT 1 CHECK (min_order_quantity >= 1);
 
 -- Indexes for querying products
 CREATE INDEX IF NOT EXISTS idx_products_category_id ON public.products (category_id);

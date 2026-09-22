@@ -163,26 +163,26 @@ async function runImport() {
       return;
     }
 
-    // 3. Keep prices strictly separate
+    // 3. Keep all prices strictly separate and independent (decimals allowed)
     const rawWholesale = row['wholesale_price'] ?? row['Sale Price (PKR)'] ?? row['Sale price'];
     const wholesale_price = rawWholesale !== undefined && rawWholesale !== null && !isNaN(Number(rawWholesale))
-      ? Number(rawWholesale)
+      ? parseFloat(rawWholesale)
       : null;
 
-    const rawTechnician = row['technician_price'];
+    const rawTechnician = row['technician_price'] ?? row['Technician Price (PKR)'] ?? row['Technician price'];
     const technician_price = rawTechnician !== undefined && rawTechnician !== null && !isNaN(Number(rawTechnician))
-      ? Number(rawTechnician)
-      : (wholesale_price ? Math.round(wholesale_price * 1.12) : null);
+      ? parseFloat(rawTechnician)
+      : null;
 
-    const rawRetail = row['retail_price'];
+    const rawRetail = row['retail_price'] ?? row['Retail Price (PKR)'] ?? row['Retail price'];
     const retail_price = rawRetail !== undefined && rawRetail !== null && !isNaN(Number(rawRetail))
-      ? Number(rawRetail)
-      : (wholesale_price ? Math.round(wholesale_price * 1.25) : null);
+      ? parseFloat(rawRetail)
+      : null;
 
     const rawPurchase = row['purchase_price'] ?? row['Purchase Price (PKR)'] ?? row['Purchase price'];
     const purchase_price = rawPurchase !== undefined && rawPurchase !== null && !isNaN(Number(rawPurchase))
-      ? Number(rawPurchase)
-      : 0;
+      ? parseFloat(rawPurchase)
+      : null;
 
     // Report missing or zero price products separately (DO NOT auto-replace with 75)
     if (wholesale_price === null || wholesale_price <= 0) {
@@ -234,14 +234,15 @@ async function runImport() {
       sku: finalSku,
       category_id: categoryId,
       price: wholesale_price !== null ? wholesale_price : 0, // Base wholesale trade price
+      wholesale_price: wholesale_price !== null ? wholesale_price : 0,
       technician_price: technician_price !== null ? technician_price : undefined,
       retail_price: retail_price !== null ? retail_price : undefined,
-      purchase_price: purchase_price > 0 ? purchase_price : undefined,
+      purchase_price: purchase_price !== null && purchase_price > 0 ? purchase_price : undefined,
       stock_quantity: stock_quantity,
       min_order_quantity: min_order_quantity,
       short_description: (row['short_description'] || `Genuine mobile replacement side key / button for ${model}.`).toString().trim(),
       description: `Original equipment mobile phone side volume and power key button for ${model}. Made of durable OEM material, precision molded for exact tactile click response.`,
-      image_url: row['image_url'] ? String(row['image_url']).trim() : null,
+      image_url: row['image_url'] ? String(row['image_url']).trim() : '/images/sidekey-placeholder.svg',
       is_active: true,
       featured: false,
     };
@@ -389,17 +390,24 @@ function generateSqlBackup(categoryId, products) {
   sql += `VALUES ('${categoryId}', 'Side Keys', 'side-keys', 'Original mobile power and volume side key buttons for Samsung, Vivo, Infinix, Oppo, Tecno, Redmi, and Itel.')\n`;
   sql += `ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;\n\n`;
 
-  sql += `INSERT INTO public.products (name, slug, sku, category_id, price, stock_quantity, short_description, image_url, is_active, featured)\nVALUES\n`;
+  sql += `INSERT INTO public.products (name, slug, sku, category_id, price, wholesale_price, technician_price, retail_price, purchase_price, stock_quantity, short_description, image_url, is_active, featured)\nVALUES\n`;
 
   const values = products.map((p) => {
     const esc = (str) => String(str).replace(/'/g, "''");
-    return `  ('${esc(p.name)}', '${esc(p.slug)}', '${esc(p.sku)}', '${categoryId}', ${p.price}, ${p.stock_quantity}, '${esc(p.short_description)}', '/images/sidekey-placeholder.svg', true, false)`;
+    const techVal = p.technician_price !== undefined && p.technician_price !== null ? p.technician_price : 'NULL';
+    const retVal = p.retail_price !== undefined && p.retail_price !== null ? p.retail_price : 'NULL';
+    const purVal = p.purchase_price !== undefined && p.purchase_price !== null ? p.purchase_price : 'NULL';
+    return `  ('${esc(p.name)}', '${esc(p.slug)}', '${esc(p.sku)}', '${categoryId}', ${p.price}, ${p.wholesale_price ?? p.price}, ${techVal}, ${retVal}, ${purVal}, ${p.stock_quantity}, '${esc(p.short_description)}', '${p.image_url || '/images/sidekey-placeholder.svg'}', true, false)`;
   });
 
   sql += values.join(',\n');
   sql += `\nON CONFLICT (slug) DO UPDATE SET\n`;
   sql += `  name = EXCLUDED.name,\n`;
   sql += `  price = EXCLUDED.price,\n`;
+  sql += `  wholesale_price = EXCLUDED.wholesale_price,\n`;
+  sql += `  technician_price = EXCLUDED.technician_price,\n`;
+  sql += `  retail_price = EXCLUDED.retail_price,\n`;
+  sql += `  purchase_price = EXCLUDED.purchase_price,\n`;
   sql += `  stock_quantity = EXCLUDED.stock_quantity,\n`;
   sql += `  short_description = EXCLUDED.short_description,\n`;
   sql += `  image_url = EXCLUDED.image_url,\n`;
