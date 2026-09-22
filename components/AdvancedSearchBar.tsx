@@ -23,7 +23,7 @@ import {
   advancedSearchProducts,
 } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/lib/auth";
+import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
 
 interface AdvancedSearchBarProps {
   className?: string;
@@ -38,7 +38,7 @@ export default function AdvancedSearchBar({
 }: AdvancedSearchBarProps) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -143,7 +143,15 @@ export default function AdvancedSearchBar({
 
   const handleQuickAddToCart = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
-    addToCart(product);
+    const priceInfo = getEffectiveProductPrice(product, user);
+    addToCart(
+      {
+        ...product,
+        price: priceInfo.price,
+        pricing_tier: priceInfo.activeTier,
+      },
+      product.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1
+    );
     setAddedIds((prev) => ({ ...prev, [product.id]: true }));
     setTimeout(() => {
       setAddedIds((prev) => ({ ...prev, [product.id]: false }));
@@ -304,66 +312,78 @@ export default function AdvancedSearchBar({
                         </p>
                       )}
 
-                      {/* Wholesale Price Tag (Hidden unless logged in) */}
-                      <div className="pt-0.5">
-                        {isLoggedIn ? (
-                          <div className="text-xs sm:text-sm font-black text-[#16a34a] flex items-center gap-1.5">
-                            <span>
-                              Rs {product.price > 0 ? product.price.toLocaleString("en-PK") : "0"}
-                            </span>
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">
-                              Wholesale
-                            </span>
+                      {/* Role-authorized Price Tag */}
+                      {(() => {
+                        const priceInfo = getEffectiveProductPrice(product, user);
+                        return (
+                          <div className="pt-0.5 space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`text-xs sm:text-sm font-black ${
+                                  priceInfo.activeTier === "wholesale"
+                                    ? "text-[#16a34a]"
+                                    : priceInfo.activeTier === "technician"
+                                    ? "text-amber-700"
+                                    : "text-blue-600"
+                                }`}
+                              >
+                                Rs {priceInfo.price.toLocaleString("en-PK")}
+                              </span>
+                              <span
+                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                                  priceInfo.activeTier === "wholesale"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : priceInfo.activeTier === "technician"
+                                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                                }`}
+                              >
+                                {priceInfo.tierLabelUrdu}
+                              </span>
+                            </div>
+                            {priceInfo.isGuest && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsOpen(false);
+                                  router.push("/login");
+                                }}
+                                className="inline-flex items-center gap-1 text-[9px] text-[#dc2626] hover:underline font-semibold"
+                              >
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>ہول سیل و ٹیکنیشن ریٹ کیلئے لاگ ان</span>
+                              </button>
+                            )}
                           </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#dc2626] bg-red-50 px-2 py-0.5 rounded border border-red-100">
-                            <Lock className="w-3 h-3 text-[#dc2626]" />
-                            <span>Login for Price</span>
-                          </span>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Col 3: Quick Action Buttons */}
                     <div className="flex flex-col sm:flex-row items-center gap-1.5 shrink-0">
-                      {isLoggedIn ? (
-                        <button
-                          type="button"
-                          onClick={(e) => handleQuickAddToCart(e, product)}
-                          className={`inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs ${
-                            isAdded
-                              ? "bg-emerald-600 text-white"
-                              : "bg-[#dc2626] hover:bg-[#b91c1c] text-white"
-                          }`}
-                          title="Add to Cart"
-                        >
-                          {isAdded ? (
-                            <>
-                              <Check className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Added</span>
-                            </>
-                          ) : (
-                            <>
-                              <ShoppingCart className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Add</span>
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsOpen(false);
-                            router.push("/login");
-                          }}
-                          className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-red-50 hover:text-[#dc2626] text-slate-700 border border-slate-200 transition-colors shadow-2xs"
-                          title="Login to View Price & Order"
-                        >
-                          <Lock className="w-3 h-3 text-[#dc2626]" />
-                          <span>Login</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => handleQuickAddToCart(e, product)}
+                        className={`inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs ${
+                          isAdded
+                            ? "bg-emerald-600 text-white"
+                            : "bg-[#dc2626] hover:bg-[#b91c1c] text-white"
+                        }`}
+                        title="Add to Cart"
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Added</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Add</span>
+                          </>
+                        )}
+                      </button>
 
                       <div className="hidden sm:block text-slate-300 group-hover:text-[#dc2626] transition-colors p-1">
                         <ArrowRight className="w-4 h-4" />

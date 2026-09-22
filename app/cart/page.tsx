@@ -60,8 +60,6 @@ export default function CartPage() {
   const handleWhatsAppCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isLoggedIn) return;
-
     // Validation
     const errors: { [key: string]: string } = {};
     if (!customerName.trim()) {
@@ -97,7 +95,7 @@ export default function CartPage() {
         id: i.id,
         name: i.name,
         price: i.price,
-        purchase_price: i.purchase_price ?? undefined,
+        purchase_price: user?.role === "admin" ? (i.purchase_price ?? undefined) : undefined,
         quantity: i.quantity,
         sku: i.sku,
       })),
@@ -113,6 +111,14 @@ export default function CartPage() {
 
     // Construct WhatsApp message
     const formattedSubtotal = cartSubtotal.toLocaleString("en-PK");
+    const rateTierLabel =
+      user?.role === "admin"
+        ? "Admin (تمام ریٹ)"
+        : user?.pricing_tier === "technician"
+        ? "Technician (ٹیکنیشن ریٹ)"
+        : user?.pricing_tier === "wholesale"
+        ? "Wholesale (ہول سیل ریٹ)"
+        : "Retail / Customer (پرچون ریٹ)";
     const itemsManifest = items
       .map((item) => {
         const lineTotal = (item.price * item.quantity).toLocaleString("en-PK");
@@ -133,6 +139,7 @@ export default function CartPage() {
       `Name: ${customerName.trim()}`,
       `Phone: ${customerPhone.trim()}`,
       `Address / City: ${customerAddress.trim()}`,
+      `Rate Applied: ${rateTierLabel}`,
     ];
 
     if (orderNotes.trim()) {
@@ -323,28 +330,18 @@ export default function CartPage() {
                             </span>
                           )}
                           <div className="sm:hidden text-xs font-bold text-[#16a34a] flex flex-wrap items-center gap-1.5">
-                            {isLoggedIn ? (
-                              <>
-                                <span>Rs. {item.price.toLocaleString("en-PK")} each</span>
-                                {item.pricing_tier === "technician" && (
-                                  <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                                    ٹیکنیشن ریٹ
-                                  </span>
-                                )}
-                                {item.pricing_tier === "wholesale" && (
-                                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                    ہول سیل ریٹ
-                                  </span>
-                                )}
-                                {item.pricing_tier === "retail" && (
-                                  <span className="text-[9px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                                    پرچون ریٹ
-                                  </span>
-                                )}
-                              </>
+                            <span>Rs. {item.price.toLocaleString("en-PK")} each</span>
+                            {item.pricing_tier === "technician" ? (
+                              <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                ٹیکنیشن ریٹ
+                              </span>
+                            ) : item.pricing_tier === "wholesale" ? (
+                              <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                ہول سیل ریٹ
+                              </span>
                             ) : (
-                              <span className="text-[#dc2626] flex items-center gap-1">
-                                <Lock className="w-3 h-3" /> Login for Price
+                              <span className="text-[9px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                پرچون ریٹ
                               </span>
                             )}
                           </div>
@@ -353,32 +350,24 @@ export default function CartPage() {
 
                       {/* Unit Price (Col 2 - Desktop) */}
                       <div className="hidden sm:block sm:col-span-2 text-center">
-                        {isLoggedIn ? (
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs font-bold text-slate-700">
-                              Rs. {item.price.toLocaleString("en-PK")}
-                            </span>
-                            {item.pricing_tier === "technician" && (
-                              <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5">
-                                ٹیکنیشن ریٹ
-                              </span>
-                            )}
-                            {item.pricing_tier === "wholesale" && (
-                              <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
-                                ہول سیل ریٹ
-                              </span>
-                            )}
-                            {item.pricing_tier === "retail" && (
-                              <span className="text-[9px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 mt-0.5">
-                                پرچون ریٹ
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] font-bold text-[#dc2626] bg-red-50 px-2 py-0.5 rounded border border-red-100">
-                            Login for Price
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-bold text-slate-700">
+                            Rs. {item.price.toLocaleString("en-PK")}
                           </span>
-                        )}
+                          {item.pricing_tier === "technician" ? (
+                            <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5">
+                              ٹیکنیشن ریٹ
+                            </span>
+                          ) : item.pricing_tier === "wholesale" ? (
+                            <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mt-0.5">
+                              ہول سیل ریٹ
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 mt-0.5">
+                              پرچون ریٹ
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Quantity Controls (Col 2) */}
@@ -444,15 +433,9 @@ export default function CartPage() {
                           <span className="sm:hidden text-xs text-slate-400 mr-2">
                             Total:
                           </span>
-                          {isLoggedIn ? (
-                            <span className="text-xs sm:text-sm font-bold text-[#16a34a]">
-                              Rs. {lineTotal.toLocaleString("en-PK")}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-bold text-[#dc2626]">
-                              Hidden
-                            </span>
-                          )}
+                          <span className="text-xs sm:text-sm font-bold text-[#16a34a]">
+                            Rs. {lineTotal.toLocaleString("en-PK")}
+                          </span>
                         </div>
 
                         {/* Desktop Delete */}
@@ -498,15 +481,9 @@ export default function CartPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between text-slate-600">
                   <span>Items Subtotal</span>
-                  {isLoggedIn ? (
-                    <span className="font-bold text-[#111827]">
-                      Rs. {cartSubtotal.toLocaleString("en-PK")}
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-[#dc2626] flex items-center gap-1">
-                      <Lock className="w-3 h-3" /> Login for Price
-                    </span>
-                  )}
+                  <span className="font-bold text-[#111827]">
+                    Rs. {cartSubtotal.toLocaleString("en-PK")}
+                  </span>
                 </div>
 
                 <div className="flex items-start justify-between text-xs text-slate-500 pt-1">
@@ -526,162 +503,147 @@ export default function CartPage() {
 
                 <div className="pt-3 border-t border-slate-100 flex items-baseline justify-between">
                   <span className="text-sm font-extrabold text-[#111827]">Total Payable:</span>
-                  {isLoggedIn ? (
-                    <span className="text-2xl font-black text-[#16a34a]">
-                      Rs. {cartSubtotal.toLocaleString("en-PK")}
-                    </span>
-                  ) : (
-                    <span className="text-sm font-bold text-[#dc2626] flex items-center gap-1">
-                      <Lock className="w-3.5 h-3.5" /> Login for Rate
-                    </span>
-                  )}
+                  <span className="text-2xl font-black text-[#16a34a]">
+                    Rs. {cartSubtotal.toLocaleString("en-PK")}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Direct WhatsApp Checkout Form or Login Prompt */}
-            {isLoggedIn ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-[#25D366]">
-                    <PhoneCall className="w-5 h-5" />
-                    <h3 className="font-black text-sm uppercase tracking-wider text-[#111827]">
-                      WhatsApp Direct Checkout
-                    </h3>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Enter your details to generate an instant WhatsApp order receipt and confirm
-                    dispatch.
-                  </p>
-                </div>
-
-                <form onSubmit={handleWhatsAppCheckout} className="space-y-3.5 text-xs">
-                  {/* Full Name */}
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-700 flex items-center justify-between">
-                      <span>Full Name *</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="e.g. Muhammad Zubair"
-                      className={`w-full px-3.5 py-2.5 rounded-lg border text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition-all ${
-                        formErrors.name
-                          ? "border-rose-300 bg-rose-50/30"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    />
-                    {formErrors.name && (
-                      <p className="text-[11px] text-rose-600 font-medium">{formErrors.name}</p>
-                    )}
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-700 flex items-center justify-between">
-                      <span>WhatsApp Number *</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="03001234567"
-                      className={`w-full px-3.5 py-2.5 rounded-lg border text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition-all ${
-                        formErrors.phone
-                          ? "border-rose-300 bg-rose-50/30"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    />
-                    {formErrors.phone && (
-                      <p className="text-[11px] text-rose-600 font-medium">{formErrors.phone}</p>
-                    )}
-                  </div>
-
-                  {/* Address */}
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-700 flex items-center justify-between">
-                      <span>Delivery Address & City *</span>
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={customerAddress}
-                      onChange={(e) => setCustomerAddress(e.target.value)}
-                      placeholder="Shop name, Market, City (e.g. Shop 4, Mobile Market, Gujranwala)"
-                      className={`w-full px-3.5 py-2.5 rounded-lg border text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition-all ${
-                        formErrors.address
-                          ? "border-rose-300 bg-rose-50/30"
-                          : "border-slate-200 bg-white"
-                      }`}
-                    />
-                    {formErrors.address && (
-                      <p className="text-[11px] text-rose-600 font-medium">{formErrors.address}</p>
-                    )}
-                  </div>
-
-                  {/* Order Notes */}
-                  <div className="space-y-1">
-                    <label className="font-medium text-slate-500">Order Notes (Optional)</label>
-                    <input
-                      type="text"
-                      value={orderNotes}
-                      onChange={(e) => setOrderNotes(e.target.value)}
-                      placeholder="e.g. Urgent Daewoo cargo please"
-                      className="w-full px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366]"
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md hover:shadow-lg transition-all"
-                    >
-                      <PhoneCall className="w-4 h-4" />
-                      <span>Send Order via WhatsApp</span>
-                    </button>
-                    <p className="text-[10px] text-slate-400 text-center mt-2">
-                      Clicking will open WhatsApp with your itemized bill pre-filled.
-                    </p>
-                  </div>
-                </form>
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4 text-center">
-                <div className="w-12 h-12 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center mx-auto">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-black text-sm uppercase text-[#111827]">
-                    Customer Login Required
+            {/* Direct WhatsApp Checkout Form */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-[#25D366]">
+                  <PhoneCall className="w-5 h-5" />
+                  <h3 className="font-black text-sm uppercase tracking-wider text-[#111827]">
+                    WhatsApp Direct Checkout
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Please log into your registered shop account to unlock wholesale rates and submit your order.
-                  </p>
                 </div>
-                <div className="pt-2 space-y-2">
+                <p className="text-xs text-slate-500">
+                  Enter your details to generate an instant WhatsApp order receipt and confirm
+                  dispatch.
+                </p>
+              </div>
+
+              {!isLoggedIn ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>موبائل دکاندار یا ٹیکنیشن ہیں؟ ہول سیل یا ٹیکنیشن ریٹ کیلئے</span>
+                  </div>
                   <Link
                     href="/login"
-                    className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#dc2626] hover:bg-[#b91c1c] text-white shadow-xs transition-all"
+                    className="inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-[11px] font-bold rounded-lg transition-colors shrink-0"
                   >
-                    <Lock className="w-4 h-4" />
-                    <span>Login to Place Order</span>
+                    لاگ ان کریں
                   </Link>
-                  <p className="text-[11px] text-slate-400">
-                    New customer? WhatsApp{" "}
-                    <a
-                      href="https://wa.me/923458032600"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#25D366] font-bold hover:underline"
-                    >
-                      03458032600
-                    </a>{" "}
-                    for registration.
+                </div>
+              ) : (
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+                  <span className="text-slate-600">
+                    Logged in as: <strong className="text-slate-900">{user?.full_name || user?.username}</strong>
+                  </span>
+                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                    {user?.role === "admin"
+                      ? "Admin"
+                      : user?.pricing_tier === "technician"
+                      ? "ٹیکنیشن ریٹ"
+                      : "ہول سیل ریٹ"}
+                  </span>
+                </div>
+              )}
+
+              <form onSubmit={handleWhatsAppCheckout} className="space-y-3.5 text-xs">
+                {/* Full Name */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 flex items-center justify-between">
+                    <span>Full Name *</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="e.g. Muhammad Zubair"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition-all ${
+                      formErrors.name
+                        ? "border-rose-300 bg-rose-50/30"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  />
+                  {formErrors.name && (
+                    <p className="text-[11px] text-rose-600 font-medium">{formErrors.name}</p>
+                  )}
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 flex items-center justify-between">
+                    <span>WhatsApp Number *</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="03001234567"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition-all ${
+                      formErrors.phone
+                        ? "border-rose-300 bg-rose-50/30"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  />
+                  {formErrors.phone && (
+                    <p className="text-[11px] text-rose-600 font-medium">{formErrors.phone}</p>
+                  )}
+                </div>
+
+                {/* Address */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 flex items-center justify-between">
+                    <span>Delivery Address & City *</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    placeholder="Shop name, Market, City (e.g. Shop 4, Mobile Market, Gujranwala)"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366] transition-all ${
+                      formErrors.address
+                        ? "border-rose-300 bg-rose-50/30"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  />
+                  {formErrors.address && (
+                    <p className="text-[11px] text-rose-600 font-medium">{formErrors.address}</p>
+                  )}
+                </div>
+
+                {/* Order Notes */}
+                <div className="space-y-1">
+                  <label className="font-medium text-slate-500">Order Notes (Optional)</label>
+                  <input
+                    type="text"
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                    placeholder="e.g. Urgent Daewoo cargo please"
+                    className="w-full px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#25D366]"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    <span>Send Order via WhatsApp</span>
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center mt-2">
+                    Clicking will open WhatsApp with your itemized bill pre-filled.
                   </p>
                 </div>
-              </div>
-            )}
+              </form>
+            </div>
           </div>
         </div>
       )}

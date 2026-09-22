@@ -44,10 +44,12 @@ export function getEffectiveProductPrice(
   isGuest: boolean;
   canSeeTechnicianRate: boolean;
   canSeeWholesaleRate: boolean;
-  wholesalePrice: number;
-  technicianPrice: number;
-  retailPrice: number;
+  retailPrice?: number;
+  wholesalePrice?: number;
+  technicianPrice?: number;
 } {
+  const isAdmin = user?.role === "admin";
+
   const wholesalePrice =
     product.wholesale_price !== undefined && product.wholesale_price !== null && !isNaN(Number(product.wholesale_price))
       ? Number(product.wholesale_price)
@@ -63,9 +65,28 @@ export function getEffectiveProductPrice(
       ? Number(product.retail_price)
       : Math.round(wholesalePrice * 1.25);
 
-  const isGuest = !user || (!user.id && !user.username);
+  const isGuest = !user || (!user.id && !user.username && !isAdmin);
 
-  // If visitor is not logged in: they see the Public Retail Price
+  // Admin gets full visibility of all rates
+  if (isAdmin) {
+    return {
+      price: wholesalePrice,
+      activeTier: "wholesale",
+      tierName: "Admin / Wholesale",
+      tierLabelUrdu: "ایڈمن ویو (تمام ریٹ)",
+      isRetail: false,
+      isTechnician: false,
+      isWholesale: true,
+      isGuest: false,
+      canSeeTechnicianRate: true,
+      canSeeWholesaleRate: true,
+      wholesalePrice,
+      technicianPrice,
+      retailPrice,
+    };
+  }
+
+  // 1. Guest Customer: Show ONLY retail_price. Do NOT expose wholesale_price or technician_price.
   if (isGuest) {
     return {
       price: retailPrice,
@@ -78,13 +99,12 @@ export function getEffectiveProductPrice(
       isGuest: true,
       canSeeTechnicianRate: false,
       canSeeWholesaleRate: false,
-      wholesalePrice,
-      technicianPrice,
       retailPrice,
+      // wholesalePrice & technicianPrice are undefined for guests
     };
   }
 
-  // Logged-in user: determine their tier
+  // Determine role/tier for logged-in user
   const tier: PricingTier =
     user.pricing_tier === "technician"
       ? "technician"
@@ -92,6 +112,7 @@ export function getEffectiveProductPrice(
       ? "retail"
       : "wholesale"; // Default logged-in trade customer is wholesale
 
+  // 2. Technician user: Show technician_price. Hide wholesale_price.
   if (tier === "technician") {
     return {
       price: technicianPrice,
@@ -104,12 +125,13 @@ export function getEffectiveProductPrice(
       isGuest: false,
       canSeeTechnicianRate: true,
       canSeeWholesaleRate: false,
-      wholesalePrice,
       technicianPrice,
       retailPrice,
+      // wholesalePrice is undefined for technician users
     };
   }
 
+  // 3. Retail account: Show retail_price only.
   if (tier === "retail") {
     return {
       price: retailPrice,
@@ -122,13 +144,12 @@ export function getEffectiveProductPrice(
       isGuest: false,
       canSeeTechnicianRate: false,
       canSeeWholesaleRate: false,
-      wholesalePrice,
-      technicianPrice,
       retailPrice,
+      // wholesalePrice & technicianPrice are undefined
     };
   }
 
-  // Wholesale Tier (default for verified shopkeepers & admin)
+  // 4. Wholesale user: Show wholesale_price. Hide technician_price.
   return {
     price: wholesalePrice,
     activeTier: "wholesale",
@@ -138,11 +159,11 @@ export function getEffectiveProductPrice(
     isTechnician: false,
     isWholesale: true,
     isGuest: false,
-    canSeeTechnicianRate: true,
+    canSeeTechnicianRate: false,
     canSeeWholesaleRate: true,
     wholesalePrice,
-    technicianPrice,
     retailPrice,
+    // technicianPrice is undefined for wholesale users
   };
 }
 

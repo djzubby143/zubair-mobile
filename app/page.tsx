@@ -19,11 +19,14 @@ import { Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categories";
+import { useAuth } from "@/lib/auth";
+import { resolveUserTier, sanitizeProductListForTier } from "@/lib/pricingSecurity";
 
 function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryFromUrl = searchParams.get("category") || searchParams.get("q") || searchParams.get("search");
+  const { user } = useAuth();
 
   const [products, setProducts] = useState<Product[]>(DEFAULT_CATALOG_PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -57,6 +60,7 @@ function HomeContent() {
 
   // Load products and live categories
   const loadAllData = async () => {
+    const tier = resolveUserTier(user);
     try {
       // 1. Fetch Categories
       const liveCats = await getLiveCategories();
@@ -64,7 +68,25 @@ function HomeContent() {
         setCategories(liveCats);
       }
 
-      // 2. Fetch Products
+      // 2. Fetch Products via secure /api/products endpoint
+      try {
+        const res = await fetch("/api/products", {
+          headers: {
+            "x-user-tier": tier,
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.products) && json.products.length > 0) {
+            setProducts(json.products);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("API /api/products fallback to Supabase direct:", apiErr);
+      }
+
+      // Fallback: Fetch directly from Supabase & sanitize with tier
       const { data: prodData, error: prodErr } = await supabase
         .from("products")
         .select("*, category:categories(*)")
@@ -78,19 +100,21 @@ function HomeContent() {
             merged.push(def);
           }
         }
-        setProducts(merged);
+        setProducts(sanitizeProductListForTier(merged, tier));
       } else {
-        setProducts(DEFAULT_CATALOG_PRODUCTS);
+        setProducts(sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier));
       }
     } catch (err) {
       console.warn("Notice loading catalog data:", err);
-      setProducts(DEFAULT_CATALOG_PRODUCTS);
+      setProducts(sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier));
     }
   };
 
   useEffect(() => {
     loadAllData();
+  }, [user]);
 
+  useEffect(() => {
     // Event listeners for instant updates when a category is added in Admin
     const handleStorageUpdate = (e: StorageEvent) => {
       if (!e.key || e.key === "zubair_mobile_categories" || e.key === "zubair_mobile_subcategories_map") {

@@ -81,6 +81,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const updated = [...prevItems];
         updated[existingIndex] = {
           ...existingItem,
+          price: Number(product.price) || existingItem.price,
+          pricing_tier: "pricing_tier" in product ? (product.pricing_tier as "wholesale" | "technician" | "retail") : existingItem.pricing_tier,
           min_order_quantity: existingItem.min_order_quantity || moq,
           quantity: finalQuantity,
         };
@@ -93,7 +95,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           price: Number(product.price) || 0,
           retail_price: "retail_price" in product ? (product.retail_price ?? null) : null,
           technician_price: "technician_price" in product ? (product.technician_price ?? null) : null,
-          purchase_price: "purchase_price" in product ? (product.purchase_price ?? null) : null,
           pricing_tier: "pricing_tier" in product ? (product.pricing_tier as "wholesale" | "technician" | "retail") : undefined,
           image_url: product.image_url ?? null,
           quantity: initialQuantity,

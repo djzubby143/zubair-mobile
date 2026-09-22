@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
+import { resolveUserTier, sanitizeProductForTier } from "@/lib/pricingSecurity";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { Product } from "@/lib/types";
@@ -33,26 +34,52 @@ export default function ProductDetailPage() {
   useEffect(() => {
     async function loadProduct() {
       setLoading(true);
+      const tier = resolveUserTier(user);
       try {
-        // Try local mock first
+        // Try secure API first
+        try {
+          const res = await fetch(`/api/products/${slug}`, {
+            headers: {
+              "x-user-tier": tier,
+            },
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && json.product) {
+              setProduct(json.product);
+              const moq = json.product.min_order_quantity && json.product.min_order_quantity > 0 ? json.product.min_order_quantity : 1;
+              setQuantity(moq);
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn("API product detail fallback:", apiErr);
+        }
+
+        // Try local mock
         const localMatch = DEFAULT_CATALOG_PRODUCTS.find(
           (p) => p.slug === slug || p.id === slug
         );
 
         // Try Supabase
-        const { data, error } = await supabase
-          .from("products")
-          .select("*, category:categories(*)")
-          .or(`slug.eq.${slug},id.eq.${slug}`)
-          .maybeSingle();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+        let detailQuery = supabase.from("products").select("*, category:categories(*)");
+        if (isUuid) {
+          detailQuery = detailQuery.or(`slug.eq.${slug},id.eq.${slug}`);
+        } else {
+          detailQuery = detailQuery.eq("slug", slug);
+        }
+        const { data, error } = await detailQuery.maybeSingle();
 
         if (data && !error) {
-          setProduct(data as Product);
-          const moq = data.min_order_quantity && data.min_order_quantity > 0 ? data.min_order_quantity : 1;
+          const sanitized = sanitizeProductForTier(data as Product, tier);
+          setProduct(sanitized);
+          const moq = sanitized.min_order_quantity && sanitized.min_order_quantity > 0 ? sanitized.min_order_quantity : 1;
           setQuantity(moq);
         } else if (localMatch) {
-          setProduct(localMatch);
-          const moq = localMatch.min_order_quantity && localMatch.min_order_quantity > 0 ? localMatch.min_order_quantity : 1;
+          const sanitized = sanitizeProductForTier(localMatch, tier);
+          setProduct(sanitized);
+          const moq = sanitized.min_order_quantity && sanitized.min_order_quantity > 0 ? sanitized.min_order_quantity : 1;
           setQuantity(moq);
         } else {
           // Fallback generic product
@@ -72,7 +99,7 @@ export default function ProductDetailPage() {
             sku: `ZB-${slug ? slug.toUpperCase().slice(0, 6) : "PART"}-01`,
             is_active: true,
           };
-          setProduct(fallbackProduct);
+          setProduct(sanitizeProductForTier(fallbackProduct, tier));
           setQuantity(1);
         }
       } catch (err) {
@@ -85,7 +112,7 @@ export default function ProductDetailPage() {
     if (slug) {
       loadProduct();
     }
-  }, [slug]);
+  }, [slug, user]);
 
   const moq = product?.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
   const productName = product?.name || "Mobile Spare Part";
