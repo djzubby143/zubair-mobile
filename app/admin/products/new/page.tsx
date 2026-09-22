@@ -29,6 +29,7 @@ export default function NewProductPage() {
   const [sku, setSku] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [price, setPrice] = useState("");
+  const [retailPrice, setRetailPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("25");
   const [minOrderQuantity, setMinOrderQuantity] = useState("1");
@@ -165,6 +166,7 @@ export default function NewProductPage() {
 
       // 2. Insert into Supabase Products table
       const numPurchasePrice = purchasePrice ? parseFloat(purchasePrice) : null;
+      const numRetailPrice = retailPrice ? parseFloat(retailPrice) : null;
       const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
       const newProductRecord = {
         name: name.trim(),
@@ -172,6 +174,7 @@ export default function NewProductPage() {
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
         price: numPrice,
+        retail_price: numRetailPrice,
         purchase_price: numPurchasePrice,
         min_order_quantity: numMinOrderQuantity > 0 ? numMinOrderQuantity : 1,
         stock_quantity: numStock,
@@ -188,10 +191,11 @@ export default function NewProductPage() {
 
       if (insertResponse.error) {
         console.warn("Database insert error:", insertResponse.error);
-        // If column purchase_price or min_order_quantity doesn't exist on remote table schema, retry without it
+        // If column purchase_price, retail_price, or min_order_quantity doesn't exist on remote table schema, retry without it
         if (
           insertResponse.error.message &&
           (insertResponse.error.message.includes("purchase_price") ||
+            insertResponse.error.message.includes("retail_price") ||
             insertResponse.error.message.includes("min_order_quantity"))
         ) {
           const fallbackRecord = { ...newProductRecord };
@@ -200,6 +204,9 @@ export default function NewProductPage() {
           }
           if (insertResponse.error.message.includes("purchase_price")) {
             delete (fallbackRecord as Record<string, unknown>).purchase_price;
+          }
+          if (insertResponse.error.message.includes("retail_price")) {
+            delete (fallbackRecord as Record<string, unknown>).retail_price;
           }
           insertResponse = await supabase.from("products").insert([fallbackRecord]);
         }
@@ -367,6 +374,32 @@ export default function NewProductPage() {
                   placeholder="2650"
                   required
                   className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Retail Selling Price (PKR) - Optional */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-charcoal">
+                  Retail Price (PKR)
+                </label>
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                  پرچون گاہک ریٹ • اختیاری
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">
+                  Rs.
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={retailPrice}
+                  onChange={(e) => setRetailPrice(e.target.value)}
+                  placeholder={price ? `Auto markup (+25%): Rs. ${Math.round(parseFloat(price) * 1.25)}` : "e.g. 3200 (خالی رکھیں تو +25% لگے گا)"}
+                  className="w-full pl-11 pr-3.5 py-2.5 rounded-lg border border-blue-200 bg-blue-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs font-bold"
                 />
               </div>
             </div>

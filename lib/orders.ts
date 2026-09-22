@@ -20,6 +20,9 @@ export interface Order {
   items: OrderItem[];
   total_items: number;
   total_amount: number;
+  paid_amount?: number; // Amount customer has paid so far (for partial payments / khata)
+  payment_status?: "unpaid" | "partial" | "paid"; // Payment status
+  payment_notes?: string; // Optional payment transaction notes (e.g. JazzCash ref, Cargo COD balance)
   total_cost?: number; // Total Purchase Cost for Admin
   total_profit?: number; // Total Net Profit (total_amount - total_cost)
   status: "pending" | "confirmed" | "dispatched" | "completed";
@@ -59,6 +62,31 @@ export function calculateOrderProfit(order: Order): {
   };
 }
 
+/**
+ * Get payment breakdown: total, paid, remaining, and status
+ */
+export function getOrderPaymentDetails(order: Order): {
+  total: number;
+  paid: number;
+  remaining: number;
+  status: "unpaid" | "partial" | "paid";
+} {
+  const total = Number(order.total_amount) || 0;
+  const paid = Math.max(0, Number(order.paid_amount) || 0);
+  const remaining = Math.max(0, total - paid);
+
+  let status: "unpaid" | "partial" | "paid" = order.payment_status || "unpaid";
+  if (paid >= total && total > 0) {
+    status = "paid";
+  } else if (paid > 0) {
+    status = "partial";
+  } else {
+    status = "unpaid";
+  }
+
+  return { total, paid, remaining, status };
+}
+
 export const STORAGE_KEY_ORDERS = "zubair_mobile_orders";
 
 // Initial demo orders for preview
@@ -78,6 +106,9 @@ export const INITIAL_ORDERS: Order[] = [
     ],
     total_items: 17,
     total_amount: 8700,
+    paid_amount: 5000,
+    payment_status: "partial",
+    payment_notes: "5,000 received via JazzCash. Remaining balance 3,700 on cargo.",
     total_cost: 6300,
     total_profit: 2400,
     status: "dispatched",
@@ -87,6 +118,67 @@ export const INITIAL_ORDERS: Order[] = [
     created_at: new Date(Date.now() - 3600000 * 6).toISOString(),
   },
 ];
+
+/**
+ * Update payment for an order (paid_amount, payment_notes, payment_status)
+ */
+export async function updateOrderPayment(
+  orderId: string,
+  paidAmount: number,
+  notes?: string
+): Promise<Order | null> {
+  let updatedOrder: Order | null = null;
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_ORDERS);
+      const orders: Order[] = stored ? JSON.parse(stored) : [];
+      const idx = orders.findIndex((o) => o.id === orderId);
+      if (idx > -1) {
+        const order = orders[idx];
+        const total = Number(order.total_amount) || 0;
+        const validPaid = Math.max(0, Number(paidAmount) || 0);
+        const status: "unpaid" | "partial" | "paid" =
+          validPaid >= total && total > 0
+            ? "paid"
+            : validPaid > 0
+            ? "partial"
+            : "unpaid";
+
+        orders[idx] = {
+          ...order,
+          paid_amount: validPaid,
+          payment_status: status,
+          payment_notes: notes !== undefined ? notes : order.payment_notes,
+        };
+        updatedOrder = orders[idx];
+        localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: orders }));
+      }
+    } catch (err) {
+      console.warn("Error updating order payment in localStorage:", err);
+    }
+  }
+
+  // Attempt to update Supabase
+  try {
+    if (updatedOrder) {
+      await supabase
+        .from("orders")
+        .update({
+          paid_amount: updatedOrder.paid_amount,
+          payment_status: updatedOrder.payment_status,
+          payment_notes: updatedOrder.payment_notes,
+        })
+        .eq("id", orderId);
+    }
+  } catch (err) {
+    console.warn("Notice: Supabase payment update skipped:", err);
+  }
+
+  return updatedOrder;
+}
 
 /**
  * Save an order to localStorage and optionally to Supabase if table exists

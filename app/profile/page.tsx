@@ -30,9 +30,16 @@ import {
   X,
   Camera,
   UploadCloud,
+  DollarSign,
 } from "lucide-react";
 import { useAuth, updateCustomerProfile } from "@/lib/auth";
-import { Order, getCustomerOrders, getCustomerNotifications, OrderNotification } from "@/lib/orders";
+import {
+  Order,
+  getCustomerOrders,
+  getCustomerNotifications,
+  OrderNotification,
+  getOrderPaymentDetails,
+} from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 import { uploadAvatarImage } from "@/lib/storage";
 
@@ -74,6 +81,23 @@ export default function ProfilePage() {
     });
     setNotifications(notifs);
   };
+
+  const khataStats = React.useMemo(() => {
+    let totalPurchases = 0;
+    let totalPaid = 0;
+    for (const ord of orders) {
+      const tot = Number(ord.total_amount) || 0;
+      const pd = Math.max(0, Number(ord.paid_amount) || 0);
+      totalPurchases += tot;
+      totalPaid += pd;
+    }
+    const remainingBalance = Math.max(0, totalPurchases - totalPaid);
+    return {
+      totalPurchases,
+      totalPaid,
+      remainingBalance,
+    };
+  }, [orders]);
 
   const handleOpenEdit = () => {
     if (!user) return;
@@ -393,6 +417,85 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Khata & Ledger Summary Card */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
+              <span>Khata & Payment Ledger (میرا کھاتہ اور بقایا رقم)</span>
+            </h2>
+            <p className="text-xs text-slate-500">
+              Aapki kul khareedari, ada shuda raqam aur baqaya balance ka mukammal record.
+            </p>
+          </div>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider self-start sm:self-center ${
+              khataStats.remainingBalance === 0
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                : "bg-rose-100 text-rose-800 border border-rose-300"
+            }`}
+          >
+            {khataStats.remainingBalance === 0
+              ? "Account Cleared (کھاتہ کلیئر)"
+              : "Balance Due (بقایا واجب الادا)"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Card 1: Total Purchases */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              Total Purchases (کل خریداری)
+            </span>
+            <span className="text-2xl font-mono font-black text-slate-900 block">
+              Rs. {khataStats.totalPurchases.toLocaleString("en-PK")}
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium block">
+              {orders.length} Total Orders Placed
+            </span>
+          </div>
+
+          {/* Card 2: Total Paid */}
+          <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1">
+            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
+              Total Paid (ادا شدہ رقم)
+            </span>
+            <span className="text-2xl font-mono font-black text-emerald-700 block">
+              Rs. {khataStats.totalPaid.toLocaleString("en-PK")}
+            </span>
+            <span className="text-[11px] text-emerald-600 font-medium block">
+              Received via Cash / Cargo / Online
+            </span>
+          </div>
+
+          {/* Card 3: Remaining Balance */}
+          <div
+            className={`p-4 rounded-2xl border space-y-1 ${
+              khataStats.remainingBalance > 0
+                ? "bg-rose-50/80 border-rose-200 text-rose-900"
+                : "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+            }`}
+          >
+            <span className="text-xs font-bold uppercase tracking-wider block">
+              Remaining Balance (بقایا واجب الادا)
+            </span>
+            <span
+              className={`text-2xl font-mono font-black block ${
+                khataStats.remainingBalance > 0 ? "text-rose-600" : "text-emerald-700"
+              }`}
+            >
+              Rs. {khataStats.remainingBalance.toLocaleString("en-PK")}
+            </span>
+            <span className="text-[11px] font-medium block opacity-80">
+              {khataStats.remainingBalance > 0
+                ? "Cargo par ya aglay order par ada karein"
+                : "Koi baqaya raqam nahi hai"}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Orders & Cargo Tracking Section */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
@@ -638,6 +741,56 @@ export default function ProfilePage() {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Payment & Remaining Balance Breakdown */}
+                      {(() => {
+                        const pay = getOrderPaymentDetails(order);
+                        return (
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                  pay.status === "paid"
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                    : pay.status === "partial"
+                                    ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                    : "bg-rose-100 text-rose-800 border border-rose-300"
+                                }`}
+                              >
+                                {pay.status === "paid"
+                                  ? "Paid (مکمل ادا شدہ)"
+                                  : pay.status === "partial"
+                                  ? "Partial Payment (جزوی ادائیگی)"
+                                  : "Unpaid (غیر ادا شدہ)"}
+                              </span>
+                              {order.payment_notes && (
+                                <span className="text-slate-600 text-[11px] bg-white px-2 py-0.5 rounded border border-slate-200 italic">
+                                  {order.payment_notes}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-4 text-xs">
+                              <div>
+                                <span className="text-slate-500">Paid: </span>
+                                <strong className="text-emerald-700 font-mono font-bold">
+                                  Rs. {pay.paid.toLocaleString("en-PK")}
+                                </strong>
+                              </div>
+                              <div>
+                                <span className="text-slate-500">Remaining (بقایا): </span>
+                                <strong
+                                  className={`font-mono font-black ${
+                                    pay.remaining > 0 ? "text-rose-600" : "text-emerald-700"
+                                  }`}
+                                >
+                                  Rs. {pay.remaining.toLocaleString("en-PK")}
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* WhatsApp Inquire Link */}

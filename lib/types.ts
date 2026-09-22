@@ -14,7 +14,8 @@ export interface Product {
   sku: string;
   category_id?: string | null;
   category?: Category | null;
-  price: number; // Wholesale / Selling Price
+  price: number; // Wholesale / Base Trade Price
+  retail_price?: number | null; // Retail Selling Price (for Retail tier customers)
   purchase_price?: number | null; // Cost / Purchase Price (Admin-only)
   min_order_quantity?: number; // Minimum Order Quantity (MOQ)
   stock_quantity: number;
@@ -31,7 +32,9 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
+  retail_price?: number | null;
   purchase_price?: number | null;
+  pricing_tier?: "wholesale" | "retail";
   image_url?: string | null;
   quantity: number;
   min_order_quantity?: number;

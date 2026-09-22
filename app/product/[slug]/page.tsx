@@ -14,7 +14,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/lib/auth";
+import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { Product } from "@/lib/types";
@@ -23,7 +23,7 @@ export default function ProductDetailPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const { addToCart } = useCart();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,12 +89,15 @@ export default function ProductDetailPage() {
 
   const moq = product?.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
   const productName = product?.name || "Mobile Spare Part";
-  const price = product?.price || 2650;
+  const { price: effectivePrice, isRetail, tierName, wholesalePrice, retailPrice } =
+    product
+      ? getEffectiveProductPrice(product, user)
+      : { price: 2650, isRetail: false, tierName: "Wholesale", wholesalePrice: 2650, retailPrice: 3315 };
   const sku = product?.sku || `ZB-${slug ? slug.toUpperCase().slice(0, 6) : "PART"}-01`;
 
   const handleAdd = () => {
     if (!isLoggedIn || !product) return;
-    addToCart(product, quantity);
+    addToCart({ ...product, price: effectivePrice }, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
@@ -167,14 +170,33 @@ export default function ProductDetailPage() {
               <span>In Stock & Tested Ready to Ship</span>
             </div>
 
-            {/* Wholesale Price Tag (Hidden unless logged in) */}
+            {/* Price Tag (Hidden unless logged in) */}
             <div className="pt-3">
-              <span className="text-xs text-slate-400 uppercase font-semibold block mb-1">
-                Wholesale Price
-              </span>
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    isRetail ? "text-blue-600" : "text-emerald-700"
+                  }`}
+                >
+                  {isRetail ? "Retail Price / پرچون ریٹ" : "Wholesale Price / ہول سیل ریٹ"}
+                </span>
+                <span
+                  className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
+                    isRetail
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {isRetail ? "Retail Customer" : "Shopkeeper / Technician"}
+                </span>
+              </div>
               {isLoggedIn ? (
-                <span className="text-3xl font-black text-[#16a34a]">
-                  Rs. {price.toLocaleString("en-PK")}
+                <span
+                  className={`text-3xl font-black ${
+                    isRetail ? "text-blue-600" : "text-[#16a34a]"
+                  }`}
+                >
+                  Rs. {effectivePrice.toLocaleString("en-PK")}
                 </span>
               ) : (
                 <div className="p-4 bg-red-50/80 border border-red-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">

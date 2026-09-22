@@ -17,6 +17,9 @@ import {
   UploadCloud,
   Sparkles,
   Layers,
+  Plus,
+  Trash2,
+  Clock,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_HERO_BANNER, HeroBannerConfig } from "@/components/HeroBanner";
@@ -122,41 +125,118 @@ export default function AdminBannerPage() {
     }
   };
 
-  // Upload image to Supabase Storage
+  const [customImageUrl, setCustomImageUrl] = useState("");
+
+  // Add custom URL to images list
+  const handleAddImageUrl = () => {
+    if (!customImageUrl.trim()) return;
+    const url = customImageUrl.trim();
+    setBanner((prev) => {
+      const currentList = prev.images && prev.images.length > 0 ? prev.images : (prev.imageUrl ? [prev.imageUrl] : []);
+      const updated = [...currentList, url];
+      return {
+        ...prev,
+        images: updated,
+        imageUrl: updated[0] || url,
+      };
+    });
+    setCustomImageUrl("");
+  };
+
+  // Remove an image from rotation
+  const handleRemoveImage = (indexToRemove: number) => {
+    setBanner((prev) => {
+      const currentList = prev.images && prev.images.length > 0 ? prev.images : (prev.imageUrl ? [prev.imageUrl] : []);
+      const updated = currentList.filter((_, i) => i !== indexToRemove);
+      return {
+        ...prev,
+        images: updated,
+        imageUrl: updated[0] || "",
+      };
+    });
+  };
+
+  // Set an image as primary (1st in rotation)
+  const handleSetPrimary = (indexToPrimary: number) => {
+    setBanner((prev) => {
+      const currentList = [...(prev.images && prev.images.length > 0 ? prev.images : (prev.imageUrl ? [prev.imageUrl] : []))];
+      if (indexToPrimary >= 0 && indexToPrimary < currentList.length) {
+        const [selected] = currentList.splice(indexToPrimary, 1);
+        const updated = [selected, ...currentList];
+        return {
+          ...prev,
+          images: updated,
+          imageUrl: selected,
+        };
+      }
+      return prev;
+    });
+  };
+
+  // Add preset to rotation
+  const handleAddPreset = (presetUrl: string) => {
+    setBanner((prev) => {
+      const currentList = prev.images && prev.images.length > 0 ? prev.images : (prev.imageUrl ? [prev.imageUrl] : []);
+      if (currentList.includes(presetUrl)) return prev;
+      const updated = [...currentList, presetUrl];
+      return {
+        ...prev,
+        images: updated,
+        imageUrl: updated[0] || presetUrl,
+      };
+    });
+  };
+
+  // Upload image(s) to Supabase Storage and append to slider
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploadingImage(true);
     setErrorMessage(null);
 
-    try {
-      const ext = file.name.split(".").pop();
-      const fileName = `banner-${Date.now()}.${ext}`;
+    const uploadedUrls: string[] = [];
 
-      const { data, error } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+    for (const file of files) {
+      try {
+        const ext = file.name.split(".").pop();
+        const fileName = `banner-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
 
-      if (error) {
-        throw error;
+        const { data, error } = await supabase.storage
+          .from("product-images")
+          .upload(fileName, file, { cacheControl: "3600", upsert: true });
+
+        if (error) {
+          throw error;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("product-images")
+          .getPublicUrl(fileName);
+
+        if (publicUrlData && publicUrlData.publicUrl) {
+          uploadedUrls.push(publicUrlData.publicUrl);
+        }
+      } catch (err: unknown) {
+        console.warn("Storage upload error for file, creating local preview:", err);
+        const objectUrl = URL.createObjectURL(file);
+        uploadedUrls.push(objectUrl);
       }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(fileName);
-
-      if (publicUrlData && publicUrlData.publicUrl) {
-        setBanner((prev) => ({ ...prev, imageUrl: publicUrlData.publicUrl }));
-      }
-    } catch (err: unknown) {
-      console.warn("Storage upload error:", err);
-      // Create local object URL as fallback preview
-      const objectUrl = URL.createObjectURL(file);
-      setBanner((prev) => ({ ...prev, imageUrl: objectUrl }));
-    } finally {
-      setUploadingImage(false);
     }
+
+    if (uploadedUrls.length > 0) {
+      setBanner((prev) => {
+        const currentList = prev.images && prev.images.length > 0 ? prev.images : (prev.imageUrl ? [prev.imageUrl] : []);
+        const updated = [...currentList, ...uploadedUrls];
+        return {
+          ...prev,
+          images: updated,
+          imageUrl: updated[0] || uploadedUrls[0],
+        };
+      });
+    }
+
+    setUploadingImage(false);
   };
 
   return (
@@ -370,54 +450,168 @@ export default function AdminBannerPage() {
           </div>
         </div>
 
-        {/* Section 3: Banner Image Configuration */}
+        {/* Section 3: Multi-Image Auto-Slider (10 Seconds) */}
         <div className="space-y-4">
-          <h3 className="font-extrabold text-sm text-[#111827] uppercase tracking-wider pb-2 border-b border-slate-100">
-            Banner Image Options
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <div>
+              <h3 className="font-extrabold text-sm text-[#111827] uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-[#dc2626]" />
+                <span>Multi-Image Hero Auto-Slider (10s Rotation)</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                ایک سے زیادہ تصاویر اپلوڈ کریں، ہوم پیج پر ہر 10 سیکنڈ بعد تصویر خود بخود تبدیل ہوگی۔
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-[#dc2626] text-xs font-bold w-fit">
+              <Clock className="w-3.5 h-3.5" />
+              <span>10 Sec Auto-Rotate</span>
+            </div>
+          </div>
 
+          {/* Current Rotating Images List */}
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-              Image URL
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                Active Rotating Images ({banner.images && banner.images.length > 0 ? banner.images.length : (banner.imageUrl ? 1 : 0)})
+              </label>
+              <span className="text-[10px] text-slate-400 font-medium">
+                Drag or use buttons to manage order
+              </span>
+            </div>
+
+            {(!banner.images || banner.images.length === 0) && !banner.imageUrl ? (
+              <div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center space-y-2 bg-slate-50/50">
+                <ImageIcon className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs font-semibold text-slate-600">No images added yet</p>
+                <p className="text-[11px] text-slate-400">
+                  Upload images or pick from presets below to start the 10-second slider.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {(banner.images && banner.images.length > 0 ? banner.images : [banner.imageUrl || "/logo.jpg"]).map(
+                  (imgUrl, idx) => (
+                    <div
+                      key={`${imgUrl}-${idx}`}
+                      className={`relative rounded-xl border p-2 bg-white flex flex-col justify-between group transition-all ${
+                        idx === 0
+                          ? "border-[#dc2626] ring-1 ring-[#dc2626]/40 shadow-xs"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      {/* Badge # */}
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <span
+                          className={`text-[9.5px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                            idx === 0
+                              ? "bg-[#dc2626] text-white"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {idx === 0 ? "★ Slide #1 (Main)" : `Slide #${idx + 1}`}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          title="Remove image from slider"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Image Thumbnail */}
+                      <div className="h-24 w-full rounded-lg overflow-hidden bg-slate-100 border border-slate-100 mb-2">
+                        <img
+                          src={imgUrl}
+                          alt={`Slider slide ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/logo.jpg";
+                          }}
+                        />
+                      </div>
+
+                      {/* Actions */}
+                      {idx !== 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetPrimary(idx)}
+                          className="w-full py-1 text-[10px] font-bold text-slate-600 hover:text-[#dc2626] bg-slate-50 hover:bg-red-50 rounded-lg transition-colors border border-slate-200 text-center"
+                        >
+                          Make First (#1)
+                        </button>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Add Image Options: Upload Multiple Files or Custom URL */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              + Add More Images to Slider
+            </h4>
+
+            {/* URL Input */}
             <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="url"
-                placeholder="https://... image link"
-                value={banner.imageUrl}
-                onChange={(e) => setBanner({ ...banner, imageUrl: e.target.value })}
-                className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626] font-mono"
+                placeholder="Paste image link (https://...)"
+                value={customImageUrl}
+                onChange={(e) => setCustomImageUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddImageUrl();
+                  }
+                }}
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626] bg-white font-mono"
               />
-              <label className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer transition-colors shrink-0">
-                <UploadCloud className="w-4 h-4 text-[#dc2626]" />
-                <span>{uploadingImage ? "Uploading..." : "Upload New"}</span>
+              <button
+                type="button"
+                onClick={handleAddImageUrl}
+                disabled={!customImageUrl.trim()}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add URL</span>
+              </button>
+
+              {/* Multi-file upload button */}
+              <label className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-2xs shrink-0">
+                <UploadCloud className="w-4 h-4" />
+                <span>{uploadingImage ? "Uploading..." : "Upload Multiple Images"}</span>
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleImageUpload}
                   disabled={uploadingImage}
                   className="hidden"
                 />
               </label>
             </div>
+            <p className="text-[10px] text-slate-400">
+              💡 آپ اپنے کمپیوٹر یا موبائل سے ایک وقت میں متعدد (multiple) تصاویر منتخب کر سکتے ہیں۔
+            </p>
           </div>
 
-          {/* Presets */}
+          {/* Quick Add Curated Presets */}
           <div className="space-y-2">
             <span className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider block">
-              Or Choose From Popular Presets:
+              Or Click Any Preset to Add to Slider:
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {BANNER_PRESETS.map((preset) => (
                 <button
                   key={preset.name}
                   type="button"
-                  onClick={() => setBanner({ ...banner, imageUrl: preset.url })}
-                  className={`p-2 rounded-xl border text-left transition-all group ${
-                    banner.imageUrl === preset.url
-                      ? "border-[#dc2626] bg-red-50/50 ring-1 ring-[#dc2626]"
-                      : "border-slate-200 hover:border-slate-300 bg-white"
-                  }`}
+                  onClick={() => handleAddPreset(preset.url)}
+                  className="p-2 rounded-xl border border-slate-200 hover:border-[#dc2626] bg-white text-left transition-all group hover:shadow-xs"
                 >
                   <div className="h-16 w-full rounded-lg overflow-hidden bg-slate-100 mb-1.5">
                     <img
@@ -426,9 +620,12 @@ export default function AdminBannerPage() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>
-                  <span className="text-[10.5px] font-bold text-slate-700 block truncate">
-                    {preset.name}
-                  </span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-bold text-slate-700 block truncate">
+                      {preset.name}
+                    </span>
+                    <Plus className="w-3 h-3 text-[#dc2626] shrink-0" />
+                  </div>
                 </button>
               ))}
             </div>

@@ -10,6 +10,9 @@ import {
   ArrowRight,
   Flame,
   Tag,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -19,6 +22,7 @@ export interface HeroBannerConfig {
   title: string;
   subtitle: string;
   imageUrl: string;
+  images?: string[];
   buttonText: string;
   buttonLink: string;
   tagline?: string;
@@ -32,6 +36,12 @@ export const DEFAULT_HERO_BANNER: HeroBannerConfig = {
     "Gujranwala's No. 1 Mobile Spare Parts & Repair Hub. Same-day Daewoo & TCS Cargo dispatch across Pakistan for technicians & shopkeepers.",
   imageUrl:
     "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=1200&auto=format&fit=crop&q=80",
+  images: [
+    "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=1200&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop&q=80",
+    "/logo.jpg",
+  ],
   buttonText: "Claim Offer on WhatsApp",
   buttonLink:
     "https://wa.me/923458032600?text=Assalam-o-Alaikum%20Zubair%20Mobile!%20Mujhe%20special%20wholesale%20offer%20k%20mutabiq%20order%20karna%20hai.",
@@ -41,6 +51,7 @@ export const DEFAULT_HERO_BANNER: HeroBannerConfig = {
 export default function HeroBanner() {
   const [config, setConfig] = useState<HeroBannerConfig>(DEFAULT_HERO_BANNER);
   const [loading, setLoading] = useState(true);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     async function loadBannerSettings() {
@@ -89,6 +100,39 @@ export default function HeroBanner() {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  // List of images for the slider
+  const bannerImages = React.useMemo(() => {
+    const list: string[] = [];
+    if (config.images && Array.isArray(config.images)) {
+      for (const img of config.images) {
+        if (img && img.trim() && !list.includes(img.trim())) {
+          list.push(img.trim());
+        }
+      }
+    }
+    if (config.imageUrl && config.imageUrl.trim() && !list.includes(config.imageUrl.trim())) {
+      list.unshift(config.imageUrl.trim());
+    }
+    return list.length > 0 ? list : [DEFAULT_HERO_BANNER.imageUrl];
+  }, [config.images, config.imageUrl]);
+
+  // Auto-slide every 10 seconds (10000ms) as requested
+  useEffect(() => {
+    if (bannerImages.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveImageIndex((prev) => (prev + 1) % bannerImages.length);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [bannerImages.length]);
+
+  const handlePrevImage = () => {
+    setActiveImageIndex((prev) => (prev === 0 ? bannerImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setActiveImageIndex((prev) => (prev + 1) % bannerImages.length);
+  };
 
   if (!config.isActive) {
     return null;
@@ -149,21 +193,83 @@ export default function HeroBanner() {
           </div>
         </div>
 
-        {/* Right Column: Featured Banner Image */}
-        {config.imageUrl && (
-          <div className="w-full md:w-64 lg:w-80 h-44 sm:h-52 rounded-xl overflow-hidden border border-slate-700/80 shadow-md shrink-0 relative bg-black/40 group">
-            <img
-              src={config.imageUrl}
-              alt={config.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                // Fallback to official logo if broken image link
-                (e.target as HTMLImageElement).src = "/logo.jpg";
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute bottom-2.5 left-3 right-3 text-white text-[11px] font-bold truncate">
-              Zubair Mobile • Gujranwala
+        {/* Right Column: Featured Banner Multi-Image Slider (Changes every 10 sec) */}
+        {bannerImages.length > 0 && (
+          <div className="w-full md:w-72 lg:w-96 h-48 sm:h-56 rounded-2xl overflow-hidden border-2 border-slate-700/80 shadow-2xl shrink-0 relative bg-black/60 group">
+            {/* Slide Images */}
+            {bannerImages.map((imgUrl, idx) => (
+              <div
+                key={idx}
+                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                  idx === activeImageIndex ? "opacity-100 z-10 scale-100" : "opacity-0 z-0 scale-105 pointer-events-none"
+                }`}
+              >
+                <img
+                  src={imgUrl}
+                  alt={`${config.title} slide ${idx + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-700"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/logo.jpg";
+                  }}
+                />
+              </div>
+            ))}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/35 z-20 pointer-events-none" />
+
+            {/* Top Indicator Badge */}
+            <div className="absolute top-2.5 right-3 z-30 flex items-center gap-1.5 bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#dc2626] animate-ping" />
+              <span>{activeImageIndex + 1} / {bannerImages.length}</span>
+              <span className="text-slate-300 font-mono text-[9px]">• 10s auto</span>
+            </div>
+
+            {/* Manual Arrows (shown on hover or mobile) */}
+            {bannerImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-black/60 hover:bg-[#dc2626] text-white flex items-center justify-center transition-colors shadow-md cursor-pointer opacity-80 hover:opacity-100"
+                  aria-label="Previous Slide"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-30 w-7 h-7 rounded-full bg-black/60 hover:bg-[#dc2626] text-white flex items-center justify-center transition-colors shadow-md cursor-pointer opacity-80 hover:opacity-100"
+                  aria-label="Next Slide"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
+            {/* Bottom Dots & Caption */}
+            <div className="absolute bottom-2.5 left-3 right-3 z-30 flex items-center justify-between">
+              <span className="text-white text-[11px] font-bold truncate drop-shadow-sm">
+                Zubair Mobile • Gujranwala
+              </span>
+
+              {/* Slider Dots */}
+              {bannerImages.length > 1 && (
+                <div className="flex items-center gap-1.5">
+                  {bannerImages.map((_, dotIdx) => (
+                    <button
+                      key={dotIdx}
+                      type="button"
+                      onClick={() => setActiveImageIndex(dotIdx)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        dotIdx === activeImageIndex
+                          ? "w-5 bg-[#dc2626]"
+                          : "w-1.5 bg-white/50 hover:bg-white"
+                      }`}
+                      aria-label={`Slide ${dotIdx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

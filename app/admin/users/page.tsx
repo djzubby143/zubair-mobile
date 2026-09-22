@@ -38,6 +38,7 @@ export interface CustomerUser {
   address: string;
   role: string;
   status: "active" | "inactive";
+  pricing_tier?: "wholesale" | "retail"; // "wholesale" (default) or "retail"
   notes?: string | null;
   created_at?: string;
 }
@@ -55,6 +56,7 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     address: "Shop No. 4, Mobile Market, Gondlanwala Road",
     role: "customer",
     status: "active",
+    pricing_tier: "wholesale",
     notes: "Wholesale LCD customer",
     created_at: new Date().toISOString(),
   },
@@ -69,6 +71,7 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     address: "Hall Road, Shop 19, Basement Plaza",
     role: "customer",
     status: "active",
+    pricing_tier: "wholesale",
     notes: "Requires regular Daewoo cargo dispatch",
     created_at: new Date(Date.now() - 86400000).toISOString(),
   },
@@ -83,7 +86,8 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     address: "Kutchery Road, Near City Hospital",
     role: "customer",
     status: "inactive",
-    notes: "Account temporarily paused on request",
+    pricing_tier: "retail",
+    notes: "Retail walk-in customer account",
     created_at: new Date(Date.now() - 172800000).toISOString(),
   },
 ];
@@ -117,6 +121,7 @@ export default function AdminUsersPage() {
     address: "",
     role: "customer",
     status: "active" as "active" | "inactive",
+    pricing_tier: "wholesale" as "wholesale" | "retail",
     notes: "",
   });
   const [showModalPassword, setShowModalPassword] = useState(false);
@@ -188,6 +193,7 @@ export default function AdminUsersPage() {
       address: "",
       role: "customer",
       status: "active",
+      pricing_tier: "wholesale",
       notes: "",
     });
     setModalError(null);
@@ -208,6 +214,7 @@ export default function AdminUsersPage() {
       address: user.address,
       role: user.role || "customer",
       status: user.status,
+      pricing_tier: user.pricing_tier || "wholesale",
       notes: user.notes || "",
     });
     setModalError(null);
@@ -284,19 +291,22 @@ export default function AdminUsersPage() {
         address: formData.address.trim(),
         role: formData.role,
         status: formData.status,
+        pricing_tier: formData.pricing_tier || "wholesale",
         notes: formData.notes.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
       if (editingUser) {
         // Update in Supabase
-        const { error } = await supabase
+        let { error } = await supabase
           .from("customers")
           .update(payload)
           .eq("id", editingUser.id);
 
-        if (error) {
-          console.warn("Supabase update error (updating local state):", error.message);
+        if (error && error.message && error.message.includes("pricing_tier")) {
+          const fallbackPayload = { ...payload };
+          delete (fallbackPayload as Record<string, unknown>).pricing_tier;
+          await supabase.from("customers").update(fallbackPayload).eq("id", editingUser.id);
         }
 
         // Update local state
@@ -305,6 +315,19 @@ export default function AdminUsersPage() {
         );
         setUsers(updatedList);
         localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+
+        // If updated user is the currently logged-in customer, update their session
+        const currentStored = localStorage.getItem("zubair_customer_user");
+        if (currentStored) {
+          try {
+            const parsed = JSON.parse(currentStored);
+            if (parsed.id === editingUser.id || parsed.username?.toLowerCase() === payload.username) {
+              const updatedSession = { ...parsed, pricing_tier: payload.pricing_tier };
+              localStorage.setItem("zubair_customer_user", JSON.stringify(updatedSession));
+              window.dispatchEvent(new Event("storage"));
+            }
+          } catch {}
+        }
       } else {
         // Insert in Supabase
         const newRecord: CustomerUser = {
@@ -313,15 +336,20 @@ export default function AdminUsersPage() {
           created_at: new Date().toISOString(),
         };
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from("customers")
           .insert([payload])
           .select()
           .single();
 
-        if (error) {
-          console.warn("Supabase insert error (saving locally):", error.message);
-        } else if (data) {
+        if (error && error.message && error.message.includes("pricing_tier")) {
+          const fallbackPayload = { ...payload };
+          delete (fallbackPayload as Record<string, unknown>).pricing_tier;
+          const retry = await supabase.from("customers").insert([fallbackPayload]).select().single();
+          data = retry.data;
+        }
+
+        if (data) {
           newRecord.id = data.id;
         }
 
@@ -336,6 +364,33 @@ export default function AdminUsersPage() {
       setModalError("Failed to save user. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Toggle Pricing Tier (Wholesale <-> Retail)
+  const handleTogglePricingTier = async (user: CustomerUser) => {
+    const nextTier: "wholesale" | "retail" = user.pricing_tier === "retail" ? "wholesale" : "retail";
+    const updatedList = users.map((u) => (u.id === user.id ? { ...u, pricing_tier: nextTier } : u));
+    setUsers(updatedList);
+    localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+
+    // Update session if user is logged in
+    const currentStored = localStorage.getItem("zubair_customer_user");
+    if (currentStored) {
+      try {
+        const parsed = JSON.parse(currentStored);
+        if (parsed.id === user.id || parsed.username?.toLowerCase() === user.username.toLowerCase()) {
+          const updatedSession = { ...parsed, pricing_tier: nextTier };
+          localStorage.setItem("zubair_customer_user", JSON.stringify(updatedSession));
+          window.dispatchEvent(new Event("storage"));
+        }
+      } catch {}
+    }
+
+    try {
+      await supabase.from("customers").update({ pricing_tier: nextTier }).eq("id", user.id);
+    } catch (err) {
+      console.warn("Pricing tier toggle cloud notice:", err);
     }
   };
 
@@ -614,6 +669,7 @@ export default function AdminUsersPage() {
                   <th className="py-3.5 px-4">Login ID / Username</th>
                   <th className="py-3.5 px-4">Password</th>
                   <th className="py-3.5 px-4">Phone & City</th>
+                  <th className="py-3.5 px-4">Pricing Tier / ریٹ</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Quick Actions</th>
                 </tr>
@@ -622,6 +678,7 @@ export default function AdminUsersPage() {
                 {filteredUsers.map((user) => {
                   const isPassVisible = visiblePasswords[user.id] || false;
                   const isCopied = copiedId === user.id;
+                  const isRetail = user.pricing_tier === "retail";
 
                   return (
                     <tr
@@ -711,7 +768,28 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
 
-                      {/* Col 5: Status */}
+                      {/* Col 5: Pricing Tier (Wholesale vs Retail) */}
+                      <td className="py-3.5 px-4">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePricingTier(user)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-bold border shadow-2xs transition-all ${
+                            isRetail
+                              ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          }`}
+                          title="Click to switch price tier (Wholesale vs Retail)"
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              isRetail ? "bg-blue-500" : "bg-emerald-500"
+                            }`}
+                          />
+                          <span>{isRetail ? "Retail (پرچون)" : "Wholesale (ہول سیل)"}</span>
+                        </button>
+                      </td>
+
+                      {/* Col 6: Status */}
                       <td className="py-3.5 px-4">
                         <button
                           type="button"
@@ -937,10 +1015,66 @@ export default function AdminUsersPage() {
                   required
                   rows={2}
                   placeholder="e.g. Shop No. 12, First Floor, Mobile Market, Gujranwala"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626] resize-none"
                 />
+              </div>
+
+              {/* Pricing Tier Selection (Wholesale vs Retail) */}
+              <div className="space-y-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                  Pricing Tier / کسٹمر ریٹ کی قسم <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.pricing_tier === "wholesale"
+                        ? "border-emerald-500 bg-white ring-2 ring-emerald-500/20 shadow-xs"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="pricing_tier"
+                      value="wholesale"
+                      checked={formData.pricing_tier === "wholesale"}
+                      onChange={() => setFormData({ ...formData, pricing_tier: "wholesale" })}
+                      className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                        Wholesale Rate (ہول سیل ریٹ)
+                      </span>
+                      <span className="text-[10px] text-slate-500 block leading-snug mt-0.5">
+                        For mobile technicians & shopkeepers. Shows original wholesale trade prices.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                      formData.pricing_tier === "retail"
+                        ? "border-blue-500 bg-white ring-2 ring-blue-500/20 shadow-xs"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="pricing_tier"
+                      value="retail"
+                      checked={formData.pricing_tier === "retail"}
+                      onChange={() => setFormData({ ...formData, pricing_tier: "retail" })}
+                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                        Retail Rate (پرچون ریٹ)
+                      </span>
+                      <span className="text-[10px] text-slate-500 block leading-snug mt-0.5">
+                        For walk-in end consumers. Shows retail selling price (+25% markup or custom retail rate).
+                      </span>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               {/* Row 5: Status & Notes */}

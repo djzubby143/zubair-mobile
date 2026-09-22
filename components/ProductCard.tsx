@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ShoppingCart, Camera, Lock } from "lucide-react";
 import { Product } from "@/lib/types";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/lib/auth";
+import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
 
 interface ProductCardProps {
   product: Product;
@@ -13,13 +13,13 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
-  const { isLoggedIn, loading: authLoading } = useAuth();
+  const { isLoggedIn, user, loading: authLoading } = useAuth();
   const [isAdded, setIsAdded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const isInStock = (product.stock_quantity ?? 0) > 0;
-  const priceValue = Number(product.price) || 0;
-  const formattedPrice = `Rs ${priceValue.toLocaleString("en-PK")}`;
+  const { price: effectivePrice, isRetail, tierName } = getEffectiveProductPrice(product, user);
+  const formattedPrice = `Rs ${effectivePrice.toLocaleString("en-PK")}`;
   const minQty = product.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -27,7 +27,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation();
     if (!isInStock) return;
 
-    addToCart(product, minQty);
+    // Add with user's effective price and pricing tier
+    addToCart(
+      {
+        ...product,
+        price: effectivePrice,
+      },
+      minQty
+    );
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 1200);
   };
@@ -90,8 +97,23 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Price (Hidden if not logged in, shown only after login) */}
         <div className="pt-0.5">
           {isLoggedIn ? (
-            <div className="text-xs sm:text-sm font-bold text-[#16a34a] tracking-tight">
-              {formattedPrice}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span
+                className={`text-xs sm:text-sm font-black tracking-tight ${
+                  isRetail ? "text-blue-600" : "text-[#16a34a]"
+                }`}
+              >
+                {formattedPrice}
+              </span>
+              <span
+                className={`text-[8.5px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
+                  isRetail
+                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                }`}
+              >
+                {isRetail ? "Retail Rate" : "Wholesale"}
+              </span>
             </div>
           ) : (
             <Link

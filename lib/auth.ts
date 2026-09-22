@@ -14,6 +14,39 @@ export interface AuthUser {
   email?: string;
   role?: string;
   avatar_url?: string | null;
+  pricing_tier?: "wholesale" | "retail"; // "wholesale" (default) or "retail"
+}
+
+/**
+ * Calculates effective price based on user tier (Wholesale vs Retail).
+ * - If user is wholesale (or admin/default), returns wholesale price.
+ * - If user is retail, returns product's explicit retail_price or calculates +25% markup.
+ */
+export function getEffectiveProductPrice(
+  product: { price: number; retail_price?: number | null },
+  user?: AuthUser | null
+): {
+  price: number;
+  isRetail: boolean;
+  tierName: string;
+  wholesalePrice: number;
+  retailPrice: number;
+} {
+  const wholesalePrice = Number(product.price) || 0;
+  const retailPrice =
+    product.retail_price && Number(product.retail_price) > 0
+      ? Number(product.retail_price)
+      : Math.round(wholesalePrice * 1.25);
+
+  const isRetail = user?.pricing_tier === "retail";
+
+  return {
+    price: isRetail ? retailPrice : wholesalePrice,
+    isRetail,
+    tierName: isRetail ? "Retail" : "Wholesale",
+    wholesalePrice,
+    retailPrice,
+  };
 }
 
 export function useAuth() {
@@ -116,6 +149,7 @@ export async function updateCustomerProfile(updatedData: {
   address?: string;
   city?: string;
   avatar_url?: string | null;
+  pricing_tier?: "wholesale" | "retail";
 }): Promise<AuthUser | null> {
   if (typeof window === "undefined") return null;
 

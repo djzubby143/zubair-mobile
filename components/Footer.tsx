@@ -81,6 +81,136 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* SEO Popular Search Tags Section */}
+      <div className="border-t border-slate-800 bg-[#0d131f] py-8 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#dc2626]" />
+                <span>POPULAR SEARCHES & WHOLESALE KEYWORDS</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 font-urdu mt-0.5">
+                مقبول ترین موبائل پارٹس، ماڈلز اور ہول سیل ریٹس پاکستان
+              </p>
+            </div>
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700">
+              SEO Quick Links
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            {/* Column 1: Popular Models & LCD Units */}
+            <div className="space-y-2.5">
+              <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Top Mobile Screens & LCDs</span>
+                <span className="text-[9.5px] text-slate-400 font-urdu">ڈسپلے یونٹس</span>
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Vivo Y20 LCD Unit",
+                  "Vivo Y21 Display",
+                  "Vivo Y33s Screen",
+                  "Vivo Y91 Y93 Y95",
+                  "Samsung A12 Display",
+                  "Samsung A32 AMOLED",
+                  "Samsung A52 Unit",
+                  "Infinix Hot 10 Play",
+                  "Infinix Hot 11 12",
+                  "Infinix Note 11 12",
+                  "Tecno Spark 6 7 8",
+                  "Tecno Spark 10 20",
+                  "Tecno Camon 18 19",
+                  "Oppo A16 LCD",
+                  "Oppo A54 Display",
+                  "Oppo F17 F19 Pro",
+                  "Redmi Note 10 11",
+                  "Redmi 9C 10C Unit",
+                  "iPhone X 11 12 OLED",
+                  "Realme C21 C35",
+                ].map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/?q=${encodeURIComponent(tag)}`}
+                    className="text-[10.5px] px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-[#dc2626] text-slate-300 hover:text-white border border-slate-700/60 hover:border-[#dc2626] transition-colors"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Column 2: Spare Parts Categories & Tools */}
+            <div className="space-y-2.5">
+              <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Spare Parts & Repairing Tools</span>
+                <span className="text-[9.5px] text-slate-400 font-urdu">پارٹس و ٹولز</span>
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Touch Screen Digitizer",
+                  "OCA Outer Glass",
+                  "Charging Flex Port PCB",
+                  "Mobile Original Batteries",
+                  "Back Glass Body Housing",
+                  "Camera Lens Replacement",
+                  "Ringer Buzzer Speaker",
+                  "Soldering Station 936",
+                  "SMD Hot Air Gun",
+                  "Mobile Repair Microscope",
+                  "OCA Lamination Machine",
+                  "Sunshine Relife Tools",
+                  "Mechanic Multimeter",
+                  "B7000 Frame Glue",
+                  "UV Glue Curing Lamp",
+                  "IC & Power Chips",
+                ].map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/?q=${encodeURIComponent(tag)}`}
+                    className="text-[10.5px] px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-[#dc2626] text-slate-300 hover:text-white border border-slate-700/60 hover:border-[#dc2626] transition-colors"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Column 3: Wholesale Market & Nationwide Delivery */}
+            <div className="space-y-2.5">
+              <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Wholesale Hubs & Delivery</span>
+                <span className="text-[9.5px] text-slate-400 font-urdu">مارکیٹ و کارگو</span>
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Mobile Spare Parts Gujranwala",
+                  "Chand Plaza Garjakhi Darwaza",
+                  "Hall Road Lahore Rates",
+                  "Wholesale Mobile LCD Pakistan",
+                  "Cash On Delivery COD Parts",
+                  "Daewoo Express Cargo Dispatch",
+                  "TCS Nationwide Spare Delivery",
+                  "Mobile LCD Dealer Gujranwala",
+                  "Mobile Technician Wholesale Hub",
+                  "Faisalabad Mobile Market Parts",
+                  "Rawalpindi Mobile Spare Parts",
+                  "Karachi Saddar Market Rates",
+                ].map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/?q=${encodeURIComponent(tag)}`}
+                    className="text-[10.5px] px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-[#dc2626] text-slate-300 hover:text-white border border-slate-700/60 hover:border-[#dc2626] transition-colors"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Copyright Bar */}
       <div className="border-t border-slate-800 py-4 text-center text-[11px] text-slate-500">
         <p>&copy; {new Date().getFullYear()} Zubair Mobile Repair Services & Parts. All rights reserved.</p>

@@ -23,7 +23,7 @@ import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categ
 function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const categoryFromUrl = searchParams.get("category");
+  const categoryFromUrl = searchParams.get("category") || searchParams.get("q") || searchParams.get("search");
 
   const [products, setProducts] = useState<Product[]>(DEFAULT_CATALOG_PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");

@@ -25,6 +25,7 @@ import {
   TrendingUp,
   DollarSign,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   Order,
@@ -33,6 +34,8 @@ import {
   updateOrderDispatch,
   calculateOrderProfit,
   deleteOrder,
+  updateOrderPayment,
+  getOrderPaymentDetails,
 } from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
@@ -54,6 +57,12 @@ export default function AdminOrdersPage() {
   const [deleteTargetOrder, setDeleteTargetOrder] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Payment / Khata Modal State
+  const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
+  const [paidAmountInput, setPaidAmountInput] = useState<string>("");
+  const [paymentNotesInput, setPaymentNotesInput] = useState<string>("");
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+
   const loadOrders = () => {
     const list = getOrders();
     setOrders(list);
@@ -71,6 +80,28 @@ export default function AdminOrdersPage() {
       alert("Failed to delete order.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleOpenPayment = (order: Order) => {
+    setPaymentOrder(order);
+    setPaidAmountInput(String(order.paid_amount ?? 0));
+    setPaymentNotesInput(order.payment_notes || "");
+  };
+
+  const handleSavePayment = async () => {
+    if (!paymentOrder) return;
+    setIsSavingPayment(true);
+    try {
+      const numPaid = parseFloat(paidAmountInput) || 0;
+      await updateOrderPayment(paymentOrder.id, numPaid, paymentNotesInput.trim());
+      loadOrders();
+      setPaymentOrder(null);
+    } catch (err) {
+      console.error("Failed to update payment:", err);
+      alert("Failed to update payment.");
+    } finally {
+      setIsSavingPayment(false);
     }
   };
 
@@ -396,6 +427,16 @@ export default function AdminOrdersPage() {
 
                     <button
                       type="button"
+                      onClick={() => handleOpenPayment(order)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs cursor-pointer"
+                      title="Record customer payment or update remaining khata balance"
+                    >
+                      <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Payment / کھاتہ</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setDeleteTargetOrder(order)}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 transition-colors shadow-2xs"
                       title="Delete unresponsive customer or fake order"
@@ -469,6 +510,61 @@ export default function AdminOrdersPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Khata & Payment Balance Box */}
+                      {(() => {
+                        const pay = getOrderPaymentDetails(order);
+                        return (
+                          <div className="mt-3 p-2.5 rounded-xl border bg-slate-50/90 space-y-1.5 text-xs shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-800 flex items-center gap-1">
+                                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                                Khata Payment (کھاتہ)
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                  pay.status === "paid"
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                    : pay.status === "partial"
+                                    ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                    : "bg-rose-100 text-rose-800 border border-rose-300"
+                                }`}
+                              >
+                                {pay.status === "paid"
+                                  ? "Paid (مکمل ادا)"
+                                  : pay.status === "partial"
+                                  ? "Partial (جزوی ادائیگی)"
+                                  : "Unpaid (غیر ادا شدہ)"}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-200">
+                              <div>
+                                <span className="text-slate-500 block">Paid (وصول شدہ):</span>
+                                <strong className="text-emerald-700 font-mono font-bold">
+                                  Rs. {pay.paid.toLocaleString("en-PK")}
+                                </strong>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 block">Remaining (بقایا رقم):</span>
+                                <strong
+                                  className={`font-mono font-black ${
+                                    pay.remaining > 0 ? "text-rose-600" : "text-emerald-700"
+                                  }`}
+                                >
+                                  Rs. {pay.remaining.toLocaleString("en-PK")}
+                                </strong>
+                              </div>
+                            </div>
+
+                            {order.payment_notes && (
+                              <p className="text-[10px] text-slate-600 bg-white p-1.5 rounded border border-slate-200 italic mt-1">
+                                <strong>Payment Note:</strong> {order.payment_notes}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -852,6 +948,144 @@ export default function AdminOrdersPage() {
               >
                 <Trash2 className="w-4 h-4" />
                 <span>{isDeleting ? "Deleting..." : "Delete Order"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Khata Payment Modal */}
+      {paymentOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shadow-2xs">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Record Payment / کھاتہ ادائیگی
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Order #{paymentOrder.order_number} • {paymentOrder.customer_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPaymentOrder(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Bill Summary */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-3 gap-2 text-center">
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Total Bill</span>
+                <span className="font-mono font-black text-slate-900 text-sm">
+                  Rs. {paymentOrder.total_amount.toLocaleString("en-PK")}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Paid Amount</span>
+                <span className="font-mono font-black text-emerald-600 text-sm">
+                  Rs. {(parseFloat(paidAmountInput) || 0).toLocaleString("en-PK")}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Remaining (بقایا)</span>
+                <span
+                  className={`font-mono font-black text-sm ${
+                    paymentOrder.total_amount - (parseFloat(paidAmountInput) || 0) > 0
+                      ? "text-rose-600"
+                      : "text-emerald-700"
+                  }`}
+                >
+                  Rs. {Math.max(0, paymentOrder.total_amount - (parseFloat(paidAmountInput) || 0)).toLocaleString("en-PK")}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Buttons */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-semibold">Quick Set:</span>
+              <button
+                type="button"
+                onClick={() => setPaidAmountInput(String(paymentOrder.total_amount))}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+              >
+                Full Paid (100%)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaidAmountInput(String(Math.round(paymentOrder.total_amount / 2)))}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 cursor-pointer"
+              >
+                Half Paid (50%)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaidAmountInput("0")}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
+              >
+                Unpaid (0)
+              </button>
+            </div>
+
+            {/* Input: Paid Amount */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Amount Paid by Customer (وصول شدہ رقم - PKR) *
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-xs">Rs.</span>
+                <input
+                  type="number"
+                  min="0"
+                  max={paymentOrder.total_amount}
+                  step="50"
+                  value={paidAmountInput}
+                  onChange={(e) => setPaidAmountInput(e.target.value)}
+                  placeholder="e.g. 5000"
+                  className="w-full pl-11 pr-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Input: Payment Notes */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Payment Details / Note (ادائیگی کی تفصیل / رسید نمبر)
+              </label>
+              <input
+                type="text"
+                value={paymentNotesInput}
+                onChange={(e) => setPaymentNotesInput(e.target.value)}
+                placeholder="e.g. 5,000 received via JazzCash / EasyPaisa / Bank Transfer"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-medium"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPaymentOrder(null)}
+                disabled={isSavingPayment}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePayment}
+                disabled={isSavingPayment}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isSavingPayment ? "Saving..." : "Save Payment (محفوظ کریں)"}</span>
               </button>
             </div>
           </div>

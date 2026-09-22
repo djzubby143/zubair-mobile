@@ -215,6 +215,11 @@ export default function CartDrawer() {
                         <span className="text-[10px] text-slate-400 ml-1">
                           (Rs. {item.price.toLocaleString("en-PK")} ea)
                         </span>
+                        {item.pricing_tier === "retail" && (
+                          <span className="text-[8.5px] font-bold text-blue-600 bg-blue-50 px-1 py-0.2 rounded ml-1 border border-blue-200">
+                            Retail
+                          </span>
+                        )}
                       </div>
 
                       {/* Quantity Stepper */}
