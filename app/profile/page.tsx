@@ -205,6 +205,7 @@ export default function ProfilePage() {
       window.removeEventListener("zubair_notifications_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleCopyBilty = (bilty: string) => {

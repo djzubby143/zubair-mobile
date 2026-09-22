@@ -54,6 +54,7 @@ export default function CartPage() {
         setCustomerAddress(`${user.address}${user.city ? `, ${user.city}` : ""}`);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleWhatsAppCheckout = async (e: React.FormEvent) => {
