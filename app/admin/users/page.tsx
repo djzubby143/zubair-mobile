@@ -26,22 +26,9 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { CustomerUser } from "@/lib/types";
+export type { CustomerUser };
 
-export interface CustomerUser {
-  id: string;
-  username: string;
-  password: string;
-  full_name: string;
-  shop_name: string;
-  phone: string;
-  city: string;
-  address: string;
-  role: string;
-  status: "active" | "inactive";
-  pricing_tier?: "retail" | "technician" | "wholesale"; // "retail", "technician", or "wholesale"
-  notes?: string | null;
-  created_at?: string;
-}
 
 // Initial demo fallback data if table is not yet migrated in Supabase
 const INITIAL_DEMO_USERS: CustomerUser[] = [
@@ -126,46 +113,66 @@ export default function AdminUsersPage() {
   });
   const [showModalPassword, setShowModalPassword] = useState(false);
 
-  // Load Users from Supabase
+  // Load Users from API / Supabase
   const loadUsers = async () => {
     setLoading(true);
     try {
+      // 1. Fetch from server API first
+      let apiUsers: CustomerUser[] = [];
+      try {
+        const res = await fetch("/api/admin/users", { cache: "no-store" });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.users) && json.users.length > 0) {
+            apiUsers = json.users;
+            setUsers(apiUsers);
+            localStorage.setItem("zubair_mobile_customers", JSON.stringify(apiUsers));
+            setShowSqlAlert(false);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("API /api/admin/users fallback:", apiErr);
+      }
+
+      // 2. Fetch from Supabase directly
       const { data, error } = await supabase
         .from("customers")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.warn("Supabase customers query warning (table may need schema run):", error.message);
+        console.warn("Supabase customers query warning:", error.message);
         setShowSqlAlert(true);
-        // Fallback to local storage or demo data
         const local = localStorage.getItem("zubair_mobile_customers");
-        if (local) {
-          try {
-            setUsers(JSON.parse(local));
-          } catch {
-            setUsers(INITIAL_DEMO_USERS);
-          }
-        } else {
-          setUsers(INITIAL_DEMO_USERS);
-          localStorage.setItem("zubair_mobile_customers", JSON.stringify(INITIAL_DEMO_USERS));
-        }
+        setUsers(local ? JSON.parse(local) : INITIAL_DEMO_USERS);
       } else if (data && data.length > 0) {
-        setUsers(data);
-        setShowSqlAlert(false);
-        localStorage.setItem("zubair_mobile_customers", JSON.stringify(data));
-      } else {
-        // Table exists but is empty
+        // Read local overrides for pricing_tier
         const local = localStorage.getItem("zubair_mobile_customers");
+        const localMap = new Map<string, string>();
         if (local) {
           try {
-            setUsers(JSON.parse(local));
-          } catch {
-            setUsers(INITIAL_DEMO_USERS);
-          }
-        } else {
-          setUsers(INITIAL_DEMO_USERS);
+            const arr = JSON.parse(local);
+            for (const item of arr) {
+              if (item.username && item.pricing_tier) {
+                localMap.set(item.username.toLowerCase(), item.pricing_tier);
+              }
+            }
+          } catch {}
         }
+
+        const enriched = (data as CustomerUser[]).map((u) => ({
+          ...u,
+          pricing_tier: (u.pricing_tier || localMap.get(u.username.toLowerCase()) || (u.role === "technician" ? "technician" : u.role === "retail" ? "retail" : "wholesale")) as "retail" | "technician" | "wholesale",
+        }));
+
+        setUsers(enriched);
+        setShowSqlAlert(false);
+        localStorage.setItem("zubair_mobile_customers", JSON.stringify(enriched));
+      } else {
+        const local = localStorage.getItem("zubair_mobile_customers");
+        setUsers(local ? JSON.parse(local) : INITIAL_DEMO_USERS);
       }
     } catch (err) {
       console.error("Error loading users:", err);
@@ -316,13 +323,22 @@ export default function AdminUsersPage() {
         setUsers(updatedList);
         localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
 
+        // Sync with server API
+        try {
+          fetch("/api/admin/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: editingUser.id, ...payload }),
+          });
+        } catch {}
+
         // If updated user is the currently logged-in customer, update their session
         const currentStored = localStorage.getItem("zubair_customer_user");
         if (currentStored) {
           try {
             const parsed = JSON.parse(currentStored);
             if (parsed.id === editingUser.id || parsed.username?.toLowerCase() === payload.username) {
-              const updatedSession = { ...parsed, pricing_tier: payload.pricing_tier };
+              const updatedSession = { ...parsed, pricing_tier: payload.pricing_tier, role: payload.pricing_tier || payload.role };
               localStorage.setItem("zubair_customer_user", JSON.stringify(updatedSession));
               window.dispatchEvent(new Event("storage"));
             }
@@ -356,6 +372,15 @@ export default function AdminUsersPage() {
         const updatedList = [newRecord, ...users];
         setUsers(updatedList);
         localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+
+        // Sync with server API
+        try {
+          fetch("/api/admin/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newRecord),
+          });
+        } catch {}
       }
 
       setIsModalOpen(false);
@@ -376,9 +401,19 @@ export default function AdminUsersPage() {
     };
     const currentTier = user.pricing_tier || "wholesale";
     const nextTier = cycleMap[currentTier] || "wholesale";
-    const updatedList = users.map((u) => (u.id === user.id ? { ...u, pricing_tier: nextTier } : u));
+    const updatedUser = { ...user, pricing_tier: nextTier, role: nextTier };
+    const updatedList = users.map((u) => (u.id === user.id ? updatedUser : u));
     setUsers(updatedList);
     localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+
+    // Sync with server API immediately
+    try {
+      fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedUser),
+      });
+    } catch {}
 
     // Update session if user is logged in
     const currentStored = localStorage.getItem("zubair_customer_user");
@@ -386,7 +421,7 @@ export default function AdminUsersPage() {
       try {
         const parsed = JSON.parse(currentStored);
         if (parsed.id === user.id || parsed.username?.toLowerCase() === user.username.toLowerCase()) {
-          const updatedSession = { ...parsed, pricing_tier: nextTier };
+          const updatedSession = { ...parsed, pricing_tier: nextTier, role: nextTier };
           localStorage.setItem("zubair_customer_user", JSON.stringify(updatedSession));
           window.dispatchEvent(new Event("storage"));
         }
@@ -394,7 +429,7 @@ export default function AdminUsersPage() {
     }
 
     try {
-      await supabase.from("customers").update({ pricing_tier: nextTier }).eq("id", user.id);
+      await supabase.from("customers").update({ pricing_tier: nextTier, role: nextTier }).eq("id", user.id);
     } catch (err) {
       console.warn("Pricing tier toggle cloud notice:", err);
     }
@@ -420,9 +455,16 @@ export default function AdminUsersPage() {
       return;
     }
 
+    const userToDelete = users.find((u) => u.id === id);
     const updatedList = users.filter((u) => u.id !== id);
     setUsers(updatedList);
     localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+
+    try {
+      fetch(`/api/admin/users?id=${id}&username=${userToDelete?.username || ""}`, {
+        method: "DELETE",
+      });
+    } catch {}
 
     try {
       await supabase.from("customers").delete().eq("id", id);

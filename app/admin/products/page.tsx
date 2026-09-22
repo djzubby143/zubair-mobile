@@ -20,7 +20,7 @@ import { Category, Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getLiveCategories } from "@/lib/categories";
-import { getCustomProducts, getDeletedProductKeys, deleteProduct } from "@/lib/customProducts";
+import { getCustomProducts, getDeletedProductKeys, deleteProduct, isProductDeleted } from "@/lib/customProducts";
 
 const SAMPLE_PRODUCTS: Product[] = [
   {
@@ -160,7 +160,7 @@ export default function AdminProductsPage() {
         const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
         const idKey = (item.id || "").toLowerCase();
         const nameLower = item.name.toLowerCase();
-        if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key)) {
+        if (!isProductDeleted(item, deletedSet) && !seenKeys.has(key)) {
           mergedList.push(item);
           seenKeys.add(key);
           seenKeys.add(idKey);
@@ -171,11 +171,11 @@ export default function AdminProductsPage() {
       // Put Supabase remote products
       if (!prodError && prodData && prodData.length > 0) {
         for (let i = 0; i < prodData.length; i++) {
-          const item = prodData[i];
+          const item = prodData[i] as Product;
           const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
           const idKey = (item.id || "").toLowerCase();
           const nameLower = item.name.toLowerCase();
-          if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
+          if (!isProductDeleted(item, deletedSet) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
             mergedList.push(item);
             seenKeys.add(key);
             seenKeys.add(idKey);
@@ -191,7 +191,7 @@ export default function AdminProductsPage() {
         const idKey = def.id.toLowerCase();
         const nameLower = def.name.toLowerCase();
 
-        if (!deletedSet.has(idKey) && !deletedSet.has(key) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
+        if (!isProductDeleted(def, deletedSet) && !seenKeys.has(key) && !seenKeys.has(nameLower)) {
           mergedList.push(def);
           seenKeys.add(key);
           seenKeys.add(idKey);
@@ -244,8 +244,13 @@ export default function AdminProductsPage() {
     setDeleting(true);
 
     try {
-      await deleteProduct(deleteTarget.id, deleteTarget.sku, deleteTarget.slug);
-      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id && p.sku !== deleteTarget.sku));
+      await deleteProduct(deleteTarget.id, deleteTarget.sku, deleteTarget.slug, deleteTarget.name);
+      const targetKeys = new Set(
+        [deleteTarget.id, deleteTarget.sku, deleteTarget.slug, deleteTarget.name]
+          .filter(Boolean)
+          .map((x) => String(x).toLowerCase().trim())
+      );
+      setProducts((prev) => prev.filter((p) => !isProductDeleted(p, targetKeys)));
       showToast(`Part "${deleteTarget.name}" was deleted successfully.`);
       setDeleteTarget(null);
     } catch (err) {

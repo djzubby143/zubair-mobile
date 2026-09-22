@@ -75,9 +75,35 @@ export default function LoginPage() {
             return;
           }
 
+          // Check local or role or notes override for pricing_tier
+          let resolvedTier: string = customerData.pricing_tier;
+          if (!resolvedTier) {
+            const local = typeof window !== "undefined" ? localStorage.getItem("zubair_mobile_customers") : null;
+            if (local) {
+              try {
+                const arr = JSON.parse(local);
+                const match = arr.find((u: { username?: string; pricing_tier?: string }) => u.username?.toLowerCase() === customerData.username?.toLowerCase());
+                if (match?.pricing_tier) resolvedTier = match.pricing_tier;
+              } catch {}
+            }
+          }
+          if (!resolvedTier && customerData.role && ["technician", "wholesale", "retail"].includes(customerData.role)) {
+            resolvedTier = customerData.role;
+          }
+          if (!resolvedTier && customerData.notes && customerData.notes.includes("tier:")) {
+            const m = customerData.notes.match(/tier:(wholesale|technician|retail)/);
+            if (m) resolvedTier = m[1];
+          }
+
+          const finalSession = {
+            ...customerData,
+            pricing_tier: resolvedTier || "wholesale",
+          };
+
           // Save customer session
           if (typeof window !== "undefined") {
-            localStorage.setItem("zubair_customer_user", JSON.stringify(customerData));
+            localStorage.setItem("zubair_customer_user", JSON.stringify(finalSession));
+            window.dispatchEvent(new Event("storage"));
           }
           router.push("/");
           return;

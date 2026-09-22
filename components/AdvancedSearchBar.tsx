@@ -24,7 +24,7 @@ import {
 } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
-import { getCustomProducts, getDeletedProductKeys } from "@/lib/customProducts";
+import { getCustomProducts, getDeletedProductKeys, isProductDeleted } from "@/lib/customProducts";
 
 interface AdvancedSearchBarProps {
   className?: string;
@@ -91,20 +91,16 @@ export default function AdvancedSearchBar({
 
       // Custom products first
       for (const item of localCustoms) {
-        if (item.is_active !== false) {
+        if (item.is_active !== false && !isProductDeleted(item, deletedKeys)) {
           const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
-          const idKey = (item.id || "").toLowerCase();
-          if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
-            mergedMap.set(key, item);
-          }
+          mergedMap.set(key, item);
         }
       }
 
       // Then base products
       for (const item of baseList) {
-        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
-        const idKey = (item.id || "").toLowerCase();
-        if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+        if (!isProductDeleted(item, deletedKeys)) {
+          const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
           if (!mergedMap.has(key)) {
             mergedMap.set(key, item);
           }

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "34265b86-483a-42d1-95ea-20bf683ff696",
+    "username": "umar",
+    "password": "ZM@123456",
+    "full_name": "",
+    "shop_name": "",
+    "phone": "",
+    "city": "Gujranwala",
+    "address": "",
+    "role": "technician",
+    "status": "active",
+    "pricing_tier": "technician",
+    "notes": null,
+    "created_at": "2026-09-22T18:10:12.200Z",
+    "updated_at": "2026-09-22T18:10:12.201Z"
+  }
+]

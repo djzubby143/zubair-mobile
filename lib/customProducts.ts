@@ -228,34 +228,73 @@ export async function saveProduct(
 }
 
 /**
+ * Check if a product is in the deleted keys set by any of its identifiers
+ */
+export function isProductDeleted(
+  item: { id?: string; sku?: string; slug?: string; name?: string },
+  deletedKeys: Set<string>
+): boolean {
+  if (!item || !deletedKeys || deletedKeys.size === 0) return false;
+  const id = (item.id || "").toLowerCase().trim();
+  const sku = (item.sku || "").toLowerCase().trim();
+  const slug = (item.slug || "").toLowerCase().trim();
+  const name = (item.name || "").toLowerCase().trim();
+
+  if (id && deletedKeys.has(id)) return true;
+  if (sku && deletedKeys.has(sku)) return true;
+  if (slug && deletedKeys.has(slug)) return true;
+  if (name && deletedKeys.has(name)) return true;
+
+  // Also check normalized name without spaces or punctuation
+  const cleanName = name.replace(/[^a-z0-9]/g, "");
+  if (cleanName && deletedKeys.has(cleanName)) return true;
+
+  return false;
+}
+
+/**
  * Delete a product:
  * 1. Calls API to remove from server.
- * 2. Attempts Supabase delete.
+ * 2. Attempts Supabase delete by id, slug, sku, and name.
  * 3. Removes from custom products localStorage.
- * 4. Adds to deleted set so default catalog doesn't revive it.
+ * 4. Adds all identifiers to deleted set so default catalog doesn't revive it.
  * 5. Broadcasts event.
  */
 export async function deleteProduct(
   id: string,
   sku?: string,
-  slug?: string
+  slug?: string,
+  name?: string
 ): Promise<{ success: boolean; error?: string }> {
+  const normId = (id || "").toLowerCase().trim();
+  const normSku = (sku || "").toLowerCase().trim();
+  const normSlug = (slug || "").toLowerCase().trim();
+  const normName = (name || "").toLowerCase().trim();
+  const cleanName = normName ? normName.replace(/[^a-z0-9]/g, "") : "";
+
   // 1. Call API
   try {
     await fetch("/api/admin/products", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, sku, slug }),
+      body: JSON.stringify({ id, sku, slug, name }),
     });
   } catch {}
 
   // 2. Try Supabase
   try {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const isUuid = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (isUuid) {
       await supabase.from("products").delete().eq("id", id);
-    } else if (slug) {
+    }
+    if (slug) {
       await supabase.from("products").delete().eq("slug", slug);
+    }
+    if (sku) {
+      await supabase.from("products").delete().eq("sku", sku);
+    }
+    if (name) {
+      await supabase.from("products").delete().eq("name", name);
     }
   } catch {}
 
@@ -263,22 +302,37 @@ export async function deleteProduct(
   if (typeof window !== "undefined") {
     try {
       const existing = getCustomProducts();
-      const filtered = existing.filter(
-        (p) =>
-          p.id !== id &&
-          (!sku || p.sku?.toLowerCase() !== sku.toLowerCase()) &&
-          (!slug || p.slug?.toLowerCase() !== slug.toLowerCase())
-      );
+      const filtered = existing.filter((p) => {
+        const pId = (p.id || "").toLowerCase().trim();
+        const pSku = (p.sku || "").toLowerCase().trim();
+        const pSlug = (p.slug || "").toLowerCase().trim();
+        const pName = (p.name || "").toLowerCase().trim();
+        if (normId && pId === normId) return false;
+        if (normSku && pSku === normSku) return false;
+        if (normSlug && pSlug === normSlug) return false;
+        if (normName && pName === normName) return false;
+        return true;
+      });
       localStorage.setItem(STORAGE_KEY_CUSTOM_PRODUCTS, JSON.stringify(filtered));
 
-      // Add to deleted set
+      // Add all identifiers to deleted set
       const deletedRaw = localStorage.getItem(STORAGE_KEY_DELETED_PRODUCTS) || "[]";
-      const deletedArr: string[] = JSON.parse(deletedRaw);
-      if (id && !deletedArr.includes(id)) deletedArr.push(id);
-      if (sku && !deletedArr.includes(sku)) deletedArr.push(sku);
-      if (slug && !deletedArr.includes(slug)) deletedArr.push(slug);
+      let deletedArr: string[] = [];
+      try {
+        deletedArr = JSON.parse(deletedRaw);
+        if (!Array.isArray(deletedArr)) deletedArr = [];
+      } catch {
+        deletedArr = [];
+      }
+
+      const toAdd = [normId, normSku, normSlug, normName, cleanName].filter(Boolean);
+      for (const k of toAdd) {
+        if (!deletedArr.includes(k)) deletedArr.push(k);
+      }
       localStorage.setItem(STORAGE_KEY_DELETED_PRODUCTS, JSON.stringify(deletedArr));
-    } catch {}
+    } catch (err) {
+      console.warn("Notice updating deleted products in localStorage:", err);
+    }
   }
 
   // 4. Broadcast

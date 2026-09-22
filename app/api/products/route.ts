@@ -5,6 +5,7 @@ import { sanitizeProductListForTier, RoleOrTier } from "@/lib/pricingSecurity";
 import { Product } from "@/lib/types";
 
 import { getServerCustomProducts, getServerDeletedKeys } from "@/lib/serverProducts";
+import { isProductDeleted } from "@/lib/customProducts";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +54,7 @@ export async function GET(req: NextRequest) {
     for (const item of serverCustomProducts) {
       if (item.is_active !== false) {
         const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
-        const idKey = (item.id || "").toLowerCase();
-        if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+        if (!isProductDeleted(item, deletedKeys)) {
           mergedMap.set(key, item);
         }
       }
@@ -63,8 +63,7 @@ export async function GET(req: NextRequest) {
     if (!error && dbData && dbData.length > 0) {
       for (const item of dbData) {
         const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
-        const idKey = (item.id || "").toLowerCase();
-        if (!deletedKeys.has(idKey) && !deletedKeys.has(key) && !mergedMap.has(key)) {
+        if (!isProductDeleted(item as Product, deletedKeys) && !mergedMap.has(key)) {
           mergedMap.set(key, item as Product);
         }
       }
@@ -73,9 +72,8 @@ export async function GET(req: NextRequest) {
     const existingItems = Array.from(mergedMap.values());
     for (const def of DEFAULT_CATALOG_PRODUCTS) {
       const key = (def.sku || def.slug || def.id || def.name).toLowerCase();
-      const idKey = (def.id || "").toLowerCase();
       const nameKey = def.name.toLowerCase();
-      const isDeleted = deletedKeys.has(idKey) || deletedKeys.has(key);
+      const isDeleted = isProductDeleted(def, deletedKeys);
       const exists = existingItems.some((val) => val.name.toLowerCase() === nameKey);
       if (!isDeleted && !exists && !mergedMap.has(key)) {
         mergedMap.set(key, def);

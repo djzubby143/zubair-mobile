@@ -108,6 +108,8 @@ export async function DELETE(req: NextRequest) {
     let sku: string | undefined;
     let slug: string | undefined;
 
+    let name: string | undefined;
+
     // Check query params
     const queryKey = req.nextUrl.searchParams.get("key") || req.nextUrl.searchParams.get("id");
     if (queryKey) id = queryKey;
@@ -115,6 +117,8 @@ export async function DELETE(req: NextRequest) {
     if (querySku) sku = querySku;
     const querySlug = req.nextUrl.searchParams.get("slug");
     if (querySlug) slug = querySlug;
+    const queryName = req.nextUrl.searchParams.get("name");
+    if (queryName) name = queryName;
 
     // Check JSON body if provided
     try {
@@ -123,33 +127,52 @@ export async function DELETE(req: NextRequest) {
         if (body.id) id = body.id;
         if (body.sku) sku = body.sku;
         if (body.slug) slug = body.slug;
+        if (body.name) name = body.name;
       }
     } catch {}
 
-    if (!id && !sku && !slug) {
-      return NextResponse.json({ success: false, error: "Missing ID or SKU or Slug" }, { status: 400 });
+    if (!id && !sku && !slug && !name) {
+      return NextResponse.json({ success: false, error: "Missing ID or SKU or Slug or Name" }, { status: 400 });
     }
 
+    const normId = (id || "").toLowerCase().trim();
+    const normSku = (sku || "").toLowerCase().trim();
+    const normSlug = (slug || "").toLowerCase().trim();
+    const normName = (name || "").toLowerCase().trim();
+
     const customProducts = getServerCustomProducts();
-    const filtered = customProducts.filter(
-      (p) =>
-        (!id || (p.id !== id && p.sku?.toLowerCase() !== id.toLowerCase() && p.slug?.toLowerCase() !== id.toLowerCase())) &&
-        (!sku || p.sku?.toLowerCase() !== sku.toLowerCase()) &&
-        (!slug || p.slug?.toLowerCase() !== slug.toLowerCase())
-    );
+    const filtered = customProducts.filter((p) => {
+      const pId = (p.id || "").toLowerCase().trim();
+      const pSku = (p.sku || "").toLowerCase().trim();
+      const pSlug = (p.slug || "").toLowerCase().trim();
+      const pName = (p.name || "").toLowerCase().trim();
+      if (normId && pId === normId) return false;
+      if (normSku && pSku === normSku) return false;
+      if (normSlug && pSlug === normSlug) return false;
+      if (normName && pName === normName) return false;
+      return true;
+    });
     saveServerCustomProducts(filtered);
 
     if (id) saveServerDeletedKey(id);
     if (sku) saveServerDeletedKey(sku);
     if (slug) saveServerDeletedKey(slug);
+    if (name) saveServerDeletedKey(name);
 
     // Try Supabase delete
     try {
       const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
       if (isUuid && id) {
         await supabase.from("products").delete().eq("id", id);
-      } else if (slug) {
+      }
+      if (slug) {
         await supabase.from("products").delete().eq("slug", slug);
+      }
+      if (sku) {
+        await supabase.from("products").delete().eq("sku", sku);
+      }
+      if (name) {
+        await supabase.from("products").delete().eq("name", name);
       }
     } catch {}
 

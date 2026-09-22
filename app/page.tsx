@@ -19,9 +19,9 @@ import { Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categories";
-import { useAuth } from "@/lib/auth";
+import { useAuth, getStoredCustomerUser } from "@/lib/auth";
 import { resolveUserTier, sanitizeProductListForTier } from "@/lib/pricingSecurity";
-import { getCustomProducts, getDeletedProductKeys } from "@/lib/customProducts";
+import { getCustomProducts, getDeletedProductKeys, isProductDeleted } from "@/lib/customProducts";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -29,7 +29,10 @@ function HomeContent() {
   const categoryFromUrl = searchParams.get("category") || searchParams.get("q") || searchParams.get("search");
   const { user } = useAuth();
 
-  const [products, setProducts] = useState<Product[]>(DEFAULT_CATALOG_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(() => {
+    const tier = resolveUserTier(getStoredCustomerUser());
+    return sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier);
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +64,8 @@ function HomeContent() {
 
   // Load products and live categories
   const loadAllData = async () => {
-    const tier = resolveUserTier(user);
+    const activeUser = user || getStoredCustomerUser();
+    const tier = resolveUserTier(activeUser);
     try {
       // 1. Fetch Categories
       const liveCats = await getLiveCategories();
@@ -111,20 +115,16 @@ function HomeContent() {
 
       // Put custom products FIRST at the top of the storefront catalog
       for (const item of localCustoms) {
-        if (item.is_active !== false) {
+        if (item.is_active !== false && !isProductDeleted(item, deletedKeys)) {
           const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
-          const idKey = (item.id || "").toLowerCase();
-          if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
-            mergedMap.set(key, item);
-          }
+          mergedMap.set(key, item);
         }
       }
 
       // Then append loaded products
       for (const item of loadedProducts) {
-        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
-        const idKey = (item.id || "").toLowerCase();
-        if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+        if (!isProductDeleted(item, deletedKeys)) {
+          const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
           if (!mergedMap.has(key)) {
             mergedMap.set(key, item);
           }

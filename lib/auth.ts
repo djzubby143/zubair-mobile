@@ -19,6 +19,25 @@ export interface AuthUser {
 
 export type PricingTier = "retail" | "technician" | "wholesale";
 
+export function getStoredCustomerUser(): AuthUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem("zubair_customer_user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && (parsed.id || parsed.username || parsed.full_name)) {
+        return {
+          ...parsed,
+          pricing_tier:
+            parsed.pricing_tier ||
+            (parsed.role === "technician" ? "technician" : parsed.role === "retail" ? "retail" : "wholesale"),
+        };
+      }
+    }
+  } catch {}
+  return null;
+}
+
 /**
  * Calculates effective price based on 3-tier system:
  * 1. Retail: Publicly visible to all visitors without login.
@@ -50,20 +69,35 @@ export function getEffectiveProductPrice(
 } {
   const isAdmin = user?.role === "admin";
 
-  const wholesalePrice =
+  let wholesalePrice: number | null =
     product.wholesale_price !== undefined && product.wholesale_price !== null && !isNaN(Number(product.wholesale_price))
       ? Number(product.wholesale_price)
-      : Number(product.price) || 0;
+      : null;
 
-  const technicianPrice =
-    product.technician_price !== undefined && product.technician_price !== null && !isNaN(Number(product.technician_price))
-      ? Number(product.technician_price)
-      : Math.round(wholesalePrice * 1.12);
-
-  const retailPrice =
+  let retailPrice: number | null =
     product.retail_price !== undefined && product.retail_price !== null && !isNaN(Number(product.retail_price))
       ? Number(product.retail_price)
-      : Math.round(wholesalePrice * 1.25);
+      : null;
+
+  let technicianPrice: number | null =
+    product.technician_price !== undefined && product.technician_price !== null && !isNaN(Number(product.technician_price))
+      ? Number(product.technician_price)
+      : null;
+
+  // If wholesalePrice is missing but retailPrice is known (e.g. from guest sanitized payload)
+  if (wholesalePrice === null && retailPrice !== null) {
+    wholesalePrice = Math.round(retailPrice / 1.25);
+  } else if (wholesalePrice === null) {
+    wholesalePrice = Number(product.price) || 0;
+  }
+
+  if (retailPrice === null) {
+    retailPrice = Math.round(wholesalePrice * 1.25);
+  }
+
+  if (technicianPrice === null) {
+    technicianPrice = Math.round(wholesalePrice * 1.12);
+  }
 
   const isGuest = !user || (!user.id && !user.username && !isAdmin);
 
@@ -168,28 +202,21 @@ export function getEffectiveProductPrice(
 }
 
 export function useAuth() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(getStoredCustomerUser);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!getStoredCustomerUser());
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
       if (typeof window === "undefined") return;
 
       // 1. Check Customer login in localStorage
-      const storedCustomer = localStorage.getItem("zubair_customer_user");
-      if (storedCustomer) {
-        try {
-          const parsed = JSON.parse(storedCustomer);
-          if (parsed && (parsed.id || parsed.username || parsed.full_name)) {
-            setIsLoggedIn(true);
-            setUser(parsed);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {
-          console.warn("Parse error for customer user:", e);
-        }
+      const cust = getStoredCustomerUser();
+      if (cust) {
+        setIsLoggedIn(true);
+        setUser(cust);
+        setLoading(false);
+        return;
       }
 
       // 2. Check Supabase session (Admin)

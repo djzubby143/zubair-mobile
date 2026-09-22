@@ -44,3 +44,22 @@ export interface CartItem {
   stock_quantity: number;
   sku?: string;
 }
+
+export interface CustomerUser {
+  id: string;
+  username: string;
+  password: string;
+  full_name: string;
+  shop_name: string;
+  phone: string;
+  city: string;
+  address: string;
+  role: string;
+  status: "active" | "inactive";
+  pricing_tier?: "retail" | "technician" | "wholesale";
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+

@@ -4,7 +4,8 @@ import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { sanitizeProductForTier, RoleOrTier } from "@/lib/pricingSecurity";
 import { Product } from "@/lib/types";
 
-import { getServerCustomProducts } from "@/lib/serverProducts";
+import { getServerCustomProducts, getServerDeletedKeys } from "@/lib/serverProducts";
+import { isProductDeleted } from "@/lib/customProducts";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,12 @@ export async function GET(
     const slug = params.slug;
     if (!slug) {
       return NextResponse.json({ success: false, error: "Missing slug" }, { status: 400 });
+    }
+
+    const deletedKeys = getServerDeletedKeys();
+    const slugLower = slug.toLowerCase().trim();
+    if (deletedKeys.has(slugLower)) {
+      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
     }
 
     // Determine tier from header
@@ -42,14 +49,18 @@ export async function GET(
     const customList = getServerCustomProducts();
     let matchedProduct: Product | null =
       customList.find(
-        (p) => p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase())
+        (p) =>
+          !isProductDeleted(p, deletedKeys) &&
+          (p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase()))
       ) || null;
 
     // 2. Try local catalog
     if (!matchedProduct) {
       matchedProduct =
         DEFAULT_CATALOG_PRODUCTS.find(
-          (p) => p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase())
+          (p) =>
+            !isProductDeleted(p, deletedKeys) &&
+            (p.slug === slug || p.id === slug || (p.sku && p.sku.toLowerCase() === slug.toLowerCase()))
         ) || null;
     }
 
@@ -64,7 +75,7 @@ export async function GET(
       }
       const { data, error } = await dbQuery.maybeSingle();
 
-      if (!error && data) {
+      if (!error && data && !isProductDeleted(data as Product, deletedKeys)) {
         matchedProduct = data as Product;
       }
     } catch {}
