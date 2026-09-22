@@ -31,6 +31,7 @@ export default function NewProductPage() {
   const [price, setPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("25");
+  const [minOrderQuantity, setMinOrderQuantity] = useState("1");
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -164,6 +165,7 @@ export default function NewProductPage() {
 
       // 2. Insert into Supabase Products table
       const numPurchasePrice = purchasePrice ? parseFloat(purchasePrice) : null;
+      const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
       const newProductRecord = {
         name: name.trim(),
         slug: slug.trim() || generateSlug(name),
@@ -171,6 +173,7 @@ export default function NewProductPage() {
         category_id: categoryId || null,
         price: numPrice,
         purchase_price: numPurchasePrice,
+        min_order_quantity: numMinOrderQuantity > 0 ? numMinOrderQuantity : 1,
         stock_quantity: numStock,
         short_description: shortDescription.trim() || null,
         description: description.trim() || null,
@@ -185,10 +188,19 @@ export default function NewProductPage() {
 
       if (insertResponse.error) {
         console.warn("Database insert error:", insertResponse.error);
-        // If column purchase_price doesn't exist on remote table schema, retry without it
-        if (insertResponse.error.message && insertResponse.error.message.includes("purchase_price")) {
+        // If column purchase_price or min_order_quantity doesn't exist on remote table schema, retry without it
+        if (
+          insertResponse.error.message &&
+          (insertResponse.error.message.includes("purchase_price") ||
+            insertResponse.error.message.includes("min_order_quantity"))
+        ) {
           const fallbackRecord = { ...newProductRecord };
-          delete (fallbackRecord as Record<string, unknown>).purchase_price;
+          if (insertResponse.error.message.includes("min_order_quantity")) {
+            delete (fallbackRecord as Record<string, unknown>).min_order_quantity;
+          }
+          if (insertResponse.error.message.includes("purchase_price")) {
+            delete (fallbackRecord as Record<string, unknown>).purchase_price;
+          }
           insertResponse = await supabase.from("products").insert([fallbackRecord]);
         }
       }
@@ -407,7 +419,7 @@ export default function NewProductPage() {
             )}
 
             {/* Stock Quantity */}
-            <div className="space-y-1 sm:col-span-2">
+            <div className="space-y-1">
               <label className="font-bold text-charcoal block">Stock Quantity *</label>
               <input
                 type="number"
@@ -418,6 +430,31 @@ export default function NewProductPage() {
                 required
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
               />
+            </div>
+
+            {/* Minimum Order Quantity (MOQ) */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-charcoal block">
+                  Minimum Order Quantity (MOQ) *
+                </label>
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  کم از کم تعداد
+                </span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={minOrderQuantity}
+                onChange={(e) => setMinOrderQuantity(e.target.value)}
+                placeholder="1"
+                required
+                className="w-full px-3.5 py-2.5 rounded-lg border border-amber-300 bg-amber-50/20 text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs font-bold"
+              />
+              <p className="text-[10px] text-slate-400">
+                User is se kam quantity cart me add nahi kar sakega (Default: 1).
+              </p>
             </div>
           </div>
         </div>

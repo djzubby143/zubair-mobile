@@ -356,7 +356,7 @@ export default function AdminProductsPage() {
                         )}
                       </td>
 
-                      {/* Stock Badge */}
+                      {/* Stock Badge & MOQ */}
                       <td className="py-3.5 px-4">
                         {isLow ? (
                           <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded text-[11px] border border-amber-200">
@@ -374,6 +374,15 @@ export default function AdminProductsPage() {
                             Out of stock
                           </span>
                         )}
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                            product.min_order_quantity && product.min_order_quantity > 1
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : "bg-slate-100 text-slate-500"
+                          }`}>
+                            MOQ: {product.min_order_quantity || 1} pcs
+                          </span>
+                        </div>
                       </td>
 
                       {/* Storefront Active */}

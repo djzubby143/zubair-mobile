@@ -7,6 +7,10 @@ interface CartContextType {
   items: CartItem[];
   cartCount: number;
   cartSubtotal: number;
+  isCartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+  toggleCart: () => void;
   addToCart: (product: Product | CartItem, quantity?: number) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeFromCart: (id: string) => void;
@@ -21,6 +25,11 @@ const STORAGE_KEY = "zubair_cart";
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const openCart = () => setIsCartOpen(true);
+  const closeCart = () => setIsCartOpen(false);
+  const toggleCart = () => setIsCartOpen((prev) => !prev);
 
   // Load cart from localStorage on mount (client-side only to avoid SSR mismatch)
   useEffect(() => {
@@ -49,38 +58,52 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, isLoaded]);
 
-  const addToCart = (product: Product | CartItem, quantity = 1) => {
-    if (quantity <= 0) return;
+  const addToCart = (product: Product | CartItem, quantity?: number) => {
+    const moq =
+      "min_order_quantity" in product &&
+      product.min_order_quantity &&
+      product.min_order_quantity > 0
+        ? product.min_order_quantity
+        : 1;
+
+    // If quantity is provided, use it; otherwise default to minimum order quantity
+    const addQty = quantity !== undefined && quantity > 0 ? quantity : moq;
 
     setItems((prevItems) => {
       const existingIndex = prevItems.findIndex((item) => item.id === product.id);
 
       if (existingIndex > -1) {
         const existingItem = prevItems[existingIndex];
-        const newQuantity = existingItem.quantity + quantity;
+        const newQuantity = existingItem.quantity + addQty;
         const maxStock = existingItem.stock_quantity ?? 999;
         const finalQuantity = Math.min(newQuantity, maxStock > 0 ? maxStock : newQuantity);
 
         const updated = [...prevItems];
         updated[existingIndex] = {
           ...existingItem,
+          min_order_quantity: existingItem.min_order_quantity || moq,
           quantity: finalQuantity,
         };
         return updated;
       } else {
+        const initialQuantity = Math.max(addQty, moq);
         const newItem: CartItem = {
           id: product.id,
           name: product.name,
           price: Number(product.price) || 0,
           purchase_price: "purchase_price" in product ? (product.purchase_price ?? null) : null,
           image_url: product.image_url ?? null,
-          quantity: quantity,
+          quantity: initialQuantity,
+          min_order_quantity: moq,
           stock_quantity: "stock_quantity" in product ? product.stock_quantity : 99,
           sku: "sku" in product ? product.sku : undefined,
         };
         return [...prevItems, newItem];
       }
     });
+
+    // Automatically slide open the right-side cart drawer!
+    setIsCartOpen(true);
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -92,8 +115,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prevItems) =>
       prevItems.map((item) => {
         if (item.id === id) {
+          const minAllowed = item.min_order_quantity && item.min_order_quantity > 0 ? item.min_order_quantity : 1;
+          const enforcedQuantity = Math.max(quantity, minAllowed);
           const maxStock = item.stock_quantity ?? 999;
-          const finalQuantity = Math.min(quantity, maxStock > 0 ? maxStock : quantity);
+          const finalQuantity = Math.min(enforcedQuantity, maxStock > 0 ? maxStock : enforcedQuantity);
           return { ...item, quantity: finalQuantity };
         }
         return item;
@@ -129,6 +154,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items,
         cartCount,
         cartSubtotal,
+        isCartOpen,
+        openCart,
+        closeCart,
+        toggleCart,
         addToCart,
         updateQuantity,
         removeFromCart,

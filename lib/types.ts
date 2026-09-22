@@ -16,6 +16,7 @@ export interface Product {
   category?: Category | null;
   price: number; // Wholesale / Selling Price
   purchase_price?: number | null; // Cost / Purchase Price (Admin-only)
+  min_order_quantity?: number; // Minimum Order Quantity (MOQ)
   stock_quantity: number;
   short_description?: string | null;
   description?: string | null;
@@ -33,6 +34,7 @@ export interface CartItem {
   purchase_price?: number | null;
   image_url?: string | null;
   quantity: number;
+  min_order_quantity?: number;
   stock_quantity: number;
   sku?: string;
 }

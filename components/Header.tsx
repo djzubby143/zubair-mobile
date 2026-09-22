@@ -28,7 +28,7 @@ export default function Header() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customerUser, setCustomerUser] = useState<{ full_name: string; shop_name: string; avatar_url?: string | null } | null>(null);
-  const { cartCount, isLoaded } = useCart();
+  const { cartCount, isLoaded, openCart } = useCart();
 
   // Categories Hover Mega-Menu State
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
@@ -383,16 +383,18 @@ export default function Header() {
           </a>
 
           {/* Cart Icon Button */}
-          <Link
-            href="/cart"
-            className="relative p-2 rounded-lg border border-red-200 hover:border-[#dc2626] text-[#dc2626] hover:bg-red-50 transition-colors flex items-center justify-center bg-white shadow-2xs"
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative p-2 rounded-lg border border-red-200 hover:border-[#dc2626] text-[#dc2626] hover:bg-red-50 transition-colors flex items-center justify-center bg-white shadow-2xs cursor-pointer"
             aria-label="Shopping Cart"
+            title="Open Shopping Cart"
           >
             <ShoppingCart className="w-5 h-5" />
             <span className="absolute -top-1.5 -right-1.5 bg-[#dc2626] text-white text-[10px] font-bold h-4.5 w-4.5 rounded-full flex items-center justify-center shadow-xs">
               {isLoaded ? cartCount : 0}
             </span>
-          </Link>
+          </button>
 
           {/* Customer / Admin Login Status */}
           {customerUser ? (
@@ -481,16 +483,22 @@ export default function Header() {
               >
                 Home / Catalog
               </Link>
-              <Link
-                href="/cart"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between py-2 text-slate-700 font-semibold hover:text-[#dc2626]"
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openCart();
+                }}
+                className="w-full flex items-center justify-between py-2 text-slate-700 font-semibold hover:text-[#dc2626] text-left cursor-pointer"
               >
-                <span>My Cart</span>
+                <span className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-[#dc2626]" />
+                  <span>My Cart</span>
+                </span>
                 <span className="bg-[#dc2626] text-white text-xs px-2 py-0.5 rounded-full">
                   {cartCount}
                 </span>
-              </Link>
+              </button>
               {customerUser ? (
                 <Link
                   href="/profile"

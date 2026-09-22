@@ -316,6 +316,11 @@ export default function CartPage() {
                               SKU: {item.sku}
                             </p>
                           )}
+                          {item.min_order_quantity && item.min_order_quantity > 1 && (
+                            <span className="inline-flex items-center text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded w-fit">
+                              Min Order: {item.min_order_quantity} Pcs (کم از کم {item.min_order_quantity} پیس)
+                            </span>
+                          )}
                           <div className="sm:hidden text-xs font-bold text-[#16a34a]">
                             {isLoggedIn ? (
                               `Rs. ${item.price.toLocaleString("en-PK")} each`
@@ -344,22 +349,43 @@ export default function CartPage() {
                       {/* Quantity Controls (Col 2) */}
                       <div className="w-full sm:w-auto sm:col-span-2 flex items-center justify-between sm:justify-center gap-3">
                         <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="p-1.5 sm:p-2 text-slate-500 hover:text-[#111827] hover:bg-slate-100 transition-colors"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="px-2.5 sm:px-3 text-xs font-bold text-[#111827] min-w-[2rem] text-center">
+                          {(() => {
+                            const itemMoq = item.min_order_quantity && item.min_order_quantity > 0 ? item.min_order_quantity : 1;
+                            const isAtMoq = item.quantity <= itemMoq;
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isAtMoq) {
+                                    removeFromCart(item.id);
+                                  } else {
+                                    updateQuantity(item.id, item.quantity - 1);
+                                  }
+                                }}
+                                className={`p-1.5 sm:p-2 transition-colors cursor-pointer ${
+                                  isAtMoq
+                                    ? "text-rose-500 hover:bg-rose-50"
+                                    : "text-slate-500 hover:text-[#111827] hover:bg-slate-100"
+                                }`}
+                                title={isAtMoq ? `Remove from cart (Minimum order is ${itemMoq})` : "Decrease quantity"}
+                                aria-label="Decrease quantity"
+                              >
+                                {isAtMoq ? (
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                ) : (
+                                  <Minus className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            );
+                          })()}
+                          <span className="px-2.5 sm:px-3 text-xs font-bold text-[#111827] min-w-[2rem] text-center font-mono">
                             {item.quantity}
                           </span>
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             disabled={item.quantity >= maxStock}
-                            className="p-1.5 sm:p-2 text-slate-500 hover:text-[#111827] hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-1.5 sm:p-2 text-slate-500 hover:text-[#111827] hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                             aria-label="Increase quantity"
                           >
                             <Plus className="w-3.5 h-3.5" />

@@ -20,24 +20,30 @@ export default function ProductCard({ product }: ProductCardProps) {
   const isInStock = (product.stock_quantity ?? 0) > 0;
   const priceValue = Number(product.price) || 0;
   const formattedPrice = `Rs ${priceValue.toLocaleString("en-PK")}`;
+  const minQty = product.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isInStock) return;
 
-    addToCart(product, 1);
+    addToCart(product, minQty);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 1200);
   };
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden">
+    <div className="bg-white rounded-lg border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden relative">
       {/* Product Image Area (Screenshot: light gray contain area or 'NO IMAGE AVAILABLE') */}
       <Link
         href={`/product/${product.slug}`}
         className="block relative aspect-square w-full bg-[#f4f6f8] border-b border-slate-100 overflow-hidden group"
       >
+        {minQty > 1 && (
+          <span className="absolute top-2 left-2 z-10 bg-amber-600 text-white text-[9.5px] font-black px-2 py-0.5 rounded-md shadow-xs tracking-wider uppercase">
+            Min: {minQty} pcs
+          </span>
+        )}
         {product.image_url && !imgError ? (
           <img
             src={product.image_url}
@@ -116,7 +122,13 @@ export default function ProductCard({ product }: ProductCardProps) {
             >
               <ShoppingCart className="w-3.5 h-3.5" />
               <span>
-                {!isInStock ? "Out of Stock" : isAdded ? "Added!" : "Add to Cart"}
+                {!isInStock
+                  ? "Out of Stock"
+                  : isAdded
+                  ? "Added!"
+                  : minQty > 1
+                  ? `Add ${minQty} Pcs`
+                  : "Add to Cart"}
               </span>
             </button>
           ) : (
