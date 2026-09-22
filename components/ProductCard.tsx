@@ -49,6 +49,20 @@ export default function ProductCard({ product }: ProductCardProps) {
     setTimeout(() => setIsAdded(false), 1200);
   };
 
+  const isSideKey =
+    (product.category?.name && product.category.name.toLowerCase().includes("side")) ||
+    product.name.toLowerCase().includes("side key") ||
+    product.name.toLowerCase().includes("sidekey") ||
+    product.name.toLowerCase().includes("power key") ||
+    product.name.toLowerCase().includes("volume key");
+
+  const displayImage =
+    product.image_url && !imgError
+      ? product.image_url
+      : isSideKey
+      ? "/images/sidekey-placeholder.svg"
+      : null;
+
   return (
     <div className="bg-white rounded-lg border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden relative">
       {/* Product Image Area (Screenshot: light gray contain area or 'NO IMAGE AVAILABLE') */}
@@ -61,9 +75,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             Min: {minQty} pcs
           </span>
         )}
-        {product.image_url && !imgError ? (
+        {displayImage ? (
           <img
-            src={product.image_url}
+            src={displayImage}
             alt={product.name}
             onError={() => setImgError(true)}
             className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"

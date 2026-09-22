@@ -24,6 +24,7 @@ import {
 } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
+import { getCustomProducts, getDeletedProductKeys } from "@/lib/customProducts";
 
 interface AdvancedSearchBarProps {
   className?: string;
@@ -53,39 +54,64 @@ export default function AdvancedSearchBar({
   // Load products from API / Supabase with fallback to DEFAULT_CATALOG_PRODUCTS
   useEffect(() => {
     async function loadCatalog() {
+      let baseList: Product[] = [];
       try {
-        const res = await fetch("/api/products");
+        const res = await fetch("/api/products", { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.products) && json.products.length > 0) {
-            setProducts(json.products);
-            return;
+            baseList = json.products;
           }
         }
       } catch (err) {
         console.warn("API search catalog fallback:", err);
       }
 
-      try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*, category:categories(*)")
-          .eq("is_active", true);
+      if (baseList.length === 0) {
+        try {
+          const { data, error } = await supabase
+            .from("products")
+            .select("*, category:categories(*)")
+            .eq("is_active", true);
 
-        if (!error && data && data.length > 0) {
-          const merged = [...data];
-          for (const def of DEFAULT_CATALOG_PRODUCTS) {
-            if (!merged.some((m) => m.name.toLowerCase() === def.name.toLowerCase())) {
-              merged.push(def);
-            }
+          if (!error && data && data.length > 0) {
+            baseList = data as Product[];
+          } else {
+            baseList = [...DEFAULT_CATALOG_PRODUCTS];
           }
-          setProducts(merged);
-        } else {
-          setProducts(DEFAULT_CATALOG_PRODUCTS);
+        } catch {
+          baseList = [...DEFAULT_CATALOG_PRODUCTS];
         }
-      } catch {
-        setProducts(DEFAULT_CATALOG_PRODUCTS);
       }
+
+      // Merge local custom products (Admin added products)
+      const localCustoms = getCustomProducts();
+      const deletedKeys = getDeletedProductKeys();
+      const mergedMap = new Map<string, Product>();
+
+      // Custom products first
+      for (const item of localCustoms) {
+        if (item.is_active !== false) {
+          const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+          const idKey = (item.id || "").toLowerCase();
+          if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+            mergedMap.set(key, item);
+          }
+        }
+      }
+
+      // Then base products
+      for (const item of baseList) {
+        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+        const idKey = (item.id || "").toLowerCase();
+        if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+          if (!mergedMap.has(key)) {
+            mergedMap.set(key, item);
+          }
+        }
+      }
+
+      setProducts(Array.from(mergedMap.values()));
     }
 
     loadCatalog();

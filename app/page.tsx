@@ -21,6 +21,7 @@ import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { useAuth } from "@/lib/auth";
 import { resolveUserTier, sanitizeProductListForTier } from "@/lib/pricingSecurity";
+import { getCustomProducts, getDeletedProductKeys } from "@/lib/customProducts";
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -69,8 +70,10 @@ function HomeContent() {
       }
 
       // 2. Fetch Products via secure /api/products endpoint
+      let loadedProducts: Product[] = [];
       try {
         const res = await fetch("/api/products", {
+          cache: "no-store",
           headers: {
             "x-user-tier": tier,
           },
@@ -78,8 +81,7 @@ function HomeContent() {
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.products) && json.products.length > 0) {
-            setProducts(json.products);
-            return;
+            loadedProducts = json.products;
           }
         }
       } catch (apiErr) {
@@ -87,23 +89,64 @@ function HomeContent() {
       }
 
       // Fallback: Fetch directly from Supabase & sanitize with tier
-      const { data: prodData, error: prodErr } = await supabase
-        .from("products")
-        .select("*, category:categories(*)")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      if (loadedProducts.length === 0) {
+        const { data: prodData, error: prodErr } = await supabase
+          .from("products")
+          .select("*, category:categories(*)")
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
 
-      if (!prodErr && prodData && prodData.length > 0) {
-        const merged = [...prodData];
-        for (const def of DEFAULT_CATALOG_PRODUCTS) {
-          if (!merged.some((m) => m.name.toLowerCase() === def.name.toLowerCase())) {
-            merged.push(def);
+        if (!prodErr && prodData && prodData.length > 0) {
+          loadedProducts = prodData as Product[];
+        } else {
+          loadedProducts = [...DEFAULT_CATALOG_PRODUCTS];
+        }
+      }
+
+      // 3. Merge LocalStorage Custom Products (Admin created products)
+      const localCustoms = getCustomProducts();
+      const deletedKeys = getDeletedProductKeys();
+
+      const mergedMap = new Map<string, Product>();
+
+      // Put custom products FIRST at the top of the storefront catalog
+      for (const item of localCustoms) {
+        if (item.is_active !== false) {
+          const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+          const idKey = (item.id || "").toLowerCase();
+          if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+            mergedMap.set(key, item);
           }
         }
-        setProducts(sanitizeProductListForTier(merged, tier));
-      } else {
-        setProducts(sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier));
       }
+
+      // Then append loaded products
+      for (const item of loadedProducts) {
+        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+        const idKey = (item.id || "").toLowerCase();
+        if (!deletedKeys.has(idKey) && !deletedKeys.has(key)) {
+          if (!mergedMap.has(key)) {
+            mergedMap.set(key, item);
+          }
+        }
+      }
+
+      // Ensure all products have category object mapped if category_id exists
+      const catList = liveCats && liveCats.length > 0 ? liveCats : categories;
+      const allMerged = Array.from(mergedMap.values()).map((p) => {
+        if (!p.category && p.category_id) {
+          const matchCat = catList.find((c) => c.id === p.category_id);
+          if (matchCat) {
+            return {
+              ...p,
+              category: { id: matchCat.id, name: matchCat.name, slug: matchCat.slug },
+            };
+          }
+        }
+        return p;
+      });
+
+      setProducts(sanitizeProductListForTier(allMerged, tier));
     } catch (err) {
       console.warn("Notice loading catalog data:", err);
       setProducts(sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier));
@@ -177,13 +220,22 @@ function HomeContent() {
       const prodName = p.name.toLowerCase();
       const desc = (p.short_description || "").toLowerCase();
 
+      // Check category_id against category list
+      const matchedCat = categories.find((c) => c.id === p.category_id);
+      const matchedCatName = (matchedCat?.name || "").toLowerCase();
+      const matchedCatSlug = (matchedCat?.slug || "").toLowerCase();
+
       // Direct category name or slug match
       if (
         catName === query ||
         catSlug === query ||
         catName.includes(query) ||
         catSlug.includes(query) ||
-        (query.includes("side") && (catName.includes("side") || catSlug.includes("side") || prodName.includes("side")))
+        matchedCatName === query ||
+        matchedCatSlug === query ||
+        matchedCatName.includes(query) ||
+        matchedCatSlug.includes(query) ||
+        (query.includes("side") && (catName.includes("side") || catSlug.includes("side") || matchedCatName.includes("side") || prodName.includes("side")))
       ) {
         return true;
       }

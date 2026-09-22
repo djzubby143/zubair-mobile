@@ -1,5 +1,6 @@
 import { Product } from "./types";
 import { supabase } from "./supabase";
+import { DEFAULT_CATEGORIES } from "./categories";
 
 export const STORAGE_KEY_CUSTOM_PRODUCTS = "zubair_admin_custom_products";
 export const STORAGE_KEY_DELETED_PRODUCTS = "zubair_admin_deleted_products";
@@ -107,6 +108,13 @@ export async function saveProduct(
     created_at: productData.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+
+  if (!fullProduct.category && fullProduct.category_id) {
+    const match = DEFAULT_CATEGORIES.find((c) => c.id === fullProduct.category_id);
+    if (match) {
+      fullProduct.category = { id: match.id, name: match.name, slug: match.slug };
+    }
+  }
 
   // 1. Try persisting to Server via /api/admin/products
   try {

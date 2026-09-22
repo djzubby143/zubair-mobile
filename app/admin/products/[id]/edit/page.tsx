@@ -228,11 +228,16 @@ export default function EditProductPage() {
       }
 
       const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
+      const selectedCategoryObj = categories.find((c) => c.id === categoryId);
+
       const updatedRecord = {
         name: name.trim(),
         slug: slug.trim(),
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
+        category: selectedCategoryObj
+          ? { id: selectedCategoryObj.id, name: selectedCategoryObj.name, slug: selectedCategoryObj.slug }
+          : null,
         price: numPrice,
         wholesale_price: numPrice,
         technician_price: numTechnicianPrice,

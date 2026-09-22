@@ -190,13 +190,29 @@ export default function NewProductPage() {
         }
       }
 
-      // 2. Insert into Supabase Products table
+      // 2. Prepare product record with category object and smart image fallback
       const numMinOrderQuantity = minOrderQuantity ? parseInt(minOrderQuantity, 10) : 1;
+      const selectedCategoryObj = categories.find((c) => c.id === categoryId);
+
+      // Auto-assign default Side Key placeholder if no image provided and category or name is side key
+      if (!finalImageUrl) {
+        const isSideKey =
+          (selectedCategoryObj?.name && selectedCategoryObj.name.toLowerCase().includes("side")) ||
+          name.toLowerCase().includes("side key") ||
+          name.toLowerCase().includes("sidekey");
+        if (isSideKey) {
+          finalImageUrl = "/images/sidekey-placeholder.svg";
+        }
+      }
+
       const newProductRecord = {
         name: name.trim(),
         slug: slug.trim() || generateSlug(name),
         sku: sku.trim().toUpperCase(),
         category_id: categoryId || null,
+        category: selectedCategoryObj
+          ? { id: selectedCategoryObj.id, name: selectedCategoryObj.name, slug: selectedCategoryObj.slug }
+          : null,
         price: numPrice,
         wholesale_price: numPrice,
         technician_price: numTechnicianPrice,
