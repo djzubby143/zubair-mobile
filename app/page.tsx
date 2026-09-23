@@ -31,7 +31,11 @@ function HomeContent() {
 
   const [products, setProducts] = useState<Product[]>(() => {
     const tier = resolveUserTier(getStoredCustomerUser());
-    return sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier);
+    const deleted = getDeletedProductKeys();
+    return sanitizeProductListForTier(
+      DEFAULT_CATALOG_PRODUCTS.filter((p) => !isProductDeleted(p, deleted)),
+      tier
+    );
   });
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
@@ -75,6 +79,7 @@ function HomeContent() {
 
       // 2. Fetch Products via secure /api/products endpoint
       let loadedProducts: Product[] = [];
+      let apiDeletedKeys: string[] = [];
       try {
         const res = await fetch("/api/products", {
           cache: "no-store",
@@ -84,12 +89,26 @@ function HomeContent() {
         });
         if (res.ok) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.products) && json.products.length > 0) {
+          if (json.success && Array.isArray(json.products)) {
             loadedProducts = json.products;
+          }
+          if (Array.isArray(json.deletedKeys)) {
+            apiDeletedKeys = json.deletedKeys;
           }
         }
       } catch (apiErr) {
         console.warn("API /api/products fallback to Supabase direct:", apiErr);
+      }
+
+      // Merge server deletedKeys with local deletedKeys and synchronize localStorage
+      const deletedKeys = getDeletedProductKeys();
+      for (const k of apiDeletedKeys) {
+        if (k) deletedKeys.add(String(k).toLowerCase().trim());
+      }
+      if (typeof window !== "undefined" && apiDeletedKeys.length > 0) {
+        try {
+          localStorage.setItem("zubair_admin_deleted_products", JSON.stringify(Array.from(deletedKeys)));
+        } catch {}
       }
 
       // Fallback: Fetch directly from Supabase & sanitize with tier
@@ -109,7 +128,6 @@ function HomeContent() {
 
       // 3. Merge LocalStorage Custom Products (Admin created products)
       const localCustoms = getCustomProducts();
-      const deletedKeys = getDeletedProductKeys();
 
       const mergedMap = new Map<string, Product>();
 
@@ -149,7 +167,8 @@ function HomeContent() {
       setProducts(sanitizeProductListForTier(allMerged, tier));
     } catch (err) {
       console.warn("Notice loading catalog data:", err);
-      setProducts(sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS, tier));
+      const fallbackDeleted = getDeletedProductKeys();
+      setProducts(sanitizeProductListForTier(DEFAULT_CATALOG_PRODUCTS.filter((p) => !isProductDeleted(p, fallbackDeleted)), tier));
     }
   };
 

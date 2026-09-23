@@ -55,12 +55,16 @@ export default function AdvancedSearchBar({
   useEffect(() => {
     async function loadCatalog() {
       let baseList: Product[] = [];
+      let apiDeletedKeys: string[] = [];
       try {
         const res = await fetch("/api/products", { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.products) && json.products.length > 0) {
             baseList = json.products;
+          }
+          if (Array.isArray(json.deletedKeys)) {
+            apiDeletedKeys = json.deletedKeys;
           }
         }
       } catch (err) {
@@ -87,6 +91,14 @@ export default function AdvancedSearchBar({
       // Merge local custom products (Admin added products)
       const localCustoms = getCustomProducts();
       const deletedKeys = getDeletedProductKeys();
+      for (const k of apiDeletedKeys) {
+        if (k) deletedKeys.add(String(k).toLowerCase().trim());
+      }
+      if (typeof window !== "undefined" && apiDeletedKeys.length > 0) {
+        try {
+          localStorage.setItem("zubair_admin_deleted_products", JSON.stringify(Array.from(deletedKeys)));
+        } catch {}
+      }
       const mergedMap = new Map<string, Product>();
 
       // Custom products first

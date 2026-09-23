@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
+import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import {
   getServerCustomProducts,
   getServerDeletedKeys,
@@ -107,7 +108,6 @@ export async function DELETE(req: NextRequest) {
     let id: string | undefined;
     let sku: string | undefined;
     let slug: string | undefined;
-
     let name: string | undefined;
 
     // Check query params
@@ -135,48 +135,104 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing ID or SKU or Slug or Name" }, { status: 400 });
     }
 
-    const normId = (id || "").toLowerCase().trim();
-    const normSku = (sku || "").toLowerCase().trim();
-    const normSlug = (slug || "").toLowerCase().trim();
-    const normName = (name || "").toLowerCase().trim();
+    const keysToAdd = new Set<string>();
+    const registerKey = (val?: string | null) => {
+      if (!val) return;
+      const s = String(val).toLowerCase().trim();
+      if (s) {
+        keysToAdd.add(s);
+        const clean = s.replace(/[^a-z0-9]/g, "");
+        if (clean) keysToAdd.add(clean);
+      }
+    };
 
+    registerKey(id);
+    registerKey(sku);
+    registerKey(slug);
+    registerKey(name);
+
+    // 1. Look up matching records in Supabase to collect all associated UUIDs, SKUs, Slugs, and Names
+    try {
+      const orConditions: string[] = [];
+      if (id) orConditions.push(`id.eq.${id}`);
+      if (sku) orConditions.push(`sku.eq.${sku}`);
+      if (slug) orConditions.push(`slug.eq.${slug}`);
+      if (name) orConditions.push(`name.ilike.%${name}%`);
+
+      if (orConditions.length > 0) {
+        const { data: matchedRows } = await supabase
+          .from("products")
+          .select("id, name, sku, slug")
+          .or(orConditions.join(","));
+
+        if (matchedRows && Array.isArray(matchedRows)) {
+          for (const row of matchedRows) {
+            registerKey(row.id);
+            registerKey(row.name);
+            registerKey(row.sku);
+            registerKey(row.slug);
+          }
+        }
+      }
+    } catch (sbErr) {
+      console.warn("Notice querying Supabase delete matches:", sbErr);
+    }
+
+    // 2. Look up matching records in DEFAULT_CATALOG_PRODUCTS
+    const targetCleanName = name ? name.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+    const targetCleanSku = sku ? sku.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+
+    for (const def of DEFAULT_CATALOG_PRODUCTS) {
+      const defId = (def.id || "").toLowerCase().trim();
+      const defSku = (def.sku || "").toLowerCase().trim();
+      const defSlug = (def.slug || "").toLowerCase().trim();
+      const defName = (def.name || "").toLowerCase().trim();
+      const defCleanName = defName.replace(/[^a-z0-9]/g, "");
+      const defCleanSku = defSku.replace(/[^a-z0-9]/g, "");
+
+      const matches =
+        (id && (defId === id.toLowerCase().trim() || defSlug === id.toLowerCase().trim() || defSku === id.toLowerCase().trim())) ||
+        (sku && (defSku === sku.toLowerCase().trim() || (targetCleanSku && defCleanSku === targetCleanSku))) ||
+        (slug && defSlug === slug.toLowerCase().trim()) ||
+        (name && (defName === name.toLowerCase().trim() || (targetCleanName && defCleanName === targetCleanName)));
+
+      if (matches) {
+        registerKey(def.id);
+        registerKey(def.name);
+        registerKey(def.sku);
+        registerKey(def.slug);
+      }
+    }
+
+    // 3. Filter server custom products
     const customProducts = getServerCustomProducts();
-    const filtered = customProducts.filter((p) => {
+    const filteredCustoms = customProducts.filter((p) => {
       const pId = (p.id || "").toLowerCase().trim();
       const pSku = (p.sku || "").toLowerCase().trim();
       const pSlug = (p.slug || "").toLowerCase().trim();
       const pName = (p.name || "").toLowerCase().trim();
-      if (normId && pId === normId) return false;
-      if (normSku && pSku === normSku) return false;
-      if (normSlug && pSlug === normSlug) return false;
-      if (normName && pName === normName) return false;
+      const pCleanName = pName.replace(/[^a-z0-9]/g, "");
+
+      if (keysToAdd.has(pId) || keysToAdd.has(pSku) || keysToAdd.has(pSlug) || keysToAdd.has(pName) || keysToAdd.has(pCleanName)) {
+        return false;
+      }
       return true;
     });
-    saveServerCustomProducts(filtered);
+    saveServerCustomProducts(filteredCustoms);
 
-    if (id) saveServerDeletedKey(id);
-    if (sku) saveServerDeletedKey(sku);
-    if (slug) saveServerDeletedKey(slug);
-    if (name) saveServerDeletedKey(name);
+    // 4. Save all registered keys to data/deleted_products.json
+    saveServerDeletedKey(Array.from(keysToAdd));
 
-    // Try Supabase delete
+    // 5. Attempt direct delete in Supabase
     try {
       const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
-      if (isUuid && id) {
-        await supabase.from("products").delete().eq("id", id);
-      }
-      if (slug) {
-        await supabase.from("products").delete().eq("slug", slug);
-      }
-      if (sku) {
-        await supabase.from("products").delete().eq("sku", sku);
-      }
-      if (name) {
-        await supabase.from("products").delete().eq("name", name);
-      }
+      if (isUuid && id) await supabase.from("products").delete().eq("id", id);
+      if (slug) await supabase.from("products").delete().eq("slug", slug);
+      if (sku) await supabase.from("products").delete().eq("sku", sku);
+      if (name) await supabase.from("products").delete().eq("name", name);
     } catch {}
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deletedKeys: Array.from(keysToAdd) });
   } catch (err: unknown) {
     const error = err as Error;
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

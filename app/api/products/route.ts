@@ -117,6 +117,7 @@ export async function GET(req: NextRequest) {
       tier,
       total: sanitizedProducts.length,
       products: sanitizedProducts,
+      deletedKeys: Array.from(deletedKeys),
     });
   } catch (err: unknown) {
     console.error("API /api/products error:", err);

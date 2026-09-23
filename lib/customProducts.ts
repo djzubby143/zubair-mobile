@@ -231,7 +231,7 @@ export async function saveProduct(
  * Check if a product is in the deleted keys set by any of its identifiers
  */
 export function isProductDeleted(
-  item: { id?: string; sku?: string; slug?: string; name?: string },
+  item: { id?: string; sku?: string; slug?: string; name?: string } | null | undefined,
   deletedKeys: Set<string>
 ): boolean {
   if (!item || !deletedKeys || deletedKeys.size === 0) return false;
@@ -249,12 +249,18 @@ export function isProductDeleted(
   const cleanName = name.replace(/[^a-z0-9]/g, "");
   if (cleanName && deletedKeys.has(cleanName)) return true;
 
+  const cleanSku = sku.replace(/[^a-z0-9]/g, "");
+  if (cleanSku && deletedKeys.has(cleanSku)) return true;
+
+  const cleanSlug = slug.replace(/[^a-z0-9]/g, "");
+  if (cleanSlug && deletedKeys.has(cleanSlug)) return true;
+
   return false;
 }
 
 /**
  * Delete a product:
- * 1. Calls API to remove from server.
+ * 1. Calls API to remove from server and gathers all matching keys.
  * 2. Attempts Supabase delete by id, slug, sku, and name.
  * 3. Removes from custom products localStorage.
  * 4. Adds all identifiers to deleted set so default catalog doesn't revive it.
@@ -265,20 +271,33 @@ export async function deleteProduct(
   sku?: string,
   slug?: string,
   name?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; deletedKeys?: string[]; error?: string }> {
   const normId = (id || "").toLowerCase().trim();
   const normSku = (sku || "").toLowerCase().trim();
   const normSlug = (slug || "").toLowerCase().trim();
   const normName = (name || "").toLowerCase().trim();
   const cleanName = normName ? normName.replace(/[^a-z0-9]/g, "") : "";
+  const cleanSku = normSku ? normSku.replace(/[^a-z0-9]/g, "") : "";
+  const cleanSlug = normSlug ? normSlug.replace(/[^a-z0-9]/g, "") : "";
+
+  const keysToAdd = [normId, normSku, normSlug, normName, cleanName, cleanSku, cleanSlug].filter(Boolean);
 
   // 1. Call API
   try {
-    await fetch("/api/admin/products", {
+    const res = await fetch("/api/admin/products", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, sku, slug, name }),
     });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.deletedKeys)) {
+        for (const k of data.deletedKeys) {
+          const s = String(k).toLowerCase().trim();
+          if (s && !keysToAdd.includes(s)) keysToAdd.push(s);
+        }
+      }
+    }
   } catch {}
 
   // 2. Try Supabase
@@ -302,17 +321,8 @@ export async function deleteProduct(
   if (typeof window !== "undefined") {
     try {
       const existing = getCustomProducts();
-      const filtered = existing.filter((p) => {
-        const pId = (p.id || "").toLowerCase().trim();
-        const pSku = (p.sku || "").toLowerCase().trim();
-        const pSlug = (p.slug || "").toLowerCase().trim();
-        const pName = (p.name || "").toLowerCase().trim();
-        if (normId && pId === normId) return false;
-        if (normSku && pSku === normSku) return false;
-        if (normSlug && pSlug === normSlug) return false;
-        if (normName && pName === normName) return false;
-        return true;
-      });
+      const keysSet = new Set(keysToAdd);
+      const filtered = existing.filter((p) => !isProductDeleted(p, keysSet));
       localStorage.setItem(STORAGE_KEY_CUSTOM_PRODUCTS, JSON.stringify(filtered));
 
       // Add all identifiers to deleted set
@@ -325,8 +335,7 @@ export async function deleteProduct(
         deletedArr = [];
       }
 
-      const toAdd = [normId, normSku, normSlug, normName, cleanName].filter(Boolean);
-      for (const k of toAdd) {
+      for (const k of keysToAdd) {
         if (!deletedArr.includes(k)) deletedArr.push(k);
       }
       localStorage.setItem(STORAGE_KEY_DELETED_PRODUCTS, JSON.stringify(deletedArr));
@@ -338,5 +347,5 @@ export async function deleteProduct(
   // 4. Broadcast
   broadcastProductChange("deleted");
 
-  return { success: true };
+  return { success: true, deletedKeys: keysToAdd };
 }

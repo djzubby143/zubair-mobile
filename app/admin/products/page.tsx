@@ -118,14 +118,18 @@ export default function AdminProductsPage() {
         setCategories(liveCats as Category[]);
       }
 
-      // 2. Fetch server-persisted custom products
+      // 2. Fetch server-persisted custom products and deleted keys
       let serverCustoms: Product[] = [];
+      let serverDeletedKeys: string[] = [];
       try {
         const sRes = await fetch("/api/admin/products");
         if (sRes.ok) {
           const sJson = await sRes.json();
           if (sJson.success && Array.isArray(sJson.customProducts)) {
             serverCustoms = sJson.customProducts;
+          }
+          if (sJson.success && Array.isArray(sJson.deletedKeys)) {
+            serverDeletedKeys = sJson.deletedKeys;
           }
         }
       } catch (e) {
@@ -140,6 +144,14 @@ export default function AdminProductsPage() {
 
       // Retrieve deleted product IDs / SKUs to avoid reviving deleted items
       const deletedSet = getDeletedProductKeys();
+      for (const k of serverDeletedKeys) {
+        if (k) deletedSet.add(String(k).toLowerCase().trim());
+      }
+      if (typeof window !== "undefined" && serverDeletedKeys.length > 0) {
+        try {
+          localStorage.setItem("zubair_admin_deleted_products", JSON.stringify(Array.from(deletedSet)));
+        } catch {}
+      }
 
       // Retrieve local custom products
       const localCustoms = getCustomProducts();
@@ -244,9 +256,17 @@ export default function AdminProductsPage() {
     setDeleting(true);
 
     try {
-      await deleteProduct(deleteTarget.id, deleteTarget.sku, deleteTarget.slug, deleteTarget.name);
+      const res = await deleteProduct(deleteTarget.id, deleteTarget.sku, deleteTarget.slug, deleteTarget.name);
       const targetKeys = new Set(
-        [deleteTarget.id, deleteTarget.sku, deleteTarget.slug, deleteTarget.name]
+        [
+          deleteTarget.id,
+          deleteTarget.sku,
+          deleteTarget.slug,
+          deleteTarget.name,
+          deleteTarget.name?.replace(/[^a-z0-9]/gi, ""),
+          deleteTarget.sku?.replace(/[^a-z0-9]/gi, ""),
+          ...(res.deletedKeys || []),
+        ]
           .filter(Boolean)
           .map((x) => String(x).toLowerCase().trim())
       );

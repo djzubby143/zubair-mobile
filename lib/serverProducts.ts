@@ -50,9 +50,18 @@ export function saveServerCustomProducts(products: Product[]) {
   fs.writeFileSync(CUSTOM_PRODUCTS_FILE, JSON.stringify(products, null, 2), "utf-8");
 }
 
-export function saveServerDeletedKey(key: string) {
+export function saveServerDeletedKey(keyOrKeys: string | string[]) {
   ensureDataDir();
   const set = getServerDeletedKeys();
-  set.add(key.toLowerCase());
+  const keys = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
+  for (const k of keys) {
+    if (!k) continue;
+    const s = String(k).toLowerCase().trim();
+    if (s) {
+      set.add(s);
+      const clean = s.replace(/[^a-z0-9]/g, "");
+      if (clean) set.add(clean);
+    }
+  }
   fs.writeFileSync(DELETED_PRODUCTS_FILE, JSON.stringify(Array.from(set), null, 2), "utf-8");
 }
