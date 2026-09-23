@@ -219,9 +219,61 @@ export default function ProductDetailPage() {
               {productName}
             </h1>
 
+            {/* Spare Part Specifications Badges */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {product?.quality_grade && (
+                <span className={`text-xs font-black px-2.5 py-1 rounded-md border ${
+                  product.quality_grade === "Original"
+                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                    : product.quality_grade === "OEM"
+                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }`}>
+                  Grade: {product.quality_grade}
+                </span>
+              )}
+              {product?.warranty && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Warranty: {product.warranty}
+                </span>
+              )}
+              {product?.brand && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                  Brand: {product.brand}
+                </span>
+              )}
+              {product?.model && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                  Model: {product.model}
+                </span>
+              )}
+              {product?.part_type && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-red-50 text-red-700 border border-red-200">
+                  {product.part_type}
+                </span>
+              )}
+            </div>
+
+            {/* Compatible Models Tags */}
+            {product?.compatible_models && (
+              <div className="pt-2">
+                <span className="text-xs font-bold text-slate-500 block mb-1.5">Compatible Phone Models:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Array.isArray(product.compatible_models)
+                    ? product.compatible_models
+                    : (product.compatible_models as string).split(",")
+                  ).map((cm: string, idx: number) => (
+                    <span key={idx} className="text-[11px] font-semibold bg-slate-50 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                      {cm.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 w-fit px-2.5 py-1 rounded-md border border-emerald-200/60 font-semibold">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>In Stock & Tested Ready to Ship</span>
+              <span>In Stock & Tested Ready to Ship ({product?.stock_quantity ?? 50} units in Gujranwala Hub)</span>
             </div>
 
             {/* Main Effective Price Display - Strict Single Tier Display */}

@@ -318,7 +318,15 @@ export function advancedSearchProducts(query: string, products: Product[]): Prod
     const sku = (product.sku || "").toLowerCase();
     const cat = (product.category?.name || "").toLowerCase();
     const desc = (product.short_description || "").toLowerCase();
-    const searchable = `${name} ${sku} ${cat} ${desc}`;
+    const brand = (product.brand || "").toLowerCase();
+    const model = (product.model || "").toLowerCase();
+    const partType = (product.part_type || "").toLowerCase();
+    const grade = (product.quality_grade || "").toLowerCase();
+    const barcode = (product.barcode || "").toLowerCase();
+    const compModels = Array.isArray(product.compatible_models)
+      ? product.compatible_models.join(" ").toLowerCase()
+      : "";
+    const searchable = `${name} ${sku} ${cat} ${desc} ${brand} ${model} ${partType} ${grade} ${barcode} ${compModels}`;
 
     let matchedTokens = 0;
     let score = 0;
@@ -334,10 +342,14 @@ export function advancedSearchProducts(query: string, products: Product[]): Prod
         matchedTokens++;
         // Extra boost if token appears in product title
         if (name.includes(token)) score += 30;
-        // Boost if token appears in category
-        if (cat.includes(token)) score += 20;
-        // Boost if matches SKU
-        if (sku.includes(token)) score += 25;
+        // Boost if token appears in brand or model
+        if (brand.includes(token) || model.includes(token)) score += 25;
+        // Boost if token appears in compatible models
+        if (compModels.includes(token)) score += 20;
+        // Boost if token appears in category or part type
+        if (cat.includes(token) || partType.includes(token)) score += 20;
+        // Boost if matches SKU or barcode
+        if (sku.includes(token) || barcode.includes(token)) score += 25;
       }
     }
 

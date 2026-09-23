@@ -45,6 +45,16 @@ export default function EditProductPage() {
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
 
+  // Mobile Spare Part Details
+  const [brand, setBrand] = useState("Samsung");
+  const [model, setModel] = useState("");
+  const [compatibleModels, setCompatibleModels] = useState("");
+  const [partType, setPartType] = useState("Charging Flex");
+  const [qualityGrade, setQualityGrade] = useState<"Original" | "OEM" | "High Copy" | "Copy">("Original");
+  const [warranty, setWarranty] = useState<"7 Days" | "15 Days" | "30 Days" | "No Warranty">("No Warranty");
+  const [barcode, setBarcode] = useState("");
+  const [minStockLevel, setMinStockLevel] = useState("5");
+
   // Existing image vs newly uploaded image
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -99,6 +109,14 @@ export default function EditProductPage() {
             setIsActive(localMatch.is_active ?? true);
             setIsFeatured(localMatch.featured ?? false);
             setExistingImageUrl(localMatch.image_url || null);
+            setBrand(localMatch.brand || "Samsung");
+            setModel(localMatch.model || "");
+            setCompatibleModels(localMatch.compatible_models || "");
+            setPartType(localMatch.part_type || "Charging Flex");
+            setQualityGrade((localMatch.quality_grade as any) || "Original");
+            setWarranty((localMatch.warranty as any) || "No Warranty");
+            setBarcode(localMatch.barcode || "");
+            setMinStockLevel(String(localMatch.min_stock_level ?? "5"));
           } else {
             // Sensible fallback so page is testable
             setName("VIVO Y20 SUNLONG BLACK UNIT");
@@ -110,6 +128,10 @@ export default function EditProductPage() {
             setMinOrderQuantity("1");
             setShortDescription("Tested Sunlong high-clarity LCD screen assembly.");
             setIsActive(true);
+            setBrand("Vivo");
+            setModel("Y20");
+            setPartType("LCD Unit");
+            setQualityGrade("Original");
           }
         } else {
           setName(prodData.name || "");
@@ -127,6 +149,14 @@ export default function EditProductPage() {
           setIsActive(prodData.is_active ?? true);
           setIsFeatured(prodData.featured ?? false);
           setExistingImageUrl(prodData.image_url || null);
+          setBrand(prodData.brand || "Samsung");
+          setModel(prodData.model || "");
+          setCompatibleModels(prodData.compatible_models || "");
+          setPartType(prodData.part_type || "Charging Flex");
+          setQualityGrade((prodData.quality_grade as any) || "Original");
+          setWarranty((prodData.warranty as any) || "No Warranty");
+          setBarcode(prodData.barcode || "");
+          setMinStockLevel(String(prodData.min_stock_level ?? "5"));
         }
       } catch (err) {
         console.error("Failed to load product:", err);
@@ -250,6 +280,14 @@ export default function EditProductPage() {
         image_url: finalImageUrl,
         is_active: isActive,
         featured: isFeatured,
+        brand: brand.trim() || undefined,
+        model: model.trim() || undefined,
+        compatible_models: compatibleModels.trim() || undefined,
+        part_type: partType.trim() || undefined,
+        quality_grade: qualityGrade,
+        warranty: warranty,
+        barcode: barcode.trim() || undefined,
+        min_stock_level: minStockLevel ? parseInt(minStockLevel, 10) : 5,
       };
 
       const saveResult = await saveProduct({
@@ -547,6 +585,144 @@ export default function EditProductPage() {
               <p className="text-[10px] text-slate-400">
                 User is se kam quantity cart me add nahi kar sakega (Default: 1).
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Card: Mobile Spare Part Specifications */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Mobile Spare Part Specifications
+            </h2>
+            <span className="text-[11px] text-slate-400 font-medium">ERP Categorization</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            {/* Brand */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Mobile Brand</label>
+              <select
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
+              >
+                <option value="Samsung">Samsung</option>
+                <option value="Vivo">Vivo</option>
+                <option value="Oppo">Oppo</option>
+                <option value="Infinix">Infinix</option>
+                <option value="Tecno">Tecno</option>
+                <option value="Xiaomi">Xiaomi / Redmi / Poco</option>
+                <option value="Realme">Realme</option>
+                <option value="Apple">Apple iPhone</option>
+                <option value="Huawei">Huawei / Honor</option>
+                <option value="Itel">Itel</option>
+                <option value="Nokia">Nokia</option>
+                <option value="Universal">Universal / Tools</option>
+                <option value="Other">Other Brand</option>
+              </select>
+            </div>
+
+            {/* Model */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Specific Model</label>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="e.g. A12, Y20, F11, Spark 6"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
+              />
+            </div>
+
+            {/* Part Type */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Part Type</label>
+              <select
+                value={partType}
+                onChange={(e) => setPartType(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
+              >
+                <option value="Charging Flex">Charging Flex / Board</option>
+                <option value="LCD Unit">LCD Unit / Screen Folder</option>
+                <option value="OCA Glass">Touch Glass / OCA Glass</option>
+                <option value="Battery">Battery</option>
+                <option value="Side Key">Side Key / Power Volume Flex</option>
+                <option value="Housing">Body Housing / Back Cover</option>
+                <option value="Camera">Camera Lens / Module</option>
+                <option value="Speaker">Loudspeaker / Ringer / Ear Piece</option>
+                <option value="IC">Power IC / Charging IC / Component</option>
+                <option value="Tool">Repair Tool / Consumable</option>
+                <option value="Other">Other Spare Part</option>
+              </select>
+            </div>
+
+            {/* Quality Grade */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Quality Grade</label>
+              <select
+                value={qualityGrade}
+                onChange={(e) => setQualityGrade(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs font-semibold"
+              >
+                <option value="Original">Original (100% Genuine Tested)</option>
+                <option value="OEM">OEM (Original Equipment Standard)</option>
+                <option value="High Copy">High Copy (Grade A+)</option>
+                <option value="Copy">Copy (Standard Budget)</option>
+              </select>
+            </div>
+
+            {/* Warranty */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Warranty Period</label>
+              <select
+                value={warranty}
+                onChange={(e) => setWarranty(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
+              >
+                <option value="No Warranty">No Warranty (Check & Pass)</option>
+                <option value="7 Days">7 Days Checking Warranty</option>
+                <option value="15 Days">15 Days Warranty</option>
+                <option value="30 Days">30 Days Replacement Warranty</option>
+              </select>
+            </div>
+
+            {/* Barcode / EAN */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Barcode / EAN</label>
+              <input
+                type="text"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                placeholder="e.g. 8901234567890"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs font-mono"
+              />
+            </div>
+
+            {/* Min Stock Alert Level */}
+            <div className="space-y-1">
+              <label className="font-bold text-charcoal block">Low Stock Alert Level</label>
+              <input
+                type="number"
+                min="0"
+                value={minStockLevel}
+                onChange={(e) => setMinStockLevel(e.target.value)}
+                placeholder="5"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
+              />
+            </div>
+
+            {/* Compatible Models (Span 2) */}
+            <div className="sm:col-span-2 space-y-1">
+              <label className="font-bold text-charcoal block">Compatible Models (Matching Codes)</label>
+              <input
+                type="text"
+                value={compatibleModels}
+                onChange={(e) => setCompatibleModels(e.target.value)}
+                placeholder="e.g. A125F, A127F, M127F, SM-A125M"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-surface text-charcoal focus:bg-white focus:outline-none focus:ring-2 focus:ring-secondary text-xs"
+              />
+              <p className="text-[10px] text-slate-400">Comma separated model codes for instant search matching.</p>
             </div>
           </div>
         </div>

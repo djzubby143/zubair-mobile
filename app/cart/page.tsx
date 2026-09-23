@@ -28,8 +28,17 @@ import { Order, saveOrder } from "@/lib/orders";
 import { generateReceiptJpeg, printThermalReceipt, ThermalPaperWidth } from "@/lib/receiptGenerator";
 
 export default function CartPage() {
-  const { items, cartCount, cartSubtotal, updateQuantity, removeFromCart, clearCart, isLoaded } =
-    useCart();
+  const {
+    items,
+    cartCount,
+    cartSubtotal,
+    deliveryCharges,
+    cartTotal,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    isLoaded,
+  } = useCart();
   const { isLoggedIn, user } = useAuth();
 
   // Customer Checkout Form State
@@ -68,8 +77,18 @@ export default function CartPage() {
     if (!customerPhone.trim()) {
       errors.phone = "Please enter your WhatsApp or phone number.";
     }
-    if (!customerAddress.trim()) {
-      errors.address = "Please enter your delivery city and shop/home address.";
+    // Stock availability & MOQ validation
+    for (const item of items) {
+      if (item.min_order_quantity && item.min_order_quantity > 1 && item.quantity < item.min_order_quantity) {
+        errors.stock = `"${item.name}" requires minimum order quantity of ${item.min_order_quantity} pcs.`;
+        setFormErrors(errors);
+        return;
+      }
+      if (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity > 0 && item.quantity > item.stock_quantity) {
+        errors.stock = `Quantity for "${item.name}" exceeds available stock (${item.stock_quantity} available). Please adjust quantity.`;
+        setFormErrors(errors);
+        return;
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -100,7 +119,8 @@ export default function CartPage() {
         sku: i.sku,
       })),
       total_items: cartCount,
-      total_amount: cartSubtotal,
+      total_amount: cartTotal,
+      delivery_charges: deliveryCharges,
       status: "pending",
       created_at: new Date().toISOString(),
       customer_id: user?.id || user?.username || user?.phone || undefined,
@@ -111,6 +131,8 @@ export default function CartPage() {
 
     // Construct WhatsApp message
     const formattedSubtotal = cartSubtotal.toLocaleString("en-PK");
+    const formattedTotal = cartTotal.toLocaleString("en-PK");
+    const deliveryFeeLabel = deliveryCharges === 0 ? "FREE (Cargo Delivery)" : `Rs. ${deliveryCharges}`;
     const rateTierLabel =
       user?.role === "admin"
         ? "Admin (تمام ریٹ)"
@@ -133,7 +155,9 @@ export default function CartPage() {
       itemsManifest,
       "------------------------------",
       `Total Items: ${cartCount}`,
-      `Total Amount: Rs. ${formattedSubtotal}`,
+      `Items Subtotal: Rs. ${formattedSubtotal}`,
+      `Delivery Charges: ${deliveryFeeLabel}`,
+      `Grand Total: Rs. ${formattedTotal}`,
       "",
       "Customer Details:",
       `Name: ${customerName.trim()}`,
@@ -486,25 +510,25 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                <div className="flex items-start justify-between text-xs text-slate-500 pt-1">
-                  <span>Cargo / Courier Delivery:</span>
-                  <span className="text-right font-medium text-slate-700 max-w-[170px]">
-                    Calculated by weight & city (Pay upon arrival)
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                  <span>Cargo / Courier Fee:</span>
+                  <span className={`font-bold ${deliveryCharges === 0 ? "text-emerald-600" : "text-slate-800"}`}>
+                    {deliveryCharges === 0 ? "FREE (Rs. 5000+)" : `Rs. ${deliveryCharges}`}
                   </span>
                 </div>
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1 text-xs text-slate-500">
                   <p className="font-semibold text-[#111827]">Delivery Dispatch:</p>
                   <p>
-                    All Pakistan Cargo (Daewoo, TCS, Leopard, Asia Cargo) or Direct Shop Pickup
+                    All Pakistan Cargo (Daewoo, TCS, Leopard, Bilal Cargo) or Direct Shop Pickup
                     at Chand Plaza, Gujranwala.
                   </p>
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 flex items-baseline justify-between">
-                  <span className="text-sm font-extrabold text-[#111827]">Total Payable:</span>
+                  <span className="text-sm font-extrabold text-[#111827]">Grand Total:</span>
                   <span className="text-2xl font-black text-[#16a34a]">
-                    Rs. {cartSubtotal.toLocaleString("en-PK")}
+                    Rs. {cartTotal.toLocaleString("en-PK")}
                   </span>
                 </div>
               </div>

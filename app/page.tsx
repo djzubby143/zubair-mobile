@@ -38,6 +38,10 @@ function HomeContent() {
     );
   });
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedBrand, setSelectedBrand] = useState<string>("All");
+  const [selectedGrade, setSelectedGrade] = useState<string>("All");
+  const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<string>("default");
   const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -227,76 +231,103 @@ function HomeContent() {
     };
   }, []);
 
-  // Filter products based on selectedCategory or selected subcategory
+  // Dynamic available brands and grades from catalog
+  const availableBrands = useMemo(() => {
+    const brandSet = new Set<string>();
+    for (const p of products) {
+      if (p.brand && p.brand.trim()) {
+        brandSet.add(p.brand.trim());
+      } else {
+        // Fallback detection from product name
+        const n = p.name.toUpperCase();
+        if (n.includes("SAMSUNG")) brandSet.add("Samsung");
+        else if (n.includes("VIVO")) brandSet.add("Vivo");
+        else if (n.includes("OPPO")) brandSet.add("Oppo");
+        else if (n.includes("INFINIX")) brandSet.add("Infinix");
+        else if (n.includes("TECNO")) brandSet.add("Tecno");
+        else if (n.includes("XIAOMI") || n.includes("REDMI")) brandSet.add("Xiaomi");
+        else if (n.includes("REALME")) brandSet.add("Realme");
+        else if (n.includes("IPHONE") || n.includes("APPLE")) brandSet.add("Apple");
+      }
+    }
+    return Array.from(brandSet).sort();
+  }, [products]);
+
+  // Filter products based on selectedCategory, brand, quality grade, stock, and sorting
   const filteredProducts = useMemo(() => {
-    if (!selectedCategory || selectedCategory === "All") return products;
+    let result = products;
 
-    const query = selectedCategory.toLowerCase().trim();
+    // 1. Category Filter
+    if (selectedCategory && selectedCategory !== "All") {
+      const query = selectedCategory.toLowerCase().trim();
+      result = result.filter((p) => {
+        const catName = (p.category?.name || "").toLowerCase();
+        const catSlug = (p.category?.slug || "").toLowerCase();
+        const prodName = p.name.toLowerCase();
+        const desc = (p.short_description || "").toLowerCase();
 
-    return products.filter((p) => {
-      const catName = (p.category?.name || "").toLowerCase();
-      const catSlug = (p.category?.slug || "").toLowerCase();
-      const prodName = p.name.toLowerCase();
-      const desc = (p.short_description || "").toLowerCase();
+        const matchedCat = categories.find((c) => c.id === p.category_id);
+        const matchedCatName = (matchedCat?.name || "").toLowerCase();
+        const matchedCatSlug = (matchedCat?.slug || "").toLowerCase();
 
-      // Check category_id against category list
-      const matchedCat = categories.find((c) => c.id === p.category_id);
-      const matchedCatName = (matchedCat?.name || "").toLowerCase();
-      const matchedCatSlug = (matchedCat?.slug || "").toLowerCase();
+        if (
+          catName === query ||
+          catSlug === query ||
+          catName.includes(query) ||
+          catSlug.includes(query) ||
+          matchedCatName === query ||
+          matchedCatSlug === query ||
+          matchedCatName.includes(query) ||
+          matchedCatSlug.includes(query) ||
+          (query.includes("side") && (catName.includes("side") || catSlug.includes("side") || matchedCatName.includes("side") || prodName.includes("side")))
+        ) {
+          return true;
+        }
 
-      // Direct category name or slug match
-      if (
-        catName === query ||
-        catSlug === query ||
-        catName.includes(query) ||
-        catSlug.includes(query) ||
-        matchedCatName === query ||
-        matchedCatSlug === query ||
-        matchedCatName.includes(query) ||
-        matchedCatSlug.includes(query) ||
-        (query.includes("side") && (catName.includes("side") || catSlug.includes("side") || matchedCatName.includes("side") || prodName.includes("side")))
-      ) {
-        return true;
-      }
+        if (query.includes("incell")) return prodName.includes("incell") || desc.includes("incell") || prodName.includes("unit") || prodName.includes("lcd");
+        if (query.includes("tft")) return prodName.includes("tft") || desc.includes("tft") || prodName.includes("unit") || prodName.includes("lcd");
+        if (query.includes("oled")) return prodName.includes("oled") || desc.includes("oled") || prodName.includes("unit") || prodName.includes("lcd");
+        if (query.includes("unit") || query.includes("lcd")) return prodName.includes("unit") || prodName.includes("lcd");
+        if (query.includes("power key") || query.includes("volume key") || query.includes("sidekey") || query.includes("side key")) return prodName.includes("key") || prodName.includes("side") || desc.includes("key");
+        if (query.includes("charging base") || query.includes("base") || query.includes("type-c") || query.includes("micro usb")) return prodName.includes("base") || prodName.includes("charging") || desc.includes("base");
+        if (query.includes("flex") || query.includes("sub board")) return prodName.includes("flex") || prodName.includes("charging") || prodName.includes("board");
+        if (query.includes("oca") || query.includes("glass")) return prodName.includes("oca") || prodName.includes("glass");
+        if (query.includes("battery") || query.includes("housing")) return prodName.includes("battery") || prodName.includes("housing") || desc.includes("battery");
+        if (query.includes("cable") || query.includes("charger")) return prodName.includes("cable") || prodName.includes("charger");
+        if (query.includes("tool") || query.includes("heatgun") || query.includes("wire")) return prodName.includes("tool") || prodName.includes("heatgun") || prodName.includes("wire") || prodName.includes("stand");
 
-      // Smart subcategory matching
-      if (query.includes("incell")) {
-        return prodName.includes("incell") || desc.includes("incell") || prodName.includes("unit") || prodName.includes("lcd");
-      }
-      if (query.includes("tft")) {
-        return prodName.includes("tft") || desc.includes("tft") || prodName.includes("unit") || prodName.includes("lcd");
-      }
-      if (query.includes("oled")) {
-        return prodName.includes("oled") || desc.includes("oled") || prodName.includes("unit") || prodName.includes("lcd");
-      }
-      if (query.includes("unit") || query.includes("lcd")) {
-        return prodName.includes("unit") || prodName.includes("lcd");
-      }
-      if (query.includes("power key") || query.includes("volume key") || query.includes("sidekey") || query.includes("side key")) {
-        return prodName.includes("key") || prodName.includes("side") || desc.includes("key");
-      }
-      if (query.includes("charging base") || query.includes("base") || query.includes("type-c") || query.includes("micro usb")) {
-        return prodName.includes("base") || prodName.includes("charging") || desc.includes("base");
-      }
-      if (query.includes("flex") || query.includes("sub board")) {
-        return prodName.includes("flex") || prodName.includes("charging") || prodName.includes("board");
-      }
-      if (query.includes("oca") || query.includes("glass")) {
-        return prodName.includes("oca") || prodName.includes("glass");
-      }
-      if (query.includes("battery") || query.includes("housing")) {
-        return prodName.includes("battery") || prodName.includes("housing") || desc.includes("battery");
-      }
-      if (query.includes("cable") || query.includes("charger")) {
-        return prodName.includes("cable") || prodName.includes("charger");
-      }
-      if (query.includes("tool") || query.includes("heatgun") || query.includes("wire")) {
-        return prodName.includes("tool") || prodName.includes("heatgun") || prodName.includes("wire") || prodName.includes("stand");
-      }
+        return prodName.includes(query) || desc.includes(query);
+      });
+    }
 
-      return prodName.includes(query) || desc.includes(query);
-    });
-  }, [products, selectedCategory]);
+    // 2. Brand Filter
+    if (selectedBrand && selectedBrand !== "All") {
+      const bQuery = selectedBrand.toLowerCase();
+      result = result.filter((p) => {
+        if (p.brand && p.brand.toLowerCase() === bQuery) return true;
+        return p.name.toLowerCase().includes(bQuery);
+      });
+    }
+
+    // 3. Quality Grade Filter
+    if (selectedGrade && selectedGrade !== "All") {
+      result = result.filter((p) => (p.quality_grade || "").toLowerCase() === selectedGrade.toLowerCase());
+    }
+
+    // 4. In Stock Only Filter
+    if (onlyInStock) {
+      result = result.filter((p) => (p.stock_quantity ?? 0) > 0);
+    }
+
+    // 5. Sorting
+    if (sortBy === "price_asc") {
+      result = [...result].sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === "price_desc") {
+      result = [...result].sort((a, b) => (b.price || 0) - (a.price || 0));
+    }
+
+    return result;
+  }, [products, selectedCategory, selectedBrand, selectedGrade, onlyInStock, sortBy, categories]);
 
   const handleSelectCategory = (catName: string) => {
     setSelectedCategory(catName);
@@ -528,6 +559,107 @@ function HomeContent() {
         <main className="flex-1 min-w-0 space-y-4">
           {/* Admin-Configurable Hero Promotional Offer Banner */}
           <HeroBanner />
+
+          {/* Multi-Faceted Spare Parts Filters Bar */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-3 shadow-2xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <Filter className="w-3.5 h-3.5 text-[#dc2626]" />
+                <span>FILTER SPARE PARTS</span>
+                <span className="text-slate-400 font-normal">({filteredProducts.length} items available)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* In-Stock Toggle */}
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={onlyInStock}
+                    onChange={(e) => setOnlyInStock(e.target.checked)}
+                    className="rounded border-slate-300 text-[#dc2626] focus:ring-[#dc2626] w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>In-Stock Only</span>
+                </label>
+
+                {/* Sort By Dropdown */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 font-medium focus:outline-hidden focus:border-[#dc2626]"
+                >
+                  <option value="default">Default Sort</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                </select>
+
+                {(selectedBrand !== "All" || selectedGrade !== "All" || onlyInStock || sortBy !== "default") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBrand("All");
+                      setSelectedGrade("All");
+                      setOnlyInStock(false);
+                      setSortBy("default");
+                    }}
+                    className="text-[11px] text-[#dc2626] hover:underline font-semibold"
+                  >
+                    Reset Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Filter Pills: Brand & Quality Grade */}
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              {/* Brand Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Brand:</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBrand("All")}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
+                    selectedBrand === "All"
+                      ? "bg-[#111827] text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  All Brands
+                </button>
+                {availableBrands.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => setSelectedBrand(selectedBrand === b ? "All" : b)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
+                      selectedBrand === b
+                        ? "bg-[#dc2626] text-white shadow-2xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+
+              {/* Quality Grade Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none shrink-0">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Grade:</span>
+                {["All", "Original", "OEM", "High Copy", "Copy"].map((grade) => (
+                  <button
+                    key={grade}
+                    type="button"
+                    onClick={() => setSelectedGrade(selectedGrade === grade ? "All" : grade)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap transition-colors ${
+                      selectedGrade === grade
+                        ? "bg-purple-700 text-white font-bold"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {grade}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* Product Cards Grid: 6 Columns on Desktop (Screenshot Style) */}
           {filteredProducts.length === 0 ? (

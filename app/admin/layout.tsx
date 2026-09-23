@@ -19,6 +19,7 @@ import {
   Receipt,
   UploadCloud,
   Boxes,
+  BarChart3,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -83,6 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Inventory", href: "/admin/inventory", icon: Boxes },
     { name: "Orders & Bills", href: "/admin/orders", icon: Receipt },
+    { name: "Reports & P&L", href: "/admin/reports", icon: BarChart3 },
     { name: "Hero Banner", href: "/admin/banner", icon: ImageIcon },
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Categories", href: "/admin/categories", icon: Layers },

@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { Product } from "@/lib/types";
+import { Product, StockMovement, StockMovementType } from "@/lib/types";
 import { getCustomProducts, saveCustomProducts } from "@/lib/customProducts";
 import { Order } from "@/lib/orders";
 
@@ -47,6 +47,38 @@ export interface PurchaseEntry {
 
 export const STORAGE_KEY_SUPPLIERS = "zubair_mobile_suppliers";
 export const STORAGE_KEY_PURCHASES = "zubair_mobile_purchases";
+export const STORAGE_KEY_STOCK_MOVEMENTS = "zubair_mobile_stock_movements";
+
+export const DEFAULT_STOCK_MOVEMENTS: StockMovement[] = [
+  {
+    id: "mov-1",
+    product_id: "prod-1",
+    product_name: "VIVO Y20 SUNLONG BLACK UNIT",
+    sku: "ZB-LCD-V20S",
+    movement_type: "purchase",
+    quantity: 25,
+    previous_stock: 10,
+    new_stock: 35,
+    reason: "Supplier shipment PO-2401 received",
+    reference_id: "PO-2401",
+    created_by: "Admin",
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: "mov-2",
+    product_id: "p-flx-sam-1",
+    product_name: "SAMSUNG A12 CHARGING FLEX WITH IC",
+    sku: "ZB-FLX-SA12",
+    movement_type: "sale",
+    quantity: -5,
+    previous_stock: 70,
+    new_stock: 65,
+    reason: "Customer Order ZB-98241",
+    reference_id: "ZB-98241",
+    created_by: "Storefront",
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+];
 
 export const DEFAULT_SUPPLIERS: Supplier[] = [
   {
@@ -538,14 +570,62 @@ export async function decreaseStockForOrder(order: Order): Promise<void> {
 }
 
 /**
- * Quick inline stock adjustment by admin
+ * Get all logged stock movements
+ */
+export function getStockMovements(): StockMovement[] {
+  if (typeof window === "undefined") return DEFAULT_STOCK_MOVEMENTS;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_STOCK_MOVEMENTS);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return DEFAULT_STOCK_MOVEMENTS;
+}
+
+/**
+ * Log a new stock movement audit record
+ */
+export function logStockMovement(
+  entry: Omit<StockMovement, "id" | "created_at">
+): StockMovement {
+  const newRecord: StockMovement = {
+    id: `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    ...entry,
+    created_at: new Date().toISOString(),
+  };
+
+  if (typeof window !== "undefined") {
+    try {
+      const current = getStockMovements();
+      const updated = [newRecord, ...current];
+      localStorage.setItem(STORAGE_KEY_STOCK_MOVEMENTS, JSON.stringify(updated));
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("zubair_stock_movements_updated"));
+    } catch {}
+  }
+
+  // Attempt Supabase async sync
+  try {
+    supabase.from("stock_movements").insert([newRecord]).then();
+  } catch {}
+
+  return newRecord;
+}
+
+/**
+ * Quick inline stock adjustment by admin with movement audit
  */
 export async function adjustProductStock(
   productId: string,
   newStock: number,
-  sku?: string
+  sku?: string,
+  reason = "Manual Stock Count Adjustment",
+  productName = "Product"
 ): Promise<void> {
   const stock = Math.max(0, Number(newStock) || 0);
+  let oldStock = 0;
 
   // 1. Update localStorage
   if (typeof window !== "undefined") {
@@ -555,6 +635,7 @@ export async function adjustProductStock(
         (p) => p.id === productId || (sku && p.sku?.toLowerCase() === sku.toLowerCase())
       );
       if (pIdx !== -1) {
+        oldStock = customProducts[pIdx].stock_quantity || 0;
         customProducts[pIdx] = {
           ...customProducts[pIdx],
           stock_quantity: stock,
@@ -571,6 +652,8 @@ export async function adjustProductStock(
   try {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
     if (isUuid) {
+      const { data } = await supabase.from("products").select("stock_quantity").eq("id", productId).single();
+      if (data) oldStock = data.stock_quantity;
       await supabase.from("products").update({ stock_quantity: stock }).eq("id", productId);
     } else if (sku) {
       await supabase.from("products").update({ stock_quantity: stock }).eq("sku", sku);
@@ -578,6 +661,19 @@ export async function adjustProductStock(
   } catch (err) {
     console.warn("Notice adjusting stock Supabase:", err);
   }
+
+  // 3. Log movement audit
+  logStockMovement({
+    product_id: productId,
+    product_name: productName,
+    sku,
+    movement_type: "adjustment",
+    quantity: stock - oldStock,
+    previous_stock: oldStock,
+    new_stock: stock,
+    reason,
+    created_by: "Admin",
+  });
 
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("storage"));
@@ -587,10 +683,94 @@ export async function adjustProductStock(
 }
 
 /**
+ * Record damaged or broken stock write-off
+ */
+export async function recordDamagedStock(
+  product: { id: string; name: string; sku?: string; stock_quantity: number },
+  damagedQty: number,
+  reason = "Damaged during transit / testing"
+): Promise<void> {
+  const prev = Number(product.stock_quantity) || 0;
+  const newStock = Math.max(0, prev - Number(damagedQty));
+
+  await adjustProductStock(product.id, newStock, product.sku, `[DAMAGED WRITE-OFF]: ${reason}`, product.name);
+
+  logStockMovement({
+    product_id: product.id,
+    product_name: product.name,
+    sku: product.sku,
+    movement_type: "damage",
+    quantity: -damagedQty,
+    previous_stock: prev,
+    new_stock: newStock,
+    reason,
+    created_by: "Admin",
+  });
+}
+
+/**
+ * Record customer returned stock restock
+ */
+export async function recordReturnedStock(
+  product: { id: string; name: string; sku?: string; stock_quantity: number },
+  returnedQty: number,
+  reason = "Customer warranty exchange / return restocked"
+): Promise<void> {
+  const prev = Number(product.stock_quantity) || 0;
+  const newStock = prev + Number(returnedQty);
+
+  await adjustProductStock(product.id, newStock, product.sku, `[CUSTOMER RETURN RESTOCK]: ${reason}`, product.name);
+
+  logStockMovement({
+    product_id: product.id,
+    product_name: product.name,
+    sku: product.sku,
+    movement_type: "return",
+    quantity: returnedQty,
+    previous_stock: prev,
+    new_stock: newStock,
+    reason,
+    created_by: "Admin",
+  });
+}
+
+/**
+ * Calculate complete ledger for a supplier
+ */
+export async function getSupplierLedger(supplierId: string): Promise<{
+  purchases: PurchaseEntry[];
+  totalPurchased: number;
+  totalPaid: number;
+  pendingBalance: number;
+}> {
+  const allPurchases = await getPurchases();
+  const supplierPurchases = allPurchases.filter(
+    (p) => p.supplier_id === supplierId || p.supplier_name.toLowerCase().includes(supplierId.toLowerCase())
+  );
+
+  let totalPurchased = 0;
+  let totalPaid = 0;
+
+  for (const p of supplierPurchases) {
+    totalPurchased += Number(p.total_amount) || 0;
+    totalPaid += Number(p.paid_amount) || 0;
+  }
+
+  const pendingBalance = Math.max(0, totalPurchased - totalPaid);
+
+  return {
+    purchases: supplierPurchases,
+    totalPurchased,
+    totalPaid,
+    pendingBalance,
+  };
+}
+
+/**
  * Filter low stock products (<= threshold, default 5)
  */
 export function getLowStockProducts(products: Product[], threshold = 5): Product[] {
   return products.filter(
-    (p) => p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity <= threshold
+    (p) => p.stock_quantity !== undefined && p.stock_quantity !== null && p.stock_quantity <= (p.min_stock_level || threshold)
   );
 }

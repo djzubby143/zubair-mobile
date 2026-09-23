@@ -25,8 +25,11 @@ export interface Order {
   payment_notes?: string; // Optional payment transaction notes (e.g. JazzCash ref, Cargo COD balance)
   total_cost?: number; // Total Purchase Cost for Admin
   total_profit?: number; // Total Net Profit (total_amount - total_cost)
-  status: "pending" | "confirmed" | "dispatched" | "completed";
+  delivery_charges?: number; // Courier / Cargo delivery fee
+  delivery_notes?: string; // Special delivery notes or instructions
+  status: "pending" | "confirmed" | "packed" | "dispatched" | "delivered" | "cancelled";
   created_at: string;
+  updated_at?: string;
   // Cargo Delivery & Tracking details
   cargo_name?: string;
   tracking_number?: string;
@@ -215,15 +218,18 @@ export async function saveOrder(order: Order): Promise<void> {
         customer_phone: orderWithProfit.customer_phone,
         customer_address: orderWithProfit.customer_address,
         shop_name: orderWithProfit.shop_name || null,
+        order_notes: orderWithProfit.order_notes || null,
         items: orderWithProfit.items,
         total_items: orderWithProfit.total_items,
         total_amount: orderWithProfit.total_amount,
+        delivery_charges: orderWithProfit.delivery_charges || 0,
         total_cost: orderWithProfit.total_cost,
         total_profit: orderWithProfit.total_profit,
         status: orderWithProfit.status,
         cargo_name: orderWithProfit.cargo_name || null,
         tracking_number: orderWithProfit.tracking_number || null,
         dispatch_date: orderWithProfit.dispatch_date || null,
+        delivery_notes: orderWithProfit.delivery_notes || null,
         customer_id: orderWithProfit.customer_id || null,
       },
     ]);
@@ -237,6 +243,32 @@ export async function saveOrder(order: Order): Promise<void> {
     await decreaseStockForOrder(orderWithProfit);
   } catch (stockErr) {
     console.warn("Notice updating inventory stock for order:", stockErr);
+  }
+
+  // Update customer totals in localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const custRaw = localStorage.getItem("zubair_mobile_customers");
+      if (custRaw) {
+        const custs = JSON.parse(custRaw);
+        const cPhone = order.customer_phone.replace(/[^0-9]/g, "");
+        const idx = custs.findIndex(
+          (c: { phone?: string; id?: string }) =>
+            (order.customer_id && c.id === order.customer_id) ||
+            (c.phone && c.phone.replace(/[^0-9]/g, "") === cPhone)
+        );
+        if (idx !== -1) {
+          const unpaid = Math.max(0, (order.total_amount || 0) - (order.paid_amount || 0));
+          custs[idx] = {
+            ...custs[idx],
+            total_orders: (Number(custs[idx].total_orders) || 0) + 1,
+            total_purchase_amount: (Number(custs[idx].total_purchase_amount) || 0) + Number(order.total_amount || 0),
+            balance: (Number(custs[idx].balance) || 0) + unpaid,
+          };
+          localStorage.setItem("zubair_mobile_customers", JSON.stringify(custs));
+        }
+      }
+    } catch {}
   }
 }
 
@@ -405,7 +437,8 @@ export function updateOrderDispatch(
   orderId: string,
   cargoName: string,
   trackingNumber: string,
-  status: Order["status"] = "dispatched"
+  status: Order["status"] = "dispatched",
+  deliveryNotes?: string
 ): void {
   if (typeof window === "undefined") return;
   try {
@@ -420,7 +453,9 @@ export function updateOrderDispatch(
             cargo_name: cargoName.trim(),
             tracking_number: trackingNumber.trim(),
             dispatch_date: dispatchDate,
+            delivery_notes: deliveryNotes?.trim() || o.delivery_notes,
             status,
+            updated_at: new Date().toISOString(),
           }
         : o
     );

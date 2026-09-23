@@ -7,6 +7,10 @@ interface CartContextType {
   items: CartItem[];
   cartCount: number;
   cartSubtotal: number;
+  deliveryCharges: number;
+  cartTotal: number;
+  orderNotes: string;
+  setOrderNotes: (notes: string) => void;
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
@@ -15,6 +19,7 @@ interface CartContextType {
   updateQuantity: (id: string, quantity: number) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
+  saveCart: () => void;
   isLoaded: boolean;
 }
 
@@ -196,6 +201,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const [orderNotes, setOrderNotes] = useState("");
+
+  const saveCart = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {}
+  };
+
   // Derived values
   const cartCount = useMemo(() => {
     return items.reduce((total, item) => total + (item.quantity || 0), 0);
@@ -205,12 +218,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return items.reduce((total, item) => total + (item.price || 0) * (item.quantity || 0), 0);
   }, [items]);
 
+  // Delivery Charges: flat Rs. 250 for courier/cargo, Free for orders Rs. 5000+
+  const deliveryCharges = useMemo(() => {
+    if (cartSubtotal === 0) return 0;
+    if (cartSubtotal >= 5000) return 0;
+    return 250;
+  }, [cartSubtotal]);
+
+  const cartTotal = useMemo(() => {
+    return cartSubtotal + deliveryCharges;
+  }, [cartSubtotal, deliveryCharges]);
+
   return (
     <CartContext.Provider
       value={{
         items,
         cartCount,
         cartSubtotal,
+        deliveryCharges,
+        cartTotal,
+        orderNotes,
+        setOrderNotes,
         isCartOpen,
         openCart,
         closeCart,
@@ -219,6 +247,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         removeFromCart,
         clearCart,
+        saveCart,
         isLoaded,
       }}
     >

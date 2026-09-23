@@ -23,6 +23,8 @@ export default function CartDrawer() {
     items,
     cartCount,
     cartSubtotal,
+    deliveryCharges,
+    cartTotal,
     isCartOpen,
     closeCart,
     updateQuantity,
@@ -284,18 +286,24 @@ export default function CartDrawer() {
         {/* Drawer Bottom Checkout Footer */}
         {items.length > 0 && (
           <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/80 space-y-3 shrink-0">
-            {/* Subtotal */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+            {/* Subtotal & Delivery */}
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-slate-500 font-medium">
                 <span>Subtotal ({cartCount} items)</span>
                 <span className="font-bold text-slate-700">
                   Rs. {cartSubtotal.toLocaleString("en-PK")}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm sm:text-base font-black text-[#111827]">
+              <div className="flex items-center justify-between text-slate-500 font-medium">
+                <span>Cargo Delivery Fee:</span>
+                <span className={`font-bold ${deliveryCharges === 0 ? "text-emerald-600" : "text-slate-700"}`}>
+                  {deliveryCharges === 0 ? "FREE (Rs. 5000+)" : `Rs. ${deliveryCharges}`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm sm:text-base font-black text-[#111827] pt-1 border-t border-slate-200">
                 <span>Total Amount:</span>
                 <span className="text-[#dc2626] font-mono">
-                  Rs. {cartSubtotal.toLocaleString("en-PK")}
+                  Rs. {cartTotal.toLocaleString("en-PK")}
                 </span>
               </div>
             </div>

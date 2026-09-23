@@ -51,6 +51,7 @@ export default function AdminOrdersPage() {
   const [dispatchOrder, setDispatchOrder] = useState<Order | null>(null);
   const [cargoName, setCargoName] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
   const [copiedBilty, setCopiedBilty] = useState(false);
 
   // Deletion Modal State
@@ -140,6 +141,7 @@ export default function AdminOrdersPage() {
     setDispatchOrder(order);
     setCargoName(order.cargo_name || "");
     setTrackingNumber(order.tracking_number || "");
+    setDeliveryNotes(order.delivery_notes || "");
   };
 
   const handleSaveDispatch = () => {
@@ -153,13 +155,13 @@ export default function AdminOrdersPage() {
       return;
     }
 
-    updateOrderDispatch(dispatchOrder.id, cargoName, trackingNumber, "dispatched");
+    updateOrderDispatch(dispatchOrder.id, cargoName, trackingNumber, "dispatched", deliveryNotes);
     loadOrders();
 
     // Auto-notify customer via WhatsApp with Tracking ID
     const cleanPhone = dispatchOrder.customer_phone.replace(/^0/, "92").replace(/[^0-9]/g, "");
     const msg = encodeURIComponent(
-      `Assalam o Alaikum ${dispatchOrder.customer_name}!\n\nAap ka Zubair Mobile Order #${dispatchOrder.order_number} cargo par laga diya gaya hai.\n\n🚚 Cargo Service: ${cargoName.trim()}\n📦 Tracking / Bilty #: ${trackingNumber.trim()}\n\nAap website par apni profile me bhi live tracking check kar sakte hain. Shukriya!\n\nZubair Mobile Gujranwala\nWhatsApp: 0345-8032600`
+      `Assalam o Alaikum ${dispatchOrder.customer_name}!\n\nAap ka Zubair Mobile Order #${dispatchOrder.order_number} cargo par laga diya gaya hai.\n\n🚚 Cargo Service: ${cargoName.trim()}\n📦 Tracking / Bilty #: ${trackingNumber.trim()}${deliveryNotes ? `\n📝 Notes: ${deliveryNotes}` : ""}\n\nAap website par apni profile me bhi live tracking check kar sakte hain. Shukriya!\n\nZubair Mobile Gujranwala\nWhatsApp: 0345-8032600`
     );
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, "_blank");
 
@@ -201,7 +203,7 @@ export default function AdminOrdersPage() {
   const totalCost = orders.reduce((sum, o) => sum + calculateOrderProfit(o).totalCost, 0);
   const overallMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : "0.0";
   const pendingCount = orders.filter((o) => o.status === "pending").length;
-  const completedCount = orders.filter((o) => o.status === "completed" || o.status === "confirmed").length;
+  const completedCount = orders.filter((o) => o.status === "delivered" || o.status === "confirmed").length;
 
   return (
     <div className="space-y-6 pb-12">
@@ -292,7 +294,7 @@ export default function AdminOrdersPage() {
 
         {/* Status Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-          {["all", "pending", "confirmed", "dispatched", "completed"].map((st) => (
+          {["all", "pending", "confirmed", "packed", "dispatched", "delivered", "cancelled"].map((st) => (
             <button
               key={st}
               onClick={() => setSelectedStatus(st)}
@@ -368,19 +370,25 @@ export default function AdminOrdersPage() {
                           handleStatusChange(order, e.target.value as Order["status"])
                         }
                         className={`text-xs font-bold px-2.5 py-1 rounded-lg border focus:outline-none cursor-pointer ${
-                          order.status === "completed"
+                          order.status === "delivered"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : order.status === "confirmed"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
                             : order.status === "dispatched"
                             ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : order.status === "packed"
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            : order.status === "confirmed"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : order.status === "cancelled"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
                         <option value="pending">Pending</option>
                         <option value="confirmed">Confirmed</option>
+                        <option value="packed">Packed</option>
                         <option value="dispatched">Dispatched</option>
-                        <option value="completed">Completed</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
                       </select>
                     </div>
                   </div>
@@ -761,6 +769,20 @@ export default function AdminOrdersPage() {
                   onChange={(e) => setTrackingNumber(e.target.value)}
                   placeholder="e.g. DW-882190 or 77482910"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Delivery Notes / Special Instructions */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-slate-800 block text-xs">
+                  Delivery Notes / کارگو ہدایات (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={deliveryNotes}
+                  onChange={(e) => setDeliveryNotes(e.target.value)}
+                  placeholder="e.g. Fragile glass inside, Cash to collect on arrival, Call before delivery"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                 />
               </div>
 

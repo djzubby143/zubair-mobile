@@ -36,18 +36,21 @@ import {
   adjustProductStock,
   getLowStockProducts,
   DEFAULT_SUPPLIERS,
+  getStockMovements,
 } from "@/lib/inventory";
+import { StockMovement } from "@/lib/types";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getCustomProducts } from "@/lib/customProducts";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminInventoryPage() {
-  const [activeTab, setActiveTab] = useState<"stock" | "new-purchase" | "purchases" | "suppliers">("stock");
+  const [activeTab, setActiveTab] = useState<"stock" | "new-purchase" | "purchases" | "suppliers" | "movements">("stock");
 
   // State
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out" | "instock">("all");
@@ -149,6 +152,9 @@ export default function AdminInventoryPage() {
       // 3. Fetch Purchases
       const purList = await getPurchases();
       setPurchases(purList);
+
+      // 4. Fetch Stock Movements
+      setMovements(getStockMovements());
     } catch (err) {
       console.error("Error loading inventory data:", err);
     } finally {
@@ -604,6 +610,19 @@ export default function AdminInventoryPage() {
         >
           <Building2 className="w-4 h-4" />
           <span>Suppliers Directory ({suppliers.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("movements")}
+          className={`pb-3 px-3 text-xs font-bold transition-all flex items-center gap-2 border-b-2 ${
+            activeTab === "movements"
+              ? "border-[#dc2626] text-[#dc2626]"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <History className="w-4 h-4" />
+          <span>Movements Log ({movements.length})</span>
         </button>
       </div>
 
@@ -1242,6 +1261,92 @@ export default function AdminInventoryPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: STOCK MOVEMENTS AUDIT LOG */}
+      {activeTab === "movements" && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                Stock Movements Audit Trail (اسٹاک ان / آؤٹ ہسٹری)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Complete audit history of stock added via purchases, deducted on customer sales, damage entries, and adjustments.
+              </p>
+            </div>
+            <span className="text-xs bg-slate-200 text-slate-700 font-bold px-2.5 py-1 rounded-full">
+              {movements.length} Records Logged
+            </span>
+          </div>
+
+          {movements.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-400">
+              No stock movements recorded yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-[10.5px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">Date & Time</th>
+                    <th className="py-3 px-4">Spare Part / Product</th>
+                    <th className="py-3 px-4">Movement Type</th>
+                    <th className="py-3 px-4 text-center">Change Qty</th>
+                    <th className="py-3 px-4 text-center">Before &rarr; After</th>
+                    <th className="py-3 px-4">Reference / Reason</th>
+                    <th className="py-3 px-4">Logged By</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {movements.map((mov) => (
+                    <tr key={mov.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
+                        {new Date(mov.created_at).toLocaleString("en-PK")}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-slate-900 block">{mov.product_name}</span>
+                        {mov.sku && <span className="font-mono text-[10px] text-slate-400">{mov.sku}</span>}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded text-[10.5px] font-bold uppercase ${
+                          mov.movement_type === "purchase"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : mov.movement_type === "sale"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : mov.movement_type === "damage"
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : mov.movement_type === "return"
+                            ? "bg-purple-50 text-purple-700 border border-purple-200"
+                            : "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}>
+                          {mov.movement_type}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono font-black text-xs">
+                        <span className={mov.quantity > 0 ? "text-emerald-600" : "text-rose-600"}>
+                          {mov.quantity > 0 ? `+${mov.quantity}` : mov.quantity}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono text-[11px] text-slate-600">
+                        {mov.previous_stock} &rarr; <strong className="text-slate-900">{mov.new_stock}</strong>
+                      </td>
+                      <td className="py-3 px-4 text-slate-700 text-xs">
+                        <span className="font-medium">{mov.reason || "-"}</span>
+                        {mov.reference_id && (
+                          <span className="block font-mono text-[10px] text-slate-400">{mov.reference_id}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 text-xs">
+                        {mov.created_by || "System"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

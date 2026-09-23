@@ -24,9 +24,15 @@ import {
   KeyRound,
   X,
   FileSpreadsheet,
+  CreditCard,
+  DollarSign,
+  BookOpen,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { CustomerUser } from "@/lib/types";
+import { CustomerUser, PaymentRecord } from "@/lib/types";
+import { getCustomerLedger, recordPayment, CustomerLedgerEntry } from "@/lib/ledger";
 export type { CustomerUser };
 
 
@@ -39,11 +45,18 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     full_name: "Muhammad Ali",
     shop_name: "Ali Mobile Repair Center",
     phone: "03001234567",
+    email: "ali@alimobile.pk",
     city: "Gujranwala",
     address: "Shop No. 4, Mobile Market, Gondlanwala Road",
     role: "customer",
     status: "active",
+    approval_status: "approved",
     pricing_tier: "wholesale",
+    customer_type: "wholesale",
+    credit_limit: 100000,
+    balance: 24500,
+    total_orders: 14,
+    total_purchase_amount: 320000,
     notes: "Wholesale LCD customer",
     created_at: new Date().toISOString(),
   },
@@ -54,11 +67,18 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     full_name: "Usman Ghani",
     shop_name: "Ghani Telecom & Parts",
     phone: "03219876543",
+    email: "usman@ghanitelecom.com",
     city: "Lahore",
     address: "Hall Road, Shop 19, Basement Plaza",
     role: "customer",
     status: "active",
+    approval_status: "approved",
     pricing_tier: "technician",
+    customer_type: "technician",
+    credit_limit: 50000,
+    balance: 8500,
+    total_orders: 8,
+    total_purchase_amount: 142000,
     notes: "Mobile technician customer",
     created_at: new Date(Date.now() - 86400000).toISOString(),
   },
@@ -69,11 +89,18 @@ const INITIAL_DEMO_USERS: CustomerUser[] = [
     full_name: "Bilal Ahmed",
     shop_name: "Master Tech Lab",
     phone: "03451122334",
+    email: "bilal@gmail.com",
     city: "Sialkot",
     address: "Kutchery Road, Near City Hospital",
     role: "customer",
     status: "inactive",
+    approval_status: "pending",
     pricing_tier: "retail",
+    customer_type: "retail",
+    credit_limit: 0,
+    balance: 0,
+    total_orders: 1,
+    total_purchase_amount: 4500,
     notes: "Retail walk-in customer account",
     created_at: new Date(Date.now() - 172800000).toISOString(),
   },
@@ -85,6 +112,7 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("all");
 
   // UI state for password visibility per user
   const [visiblePasswords, setVisiblePasswords] = useState<{ [id: string]: boolean }>({});
@@ -97,6 +125,28 @@ export default function AdminUsersPage() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [showSqlAlert, setShowSqlAlert] = useState(false);
 
+  // Khata Ledger Modal State
+  const [selectedLedgerUser, setSelectedLedgerUser] = useState<CustomerUser | null>(null);
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [ledgerStatement, setLedgerStatement] = useState<{
+    entries: CustomerLedgerEntry[];
+    totalBilled: number;
+    totalPaid: number;
+    remainingBalance: number;
+  } | null>(null);
+  const [paymentForm, setPaymentForm] = useState<{
+    amount: string;
+    payment_method: PaymentRecord["payment_method"];
+    reference_no: string;
+    notes: string;
+  }>({
+    amount: "",
+    payment_method: "Cash",
+    reference_no: "",
+    notes: "",
+  });
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+
   // Form Fields
   const [formData, setFormData] = useState({
     username: "",
@@ -104,11 +154,16 @@ export default function AdminUsersPage() {
     full_name: "",
     shop_name: "",
     phone: "",
+    email: "",
     city: "Gujranwala",
     address: "",
     role: "customer",
     status: "active" as "active" | "inactive",
+    approval_status: "approved" as "pending" | "approved" | "rejected",
     pricing_tier: "retail" as "retail" | "technician" | "wholesale",
+    customer_type: "retail" as "retail" | "technician" | "wholesale",
+    credit_limit: 0,
+    balance: 0,
     notes: "",
   });
   const [showModalPassword, setShowModalPassword] = useState(false);
@@ -196,11 +251,16 @@ export default function AdminUsersPage() {
       full_name: "",
       shop_name: "",
       phone: "",
+      email: "",
       city: "Gujranwala",
       address: "",
       role: "customer",
       status: "active",
+      approval_status: "approved",
       pricing_tier: "wholesale",
+      customer_type: "wholesale",
+      credit_limit: 50000,
+      balance: 0,
       notes: "",
     });
     setModalError(null);
@@ -211,22 +271,116 @@ export default function AdminUsersPage() {
   // Open Edit Modal
   const handleOpenEditModal = (user: CustomerUser) => {
     setEditingUser(user);
+    const tier = user.pricing_tier || (user.role === "technician" || user.role === "wholesale" ? user.role : "retail");
     setFormData({
       username: user.username,
-      password: user.password,
+      password: user.password || "",
       full_name: user.full_name,
-      shop_name: user.shop_name,
+      shop_name: user.shop_name || "",
       phone: user.phone,
+      email: user.email || "",
       city: user.city,
       address: user.address,
       role: user.role || "customer",
       status: user.status,
-      pricing_tier: user.pricing_tier || (user.role === "technician" || user.role === "wholesale" ? user.role : "retail"),
+      approval_status: (user.approval_status as "pending" | "approved" | "rejected") || "approved",
+      pricing_tier: tier,
+      customer_type: (user.customer_type as "retail" | "technician" | "wholesale") || tier,
+      credit_limit: user.credit_limit || 0,
+      balance: user.balance || 0,
       notes: user.notes || "",
     });
     setModalError(null);
     setShowModalPassword(false);
     setIsModalOpen(true);
+  };
+
+  // Open Customer Khata Ledger
+  const handleOpenLedger = (user: CustomerUser) => {
+    setSelectedLedgerUser(user);
+    const statement = getCustomerLedger(user.id, user.full_name);
+    setLedgerStatement(statement);
+    setPaymentForm({
+      amount: "",
+      payment_method: "Cash",
+      reference_no: "",
+      notes: "",
+    });
+    setIsLedgerOpen(true);
+  };
+
+  // Record Payment Received from Customer
+  const handleRecordPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLedgerUser) return;
+    const amount = Number(paymentForm.amount);
+    if (!amount || amount <= 0) return;
+
+    setIsRecordingPayment(true);
+    try {
+      await recordPayment({
+        entity_type: "customer",
+        entity_id: selectedLedgerUser.id,
+        entity_name: `${selectedLedgerUser.full_name} (${selectedLedgerUser.shop_name})`,
+        amount: amount,
+        payment_method: paymentForm.payment_method,
+        reference_no: paymentForm.reference_no,
+        notes: paymentForm.notes,
+        payment_date: new Date().toISOString(),
+      });
+
+      // Update customer balance in state and storage
+      const newBal = Math.max(0, (selectedLedgerUser.balance || 0) - amount);
+      const updatedList = users.map((u) =>
+        u.id === selectedLedgerUser.id ? { ...u, balance: newBal } : u
+      );
+      setUsers(updatedList);
+      localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+
+      // Refresh ledger statement
+      const refreshedStatement = getCustomerLedger(selectedLedgerUser.id, selectedLedgerUser.full_name);
+      setLedgerStatement(refreshedStatement);
+      setPaymentForm({
+        amount: "",
+        payment_method: "Cash",
+        reference_no: "",
+        notes: "",
+      });
+    } catch (err) {
+      console.warn("Payment error:", err);
+    } finally {
+      setIsRecordingPayment(false);
+    }
+  };
+
+  // Quick Approve Customer
+  const handleApproveUser = async (user: CustomerUser) => {
+    const updatedList = users.map((u) =>
+      u.id === user.id ? { ...u, approval_status: "approved" as const, status: "active" as const } : u
+    );
+    setUsers(updatedList);
+    localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+    try {
+      await supabase
+        .from("customers")
+        .update({ approval_status: "approved", status: "active" })
+        .eq("id", user.id);
+    } catch {}
+  };
+
+  // Quick Reject Customer
+  const handleRejectUser = async (user: CustomerUser) => {
+    const updatedList = users.map((u) =>
+      u.id === user.id ? { ...u, approval_status: "rejected" as const, status: "inactive" as const } : u
+    );
+    setUsers(updatedList);
+    localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
+    try {
+      await supabase
+        .from("customers")
+        .update({ approval_status: "rejected", status: "inactive" })
+        .eq("id", user.id);
+    } catch {}
   };
 
   // Random Password Generator
@@ -288,18 +442,23 @@ export default function AdminUsersPage() {
     setIsSaving(true);
 
     try {
-      const payload = {
+      const payload: Partial<CustomerUser> = {
         username: formData.username.trim().toLowerCase(),
         password: formData.password.trim(),
         full_name: formData.full_name.trim(),
         shop_name: formData.shop_name.trim(),
         phone: formData.phone.trim(),
+        email: formData.email.trim() || undefined,
         city: formData.city.trim(),
         address: formData.address.trim(),
         role: formData.role,
         status: formData.status,
+        approval_status: formData.approval_status,
         pricing_tier: formData.pricing_tier || "retail",
-        notes: formData.notes.trim() || null,
+        customer_type: formData.pricing_tier || "retail",
+        credit_limit: Number(formData.credit_limit) || 0,
+        balance: Number(formData.balance) || 0,
+        notes: formData.notes.trim() || undefined,
         updated_at: new Date().toISOString(),
       };
 
@@ -348,7 +507,22 @@ export default function AdminUsersPage() {
         // Insert in Supabase
         const newRecord: CustomerUser = {
           id: `cust-${Date.now()}`,
-          ...payload,
+          username: formData.username.trim().toLowerCase(),
+          password: formData.password.trim(),
+          full_name: formData.full_name.trim(),
+          shop_name: formData.shop_name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim() || undefined,
+          city: formData.city.trim(),
+          address: formData.address.trim(),
+          role: formData.role,
+          status: formData.status,
+          approval_status: formData.approval_status,
+          pricing_tier: formData.pricing_tier || "retail",
+          customer_type: formData.pricing_tier || "retail",
+          credit_limit: Number(formData.credit_limit) || 0,
+          balance: Number(formData.balance) || 0,
+          notes: formData.notes.trim() || undefined,
           created_at: new Date().toISOString(),
         };
 
@@ -521,13 +695,14 @@ export default function AdminUsersPage() {
 
   // Filtered Users
   const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.shop_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.phone.includes(searchQuery) ||
-      u.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.address.toLowerCase().includes(searchQuery.toLowerCase());
+      (u.full_name || "").toLowerCase().includes(q) ||
+      (u.shop_name || "").toLowerCase().includes(q) ||
+      (u.username || "").toLowerCase().includes(q) ||
+      (u.phone || "").includes(searchQuery) ||
+      (u.city || "").toLowerCase().includes(q) ||
+      (u.address || "").toLowerCase().includes(q);
 
     const matchesCity = cityFilter === "all" || u.city.toLowerCase() === cityFilter.toLowerCase();
     const matchesStatus = statusFilter === "all" || u.status === statusFilter;
@@ -714,11 +889,11 @@ export default function AdminUsersPage() {
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   <th className="py-3.5 px-4">User & Shop Details</th>
-                  <th className="py-3.5 px-4">Login ID / Username</th>
-                  <th className="py-3.5 px-4">Password</th>
+                  <th className="py-3.5 px-4">Login & Password</th>
                   <th className="py-3.5 px-4">Phone & City</th>
                   <th className="py-3.5 px-4">Pricing Tier / ریٹ</th>
-                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Credit & Balance / کھاتہ</th>
+                  <th className="py-3.5 px-4">Approval & Status</th>
                   <th className="py-3.5 px-4 text-right">Quick Actions</th>
                 </tr>
               </thead>
@@ -727,6 +902,9 @@ export default function AdminUsersPage() {
                   const isPassVisible = visiblePasswords[user.id] || false;
                   const isCopied = copiedId === user.id;
                   const isRetail = user.pricing_tier === "retail";
+                  const balance = user.balance ?? 0;
+                  const creditLimit = user.credit_limit ?? 0;
+                  const isPending = user.approval_status === "pending";
 
                   return (
                     <tr
@@ -747,6 +925,11 @@ export default function AdminUsersPage() {
                               <Building2 className="w-3 h-3 text-[#dc2626] shrink-0" />
                               <strong className="text-slate-700">{user.shop_name}</strong>
                             </span>
+                            {user.email && (
+                              <span className="text-[10px] text-blue-600 block mt-0.5 font-mono">
+                                {user.email}
+                              </span>
+                            )}
                             <span className="text-[10px] text-slate-400 block truncate max-w-xs mt-0.5">
                               {user.address}
                             </span>
@@ -754,55 +937,46 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
 
-                      {/* Col 2: Login ID */}
+                      {/* Col 2: Login ID & Password */}
                       <td className="py-3.5 px-4">
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 font-mono text-[11px] font-bold text-slate-800">
                             <KeyRound className="w-3 h-3 text-[#dc2626]" />
                             {user.username}
                           </span>
-                          {user.notes && (
-                            <span className="text-[10px] text-slate-400 block italic truncate max-w-[150px]">
-                              Note: {user.notes}
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono text-[11px] font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 min-w-[70px] text-center">
+                              {isPassVisible ? user.password : "••••••••"}
                             </span>
-                          )}
+                            <button
+                              type="button"
+                              onClick={() => togglePasswordVisibility(user.id)}
+                              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                              title={isPassVisible ? "Hide password" : "Show password"}
+                            >
+                              {isPassVisible ? (
+                                <EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCredentials(user)}
+                              className="p-1 rounded text-slate-400 hover:text-[#dc2626] hover:bg-slate-100"
+                              title="Copy ID & Password"
+                            >
+                              {isCopied ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </td>
 
-                      {/* Col 3: Password */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-50 px-2 py-1 rounded border border-slate-200 min-w-[90px] text-center">
-                            {isPassVisible ? user.password : "••••••••"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(user.id)}
-                            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                            title={isPassVisible ? "Hide password" : "Show password"}
-                          >
-                            {isPassVisible ? (
-                              <EyeOff className="w-3.5 h-3.5" />
-                            ) : (
-                              <Eye className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyCredentials(user)}
-                            className="p-1 rounded text-slate-400 hover:text-[#dc2626] hover:bg-slate-100"
-                            title="Copy ID & Password"
-                          >
-                            {isCopied ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Col 4: Phone & City */}
+                      {/* Col 3: Phone & City */}
                       <td className="py-3.5 px-4">
                         <div className="space-y-0.5">
                           <span className="font-semibold text-slate-800 flex items-center gap-1 text-[11px]">
@@ -816,7 +990,7 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
 
-                      {/* Col 5: Pricing Tier (Wholesale vs Technician vs Retail) */}
+                      {/* Col 4: Pricing Tier (Wholesale vs Technician vs Retail) */}
                       <td className="py-3.5 px-4">
                         <button
                           type="button"
@@ -849,28 +1023,78 @@ export default function AdminUsersPage() {
                         </button>
                       </td>
 
-                      {/* Col 6: Status */}
+                      {/* Col 5: Credit Limit & Outstanding Balance / Khata */}
                       <td className="py-3.5 px-4">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(user)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
-                            user.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                              : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
-                          }`}
-                          title="Click to toggle status"
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              user.status === "active" ? "bg-emerald-500" : "bg-slate-400"
-                            }`}
-                          />
-                          <span className="capitalize">{user.status}</span>
-                        </button>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase">Balance:</span>
+                            <span className={`font-mono font-bold text-xs ${balance > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                              Rs. {balance.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-medium">
+                            Limit: Rs. {creditLimit.toLocaleString()}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLedger(user)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10.5px] font-bold transition-colors"
+                            title="View Khata Ledger & Record Payment"
+                          >
+                            <BookOpen className="w-3 h-3 text-[#dc2626]" />
+                            <span>کھاتہ / Ledger</span>
+                          </button>
+                        </div>
                       </td>
 
-                      {/* Col 6: Quick Actions */}
+                      {/* Col 6: Approval & Status */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1.5">
+                          {isPending ? (
+                            <div className="flex items-center gap-1">
+                              <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.5 rounded border border-amber-200">
+                                Pending
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleApproveUser(user)}
+                                className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                                title="Approve Customer"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectUser(user)}
+                                className="p-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                                title="Reject Customer"
+                              >
+                                <UserX className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(user)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                                user.status === "active"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
+                              }`}
+                              title="Click to toggle status"
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  user.status === "active" ? "bg-emerald-500" : "bg-slate-400"
+                                }`}
+                              />
+                              <span className="capitalize">{user.status}</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Col 7: Quick Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="inline-flex items-center gap-1.5">
                           {/* Send WhatsApp Login Details */}
@@ -1035,11 +1259,11 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              {/* Row 3: Phone & City */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Row 3: Phone, Email & City */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                    Phone / WhatsApp Number <span className="text-red-500">*</span>
+                    Phone / WhatsApp <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -1047,6 +1271,19 @@ export default function AdminUsersPage() {
                     placeholder="e.g. 03001234567"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. shop@gmail.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
                   />
                 </div>
@@ -1075,8 +1312,40 @@ export default function AdminUsersPage() {
                   required
                   rows={2}
                   placeholder="e.g. Shop No. 12, First Floor, Mobile Market, Gujranwala"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626] resize-none"
                 />
+              </div>
+
+              {/* Credit Limit & Outstanding Balance */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                    Credit Limit / ادھار کی حد (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 50000"
+                    value={formData.credit_limit}
+                    onChange={(e) => setFormData({ ...formData, credit_limit: Number(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] bg-white font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                    Current Balance / واجب الادا رقم (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 15000"
+                    value={formData.balance}
+                    onChange={(e) => setFormData({ ...formData, balance: Number(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] bg-white font-mono"
+                  />
+                </div>
               </div>
 
               {/* Pricing Tier Selection (Wholesale vs Technician vs Retail) */}
@@ -1106,7 +1375,7 @@ export default function AdminUsersPage() {
                         Wholesale (ہول سیل)
                       </span>
                       <span className="text-[9.5px] text-slate-500 block leading-tight mt-0.5">
-                        For bulk shopkeepers. Shows lowest wholesale trade price.
+                        For bulk shopkeepers.
                       </span>
                     </div>
                   </label>
@@ -1132,7 +1401,7 @@ export default function AdminUsersPage() {
                         Technician (ٹیکنیشن)
                       </span>
                       <span className="text-[9.5px] text-slate-500 block leading-tight mt-0.5">
-                        For mobile repair technicians. Shows discounted technician rate.
+                        For mobile repairers.
                       </span>
                     </div>
                   </label>
@@ -1158,15 +1427,15 @@ export default function AdminUsersPage() {
                         Retail (پرچون ریٹ)
                       </span>
                       <span className="text-[9.5px] text-slate-500 block leading-tight mt-0.5">
-                        For walk-in consumers. Shows public retail selling price.
+                        For walk-in consumers.
                       </span>
                     </div>
                   </label>
                 </div>
               </div>
 
-              {/* Row 5: Status & Notes */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Row 5: Status, Approval & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
                     Account Status
@@ -1178,8 +1447,28 @@ export default function AdminUsersPage() {
                     }
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626] bg-white"
                   >
-                    <option value="active">Active (Can place wholesale orders)</option>
+                    <option value="active">Active (Can Login & Order)</option>
                     <option value="inactive">Inactive / Paused</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
+                    Approval Status
+                  </label>
+                  <select
+                    value={formData.approval_status}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        approval_status: e.target.value as "pending" | "approved" | "rejected",
+                      })
+                    }
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626] bg-white"
+                  >
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending Approval</option>
+                    <option value="rejected">Rejected</option>
                   </select>
                 </div>
 
@@ -1189,7 +1478,7 @@ export default function AdminUsersPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. 5% discount dealer, TCS Cargo"
+                    placeholder="e.g. 5% discount, TCS Cargo"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-[#dc2626] focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
@@ -1226,6 +1515,188 @@ export default function AdminUsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Customer Khata Ledger */}
+      {isLedgerOpen && selectedLedgerUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-2xs overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#dc2626] text-white flex items-center justify-center shadow-xs">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#111827]">
+                    Customer Khata Ledger (کھاتہ اسٹیٹمنٹ)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedLedgerUser.full_name} &bull; {selectedLedgerUser.shop_name} ({selectedLedgerUser.city})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLedgerOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Summary KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Credit Limit</span>
+                  <span className="text-sm font-black text-slate-800 font-mono">
+                    Rs. {(selectedLedgerUser.credit_limit ?? 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 bg-rose-50 rounded-xl border border-rose-200">
+                  <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider block">Total Billed</span>
+                  <span className="text-sm font-black text-rose-700 font-mono">
+                    Rs. {(ledgerStatement?.totalBilled ?? 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Total Received</span>
+                  <span className="text-sm font-black text-emerald-700 font-mono">
+                    Rs. {(ledgerStatement?.totalPaid ?? 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 bg-red-100/70 rounded-xl border border-red-300">
+                  <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider block">Outstanding Balance</span>
+                  <span className="text-base font-black text-red-800 font-mono">
+                    Rs. {(selectedLedgerUser.balance ?? 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Record Payment Form */}
+              <form onSubmit={handleRecordPaymentSubmit} className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <span>Record Payment Received (وصولی درج کریں)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                  <div>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="Amount (Rs.)"
+                      value={paymentForm.amount}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <select
+                      value={paymentForm.payment_method}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value as PaymentRecord["payment_method"] })}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                    >
+                      <option value="Cash">Cash (کیش)</option>
+                      <option value="Bank Transfer">Bank Transfer (بینک)</option>
+                      <option value="JazzCash / EasyPaisa">JazzCash / EasyPaisa</option>
+                      <option value="Cargo COD">Cargo COD</option>
+                    </select>
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Ref / Trx ID (Optional)"
+                      value={paymentForm.reference_no}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, reference_no: e.target.value })}
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={isRecordingPayment || !paymentForm.amount}
+                      className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-2xs disabled:opacity-50"
+                    >
+                      {isRecordingPayment ? "Recording..." : "+ Receive Payment"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* Transactions Ledger Table */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="p-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700">
+                  Transaction History & Running Balance
+                </div>
+                {ledgerStatement?.entries.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">
+                    No transactions recorded for this customer yet.
+                  </div>
+                ) : (
+                  <div className="max-h-60 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100/70 border-b border-slate-200 text-[10.5px] uppercase font-bold text-slate-500">
+                        <tr>
+                          <th className="py-2 px-3">Date</th>
+                          <th className="py-2 px-3">Type</th>
+                          <th className="py-2 px-3">Reference / Description</th>
+                          <th className="py-2 px-3 text-right">Debit (Rs.)</th>
+                          <th className="py-2 px-3 text-right">Credit (Rs.)</th>
+                          <th className="py-2 px-3 text-right">Balance (Rs.)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {ledgerStatement?.entries.map((entry) => (
+                          <tr key={entry.id} className="hover:bg-slate-50 font-mono text-[11px]">
+                            <td className="py-2 px-3 text-slate-600">
+                              {new Date(entry.date).toLocaleDateString("en-PK")}
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                entry.type === "order"
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}>
+                                {entry.type === "order" ? "Order" : "Payment"}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 font-sans text-slate-700 text-xs">
+                              <span className="font-semibold">{entry.reference}</span>
+                              {entry.description && (
+                                <span className="text-slate-400 block text-[10px]">{entry.description}</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-right text-rose-600 font-bold">
+                              {entry.debit > 0 ? entry.debit.toLocaleString() : "-"}
+                            </td>
+                            <td className="py-2 px-3 text-right text-emerald-600 font-bold">
+                              {entry.credit > 0 ? entry.credit.toLocaleString() : "-"}
+                            </td>
+                            <td className="py-2 px-3 text-right font-black text-slate-800">
+                              {entry.balance.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setIsLedgerOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Close Ledger
+              </button>
+            </div>
           </div>
         </div>
       )}

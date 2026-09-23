@@ -576,19 +576,25 @@ export default function ProfilePage() {
                       {/* Status Badge */}
                       <span
                         className={`text-xs font-bold px-2.5 py-1 rounded-full border flex items-center gap-1 ${
-                          order.status === "completed"
+                          order.status === "delivered" || (order.status as string) === "completed"
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : order.status === "dispatched"
                             ? "bg-purple-50 text-purple-700 border-purple-200 animate-pulse"
+                            : order.status === "packed"
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                             : order.status === "confirmed"
                             ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : order.status === "cancelled"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
-                        {order.status === "completed" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {(order.status === "delivered" || (order.status as string) === "completed") && <CheckCircle2 className="w-3.5 h-3.5" />}
                         {order.status === "dispatched" && <Truck className="w-3.5 h-3.5" />}
+                        {order.status === "packed" && <Package className="w-3.5 h-3.5" />}
                         {order.status === "confirmed" && <Check className="w-3.5 h-3.5" />}
                         {order.status === "pending" && <Clock className="w-3.5 h-3.5" />}
+                        {order.status === "cancelled" && <AlertCircle className="w-3.5 h-3.5" />}
                         <span className="capitalize">{order.status}</span>
                       </span>
                     </div>
@@ -618,8 +624,78 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  {/* 5-Stage Order Progress Timeline Stepper */}
+                  <div className="px-4 sm:px-6 py-4 bg-slate-50/40 border-b border-slate-100">
+                    {order.status === "cancelled" ? (
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-700 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>This order was cancelled. Please contact Zubair Mobile on WhatsApp if you have questions.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Order Progress Timeline
+                        </span>
+                        {(() => {
+                          const stages = ["pending", "confirmed", "packed", "dispatched", "delivered"];
+                          const stageLabels = ["Placed", "Confirmed", "Packed", "Dispatched", "Delivered"];
+                          // Support "completed" as "delivered"
+                          const currentIdx =
+                            order.status === "delivered" || (order.status as string) === "completed"
+                              ? 4
+                              : stages.indexOf(order.status);
+                          return (
+                            <div className="grid grid-cols-5 gap-1 sm:gap-2">
+                              {stages.map((stg, idx) => {
+                                const isPassed = currentIdx >= idx;
+                                const isCurrent = currentIdx === idx;
+                                return (
+                                  <div key={stg} className="flex flex-col items-center text-center">
+                                    <div
+                                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs mb-1 transition-all ${
+                                        isCurrent
+                                          ? "bg-[#dc2626] text-white ring-4 ring-red-100 shadow-xs"
+                                          : isPassed
+                                          ? "bg-emerald-600 text-white"
+                                          : "bg-slate-200 text-slate-400"
+                                      }`}
+                                    >
+                                      {isPassed && !isCurrent ? (
+                                        <Check className="w-4 h-4" />
+                                      ) : (
+                                        <span>{idx + 1}</span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`text-[10px] sm:text-[11px] font-bold ${
+                                        isCurrent
+                                          ? "text-[#dc2626]"
+                                          : isPassed
+                                          ? "text-emerald-700"
+                                          : "text-slate-400"
+                                      }`}
+                                    >
+                                      {stageLabels[idx]}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Body: Live Cargo Tracking Box (When Dispatched) */}
                   <div className="p-4 sm:p-5 space-y-4">
+                    {/* Delivery Notes if available */}
+                    {order.delivery_notes && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2">
+                        <span className="font-bold shrink-0">Dispatch Notes:</span>
+                        <span>{order.delivery_notes}</span>
+                      </div>
+                    )}
                     {isDispatched && order.cargo_name && (
                       <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border-2 border-purple-200 space-y-2.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
