@@ -4,34 +4,61 @@ import path from "path";
 import { supabase } from "@/lib/supabase";
 import { CustomerUser } from "@/lib/types";
 
-const DATA_DIR = path.resolve(process.cwd(), "data");
+const IS_VERCEL = !!process.env.VERCEL;
+const DATA_DIR = IS_VERCEL ? path.join("/tmp", "zubair-data") : path.resolve(process.cwd(), "data");
 const USERS_FILE = path.join(DATA_DIR, "customer_users.json");
 
+const globalUsersStore = global as unknown as {
+  __zubair_customer_users?: CustomerUser[];
+};
+
+if (!globalUsersStore.__zubair_customer_users) {
+  globalUsersStore.__zubair_customer_users = [];
+}
+
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch (e) {
+    // Read-only filesystem warning, safe fallback to memory
   }
 }
+
+const BUNDLED_USERS_FILE = path.resolve(process.cwd(), "data", "customer_users.json");
 
 function getServerUsers(): CustomerUser[] {
   try {
     ensureDataDir();
-    if (!fs.existsSync(USERS_FILE)) return [];
-    const raw = fs.readFileSync(USERS_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (fs.existsSync(USERS_FILE)) {
+      const raw = fs.readFileSync(USERS_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        globalUsersStore.__zubair_customer_users = parsed;
+        return parsed;
+      }
+    } else if (IS_VERCEL && fs.existsSync(BUNDLED_USERS_FILE)) {
+      const raw = fs.readFileSync(BUNDLED_USERS_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        globalUsersStore.__zubair_customer_users = parsed;
+        return parsed;
+      }
+    }
   } catch (e) {
-    console.error("Error reading customer_users.json:", e);
-    return [];
+    // Silently continue to memory store
   }
+  return globalUsersStore.__zubair_customer_users || [];
 }
 
 function saveServerUsers(users: CustomerUser[]) {
+  globalUsersStore.__zubair_customer_users = users;
   try {
     ensureDataDir();
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
   } catch (e) {
-    console.error("Error writing customer_users.json:", e);
+    // Handled in-memory on read-only serverless platforms
   }
 }
 
@@ -150,7 +177,7 @@ export async function POST(req: NextRequest) {
         address: body.address || "",
         role: body.pricing_tier || body.role || "customer",
         status: body.status || "active",
-        pricing_tier: body.pricing_tier || "wholesale",
+        pricing_tier: body.pricing_tier || "retail",
         notes: body.notes || null,
         created_at: body.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -173,7 +200,7 @@ export async function POST(req: NextRequest) {
         address: updatedRecord.address,
         role: updatedRecord.pricing_tier || updatedRecord.role || "customer",
         status: updatedRecord.status || "active",
-        notes: updatedRecord.notes || `tier:${updatedRecord.pricing_tier || "wholesale"}`,
+        notes: updatedRecord.notes || `tier:${updatedRecord.pricing_tier || "retail"}`,
         updated_at: new Date().toISOString(),
       };
       if (isUuid) sbRecord.id = updatedRecord.id;

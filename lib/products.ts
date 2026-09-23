@@ -252,7 +252,24 @@ const BASE_CATALOG_PRODUCTS: Product[] = [
 export const DEFAULT_CATALOG_PRODUCTS: Product[] = [
   ...BASE_CATALOG_PRODUCTS,
   ...SIDE_KEY_PRODUCTS,
-];
+].map((p) => {
+  const wholesale = Number(p.wholesale_price ?? p.price) || 0;
+  const technician =
+    p.technician_price !== undefined && p.technician_price !== null && Number(p.technician_price) > wholesale
+      ? Number(p.technician_price)
+      : Math.round(wholesale * 1.12);
+  const retail =
+    p.retail_price !== undefined && p.retail_price !== null && Number(p.retail_price) > wholesale
+      ? Number(p.retail_price)
+      : Math.round(wholesale * 1.25);
+  return {
+    ...p,
+    price: wholesale,
+    wholesale_price: wholesale,
+    technician_price: technician,
+    retail_price: retail,
+  };
+});
 
 // Stopwords in Urdu, Roman Urdu & English to filter out
 const STOP_WORDS = new Set([

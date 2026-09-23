@@ -230,6 +230,14 @@ export async function saveOrder(order: Order): Promise<void> {
   } catch (err) {
     console.warn("Notice: Supabase orders insert skipped:", err);
   }
+
+  // AUTOMATIC INVENTORY STOCK DECREASE: Deduct ordered quantities from stock
+  try {
+    const { decreaseStockForOrder } = await import("@/lib/inventory");
+    await decreaseStockForOrder(orderWithProfit);
+  } catch (stockErr) {
+    console.warn("Notice updating inventory stock for order:", stockErr);
+  }
 }
 
 export const STORAGE_KEY_DELETED_ORDERS = "zubair_deleted_order_ids";

@@ -34,6 +34,7 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
+  wholesale_price?: number | null;
   technician_price?: number | null;
   retail_price?: number | null;
   purchase_price?: number | null;

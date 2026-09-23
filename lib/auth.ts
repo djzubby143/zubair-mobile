@@ -26,11 +26,15 @@ export function getStoredCustomerUser(): AuthUser | null {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed && (parsed.id || parsed.username || parsed.full_name)) {
+        const rawTier = (parsed.pricing_tier || parsed.role || "").toLowerCase().trim();
+        let tier: PricingTier = "retail";
+        if (rawTier === "wholesale") tier = "wholesale";
+        else if (rawTier === "technician") tier = "technician";
+        else tier = "retail";
+
         return {
           ...parsed,
-          pricing_tier:
-            parsed.pricing_tier ||
-            (parsed.role === "technician" ? "technician" : parsed.role === "retail" ? "retail" : "wholesale"),
+          pricing_tier: tier,
         };
       }
     }
@@ -39,10 +43,11 @@ export function getStoredCustomerUser(): AuthUser | null {
 }
 
 /**
- * Calculates effective price based on 3-tier system:
- * 1. Retail: Publicly visible to all visitors without login.
- * 2. Technician: Requires login (verified mobile technician rate).
- * 3. Wholesale: Requires login (bulk dealer & shopkeeper trade rate).
+ * Calculates effective price based on strict 3-tier user system:
+ * 1. Guest & Retail: Show ONLY retail_price.
+ * 2. Technician: Show ONLY technician_price.
+ * 3. Wholesale: Show ONLY wholesale_price.
+ * 4. Admin: Show all prices.
  */
 export function getEffectiveProductPrice(
   product: {
@@ -50,6 +55,7 @@ export function getEffectiveProductPrice(
     wholesale_price?: number | null;
     technician_price?: number | null;
     retail_price?: number | null;
+    purchase_price?: number | null;
   },
   user?: AuthUser | null
 ): {
@@ -66,45 +72,39 @@ export function getEffectiveProductPrice(
   retailPrice?: number;
   wholesalePrice?: number;
   technicianPrice?: number;
+  purchasePrice?: number;
 } {
   const isAdmin = user?.role === "admin";
+  const isGuest = !user || (!user.id && !user.username && !isAdmin);
 
-  let wholesalePrice: number | null =
+  const rawWholesale =
     product.wholesale_price !== undefined && product.wholesale_price !== null && !isNaN(Number(product.wholesale_price))
       ? Number(product.wholesale_price)
-      : null;
+      : Number(product.price) || 0;
 
-  let retailPrice: number | null =
-    product.retail_price !== undefined && product.retail_price !== null && !isNaN(Number(product.retail_price))
+  // Strict retail calculation: never fall back to wholesale
+  let rawRetail =
+    product.retail_price !== undefined && product.retail_price !== null && !isNaN(Number(product.retail_price)) && Number(product.retail_price) > 0
       ? Number(product.retail_price)
-      : null;
+      : Math.round(rawWholesale * 1.25);
 
-  let technicianPrice: number | null =
-    product.technician_price !== undefined && product.technician_price !== null && !isNaN(Number(product.technician_price))
+  if (rawWholesale > 0 && rawRetail <= rawWholesale) {
+    rawRetail = Math.round(rawWholesale * 1.25);
+  }
+
+  let rawTechnician =
+    product.technician_price !== undefined && product.technician_price !== null && !isNaN(Number(product.technician_price)) && Number(product.technician_price) > 0
       ? Number(product.technician_price)
-      : null;
+      : Math.round(rawWholesale * 1.12);
 
-  // If wholesalePrice is missing but retailPrice is known (e.g. from guest sanitized payload)
-  if (wholesalePrice === null && retailPrice !== null) {
-    wholesalePrice = Math.round(retailPrice / 1.25);
-  } else if (wholesalePrice === null) {
-    wholesalePrice = Number(product.price) || 0;
+  if (rawWholesale > 0 && rawTechnician <= rawWholesale) {
+    rawTechnician = Math.round(rawWholesale * 1.12);
   }
-
-  if (retailPrice === null) {
-    retailPrice = Math.round(wholesalePrice * 1.25);
-  }
-
-  if (technicianPrice === null) {
-    technicianPrice = Math.round(wholesalePrice * 1.12);
-  }
-
-  const isGuest = !user || (!user.id && !user.username && !isAdmin);
 
   // Admin gets full visibility of all rates
   if (isAdmin) {
     return {
-      price: wholesalePrice,
+      price: rawWholesale,
       activeTier: "wholesale",
       tierName: "Admin / Wholesale",
       tierLabelUrdu: "ایڈمن ویو (تمام ریٹ)",
@@ -114,16 +114,17 @@ export function getEffectiveProductPrice(
       isGuest: false,
       canSeeTechnicianRate: true,
       canSeeWholesaleRate: true,
-      wholesalePrice,
-      technicianPrice,
-      retailPrice,
+      wholesalePrice: rawWholesale,
+      technicianPrice: rawTechnician,
+      retailPrice: rawRetail,
+      purchasePrice: product.purchase_price ?? undefined,
     };
   }
 
-  // 1. Guest Customer: Show ONLY retail_price. Do NOT expose wholesale_price or technician_price.
+  // 1. Guest: Show ONLY retail_price. Never fall back to wholesale or purchase.
   if (isGuest) {
     return {
-      price: retailPrice,
+      price: rawRetail,
       activeTier: "retail",
       tierName: "Retail",
       tierLabelUrdu: "پرچون ریٹ",
@@ -133,42 +134,23 @@ export function getEffectiveProductPrice(
       isGuest: true,
       canSeeTechnicianRate: false,
       canSeeWholesaleRate: false,
-      retailPrice,
-      // wholesalePrice & technicianPrice are undefined for guests
+      retailPrice: rawRetail,
     };
   }
 
-  // Determine role/tier for logged-in user
+  // Determine user tier for logged-in user: defaults strictly to retail
+  const userTierRaw = (user.pricing_tier || user.role || "").toLowerCase().trim();
   const tier: PricingTier =
-    user.pricing_tier === "technician"
+    userTierRaw === "wholesale"
+      ? "wholesale"
+      : userTierRaw === "technician"
       ? "technician"
-      : user.pricing_tier === "retail"
-      ? "retail"
-      : "wholesale"; // Default logged-in trade customer is wholesale
+      : "retail";
 
-  // 2. Technician user: Show technician_price. Hide wholesale_price.
-  if (tier === "technician") {
-    return {
-      price: technicianPrice,
-      activeTier: "technician",
-      tierName: "Technician",
-      tierLabelUrdu: "ٹیکنیشن ریٹ",
-      isRetail: false,
-      isTechnician: true,
-      isWholesale: false,
-      isGuest: false,
-      canSeeTechnicianRate: true,
-      canSeeWholesaleRate: false,
-      technicianPrice,
-      retailPrice,
-      // wholesalePrice is undefined for technician users
-    };
-  }
-
-  // 3. Retail account: Show retail_price only.
+  // 2. Retail Customer: Show ONLY retail_price.
   if (tier === "retail") {
     return {
-      price: retailPrice,
+      price: rawRetail,
       activeTier: "retail",
       tierName: "Retail",
       tierLabelUrdu: "پرچون ریٹ",
@@ -178,14 +160,30 @@ export function getEffectiveProductPrice(
       isGuest: false,
       canSeeTechnicianRate: false,
       canSeeWholesaleRate: false,
-      retailPrice,
-      // wholesalePrice & technicianPrice are undefined
+      retailPrice: rawRetail,
     };
   }
 
-  // 4. Wholesale user: Show wholesale_price. Hide technician_price.
+  // 3. Technician Customer: Show ONLY technician_price.
+  if (tier === "technician") {
+    return {
+      price: rawTechnician,
+      activeTier: "technician",
+      tierName: "Technician",
+      tierLabelUrdu: "ٹیکنیشن ریٹ",
+      isRetail: false,
+      isTechnician: true,
+      isWholesale: false,
+      isGuest: false,
+      canSeeTechnicianRate: true,
+      canSeeWholesaleRate: false,
+      technicianPrice: rawTechnician,
+    };
+  }
+
+  // 4. Wholesale Customer: Show ONLY wholesale_price.
   return {
-    price: wholesalePrice,
+    price: rawWholesale,
     activeTier: "wholesale",
     tierName: "Wholesale",
     tierLabelUrdu: "ہول سیل ریٹ",
@@ -195,9 +193,7 @@ export function getEffectiveProductPrice(
     isGuest: false,
     canSeeTechnicianRate: false,
     canSeeWholesaleRate: true,
-    wholesalePrice,
-    retailPrice,
-    // technicianPrice is undefined for wholesale users
+    wholesalePrice: rawWholesale,
   };
 }
 

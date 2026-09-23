@@ -108,7 +108,7 @@ export default function AdminUsersPage() {
     address: "",
     role: "customer",
     status: "active" as "active" | "inactive",
-    pricing_tier: "wholesale" as "retail" | "technician" | "wholesale",
+    pricing_tier: "retail" as "retail" | "technician" | "wholesale",
     notes: "",
   });
   const [showModalPassword, setShowModalPassword] = useState(false);
@@ -221,7 +221,7 @@ export default function AdminUsersPage() {
       address: user.address,
       role: user.role || "customer",
       status: user.status,
-      pricing_tier: user.pricing_tier || "wholesale",
+      pricing_tier: user.pricing_tier || (user.role === "technician" || user.role === "wholesale" ? user.role : "retail"),
       notes: user.notes || "",
     });
     setModalError(null);
@@ -298,7 +298,7 @@ export default function AdminUsersPage() {
         address: formData.address.trim(),
         role: formData.role,
         status: formData.status,
-        pricing_tier: formData.pricing_tier || "wholesale",
+        pricing_tier: formData.pricing_tier || "retail",
         notes: formData.notes.trim() || null,
         updated_at: new Date().toISOString(),
       };
@@ -399,8 +399,8 @@ export default function AdminUsersPage() {
       technician: "retail",
       retail: "wholesale",
     };
-    const currentTier = user.pricing_tier || "wholesale";
-    const nextTier = cycleMap[currentTier] || "wholesale";
+    const currentTier = user.pricing_tier || (user.role === "technician" || user.role === "wholesale" ? user.role : "retail");
+    const nextTier = cycleMap[currentTier as "wholesale" | "technician" | "retail"] || "retail";
     const updatedUser = { ...user, pricing_tier: nextTier, role: nextTier };
     const updatedList = users.map((u) => (u.id === user.id ? updatedUser : u));
     setUsers(updatedList);
@@ -828,7 +828,7 @@ export default function AdminUsersPage() {
                               ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                               : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                           }`}
-                          title={`Current: ${user.pricing_tier || "wholesale"}. Click to cycle: Wholesale -> Technician -> Retail`}
+                          title={`Current: ${user.pricing_tier || "retail"}. Click to cycle: Retail -> Wholesale -> Technician`}
                         >
                           <span
                             className={`w-2 h-2 rounded-full ${

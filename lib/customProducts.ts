@@ -22,6 +22,20 @@ export function getCustomProducts(): Product[] {
 }
 
 /**
+ * Save entire array of custom products to localStorage.
+ */
+export function saveCustomProducts(products: Product[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY_CUSTOM_PRODUCTS, JSON.stringify(products));
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("zubair_products_updated", { detail: products }));
+  } catch (err) {
+    console.warn("Failed to save custom products list:", err);
+  }
+}
+
+/**
  * Retrieve set of deleted product IDs, SKUs, and slugs.
  */
 export function getDeletedProductKeys(): Set<string> {

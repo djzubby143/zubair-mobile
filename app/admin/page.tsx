@@ -14,8 +14,9 @@ import {
   ExternalLink,
   Users,
   UserPlus,
-  Image as ImageIcon,
   Receipt,
+  Boxes,
+  Image as ImageIcon,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getOrders, calculateOrderProfit } from "@/lib/orders";
@@ -127,6 +128,13 @@ export default function AdminDashboardPage() {
             >
               <Layers className="w-4 h-4" />
               <span>Categories</span>
+            </Link>
+            <Link
+              href="/admin/inventory"
+              className="inline-flex items-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+            >
+              <Boxes className="w-4 h-4" />
+              <span>Inventory & Stock</span>
             </Link>
             <Link
               href="/admin/products"

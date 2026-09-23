@@ -58,6 +58,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, isLoaded]);
 
+  // Keep cart items strictly priced according to the active user's role/tier
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const syncCartTierPrices = () => {
+      try {
+        const stored = localStorage.getItem("zubair_customer_user");
+        let activeTier: "retail" | "technician" | "wholesale" = "retail";
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const raw = (parsed.pricing_tier || parsed.role || "").toLowerCase().trim();
+          if (raw === "wholesale") activeTier = "wholesale";
+          else if (raw === "technician") activeTier = "technician";
+          else activeTier = "retail";
+        }
+
+        setItems((prevItems) => {
+          let changed = false;
+          const updated = prevItems.map((item) => {
+            let targetPrice = item.price;
+            if (activeTier === "wholesale" && item.wholesale_price && item.wholesale_price > 0) {
+              targetPrice = item.wholesale_price;
+            } else if (activeTier === "technician" && item.technician_price && item.technician_price > 0) {
+              targetPrice = item.technician_price;
+            } else if (activeTier === "retail" && item.retail_price && item.retail_price > 0) {
+              targetPrice = item.retail_price;
+            }
+
+            if (item.price !== targetPrice || item.pricing_tier !== activeTier) {
+              changed = true;
+              return {
+                ...item,
+                price: targetPrice,
+                pricing_tier: activeTier,
+              };
+            }
+            return item;
+          });
+          return changed ? updated : prevItems;
+        });
+      } catch {}
+    };
+
+    syncCartTierPrices();
+
+    window.addEventListener("storage", syncCartTierPrices);
+    return () => window.removeEventListener("storage", syncCartTierPrices);
+  }, [isLoaded]);
+
   const addToCart = (product: Product | CartItem, quantity?: number) => {
     const moq =
       "min_order_quantity" in product &&
@@ -82,6 +131,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updated[existingIndex] = {
           ...existingItem,
           price: Number(product.price) || existingItem.price,
+          wholesale_price: "wholesale_price" in product ? (product.wholesale_price ?? existingItem.wholesale_price) : existingItem.wholesale_price,
+          retail_price: "retail_price" in product ? (product.retail_price ?? existingItem.retail_price) : existingItem.retail_price,
+          technician_price: "technician_price" in product ? (product.technician_price ?? existingItem.technician_price) : existingItem.technician_price,
           pricing_tier: "pricing_tier" in product ? (product.pricing_tier as "wholesale" | "technician" | "retail") : existingItem.pricing_tier,
           min_order_quantity: existingItem.min_order_quantity || moq,
           quantity: finalQuantity,
@@ -93,6 +145,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           id: product.id,
           name: product.name,
           price: Number(product.price) || 0,
+          wholesale_price: "wholesale_price" in product ? (product.wholesale_price ?? null) : null,
           retail_price: "retail_price" in product ? (product.retail_price ?? null) : null,
           technician_price: "technician_price" in product ? (product.technician_price ?? null) : null,
           pricing_tier: "pricing_tier" in product ? (product.pricing_tier as "wholesale" | "technician" | "retail") : undefined,

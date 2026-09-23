@@ -97,7 +97,7 @@ export default function LoginPage() {
 
           const finalSession = {
             ...customerData,
-            pricing_tier: resolvedTier || "wholesale",
+            pricing_tier: resolvedTier || "retail",
           };
 
           // Save customer session
@@ -132,7 +132,12 @@ export default function LoginPage() {
                 setLoading(false);
                 return;
               }
-              localStorage.setItem("zubair_customer_user", JSON.stringify(found));
+              const finalFound = {
+                ...found,
+                pricing_tier: found.pricing_tier || (found.role === "technician" || found.role === "wholesale" ? found.role : "retail"),
+              };
+              localStorage.setItem("zubair_customer_user", JSON.stringify(finalFound));
+              window.dispatchEvent(new Event("storage"));
               router.push("/");
               return;
             }

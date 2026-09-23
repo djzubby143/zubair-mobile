@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Receipt,
   UploadCloud,
+  Boxes,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -80,6 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Inventory", href: "/admin/inventory", icon: Boxes },
     { name: "Orders & Bills", href: "/admin/orders", icon: Receipt },
     { name: "Hero Banner", href: "/admin/banner", icon: ImageIcon },
     { name: "Users", href: "/admin/users", icon: Users },
