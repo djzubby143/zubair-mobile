@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -25,12 +25,19 @@ export default function CartDrawer() {
     cartSubtotal,
     deliveryCharges,
     cartTotal,
+    appliedCoupon,
+    discountAmount,
+    couponError,
+    applyCoupon,
+    removeCoupon,
     isCartOpen,
     closeCart,
     updateQuantity,
     removeFromCart,
     isLoaded,
   } = useCart();
+
+  const [couponCodeInput, setCouponCodeInput] = useState("");
 
   // Close on Escape key
   useEffect(() => {
@@ -300,6 +307,56 @@ export default function CartDrawer() {
                   {deliveryCharges === 0 ? "FREE (Rs. 5000+)" : `Rs. ${deliveryCharges}`}
                 </span>
               </div>
+
+              {/* Coupon Row */}
+              <div className="pt-1.5 border-t border-slate-200 space-y-1">
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between text-[11px] text-emerald-700 font-bold bg-emerald-50 p-1.5 rounded-lg border border-emerald-200">
+                    <span className="font-mono">{appliedCoupon.code}</span>
+                    <div className="flex items-center gap-2">
+                      <span>-Rs. {discountAmount}</span>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-rose-500 hover:text-rose-700"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-1">
+                    <input
+                      type="text"
+                      placeholder="Coupon Code"
+                      value={couponCodeInput}
+                      onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                      className="flex-1 text-[11px] font-mono font-bold uppercase px-2 py-1 bg-white border border-slate-200 rounded-lg outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (couponCodeInput.trim()) {
+                          applyCoupon(couponCodeInput.trim());
+                          setCouponCodeInput("");
+                        }
+                      }}
+                      className="px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg hover:bg-slate-800 cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+                {couponError && <p className="text-[10px] text-rose-500 font-bold">{couponError}</p>}
+              </div>
+
+              {discountAmount > 0 && (
+                <div className="flex items-center justify-between text-xs font-bold text-emerald-600">
+                  <span>Coupon Discount:</span>
+                  <span>-Rs. {discountAmount.toLocaleString("en-PK")}</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-sm sm:text-base font-black text-[#111827] pt-1 border-t border-slate-200">
                 <span>Total Amount:</span>
                 <span className="text-[#dc2626] font-mono">

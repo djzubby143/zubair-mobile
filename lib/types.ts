@@ -22,9 +22,13 @@ export interface Product {
   technician_price?: number | null; // Special Technician / Repairman Price
   retail_price?: number | null; // Retail Selling Price (Publicly visible)
   purchase_price?: number | null; // Cost / Purchase Price (Admin-only)
+  cost_price?: number | null; // Alias for purchase_price
   min_order_quantity?: number; // Minimum Order Quantity (MOQ)
   stock_quantity: number;
+  stock?: number; // Alias for stock_quantity
   min_stock_level?: number; // Low stock alert threshold (default: 5)
+  low_stock_alert?: number; // Alias for min_stock_level
+  sales_count?: number; // Total units sold
   short_description?: string | null;
   description?: string | null;
   image_url?: string | null;
@@ -73,6 +77,7 @@ export interface CustomerUser {
   username: string;
   password?: string;
   full_name: string;
+  name?: string; // Convenience alias for full_name
   shop_name?: string;
   phone: string;
   email?: string;
@@ -92,6 +97,9 @@ export interface CustomerUser {
   created_at?: string;
   updated_at?: string;
 }
+
+export type Customer = CustomerUser;
+export type { Order, OrderItem } from "./orders";
 
 export type StockMovementType = "purchase" | "sale" | "adjustment" | "damage" | "return";
 
@@ -133,3 +141,206 @@ export interface PaymentRecord {
   notes?: string;
   created_at: string;
 }
+
+// ----------------------------------------------------
+// 1. SMART PRICE MANAGEMENT
+// ----------------------------------------------------
+export interface PriceHistoryEntry {
+  id: string;
+  product_id: string;
+  product_name?: string;
+  sku?: string;
+  tier_affected?: "retail_price" | "wholesale_price" | "technician_price" | "all";
+  tier?: "retail_price" | "wholesale_price" | "technician_price" | "all"; // Alias
+  old_price: number;
+  new_price: number;
+  change_type: "percentage" | "fixed";
+  change_value: number; // e.g. +5% or +100 Rs
+  changed_by: string; // Admin username
+  reason?: string;
+  created_at: string;
+}
+
+// ----------------------------------------------------
+// 2. PRODUCT COMPATIBILITY ENGINE
+// ----------------------------------------------------
+export interface CompatibilityDevice {
+  id: string;
+  brand: string; // Samsung, Apple, Vivo, Oppo, Infinix, Tecno, Xiaomi, Realme
+  model: string; // e.g. iPhone 11, Vivo Y20, Galaxy A52
+  model_name?: string; // Alias for model
+  model_code?: string; // Hardware code
+  series?: string; // e.g. Galaxy A Series, iPhone Series, Y Series
+  release_year?: number;
+  compatible_models_alias?: string[]; // e.g. ["A125F", "A127F", "M127F"]
+  aliases?: string[]; // Alias for compatible_models_alias
+  image_url?: string;
+}
+
+export type SparePartCategory =
+  | "LCD Unit"
+  | "Battery"
+  | "Charging Flex"
+  | "Camera"
+  | "OCA Glass"
+  | "IC Parts"
+  | "Side Key"
+  | "Housing / Body"
+  | "Speaker / Ringer";
+
+// ----------------------------------------------------
+// 3. AI PRODUCT SEARCH SYSTEM
+// ----------------------------------------------------
+export interface ParsedSearchIntent {
+  rawQuery: string;
+  brand?: string;
+  model?: string;
+  category?: string;
+  partType?: string;
+  qualityGrade?: string;
+  tokens: string[];
+}
+
+export interface SearchSuggestion {
+  text: string;
+  type: "product" | "brand" | "model" | "part_type" | "trending";
+  count?: number;
+  badge?: string;
+}
+
+// ----------------------------------------------------
+// 4. NOTIFICATION SYSTEM
+// ----------------------------------------------------
+export type NotificationType =
+  | "new_order"
+  | "order_status"
+  | "low_stock"
+  | "payment_pending"
+  | "customer_registration"
+  | "account_approved"
+  | "order_confirmed"
+  | "order_packed"
+  | "order_dispatched"
+  | "order_delivered";
+
+export interface AppNotification {
+  id: string;
+  recipient_type: "admin" | "customer";
+  recipient_id?: string; // customer user id or "admin"
+  title: string;
+  message: string;
+  type: NotificationType;
+  reference_id?: string; // order_id, product_id, or user_id
+  data?: any;
+  is_read: boolean;
+  link_url?: string;
+  whatsapp_text?: string;
+  created_at: string;
+}
+
+// ----------------------------------------------------
+// 5. SECURITY & STAFF MANAGEMENT
+// ----------------------------------------------------
+export type AdminStaffRole = "super_admin" | "inventory_manager" | "sales_manager" | "accountant" | "order_manager";
+
+export interface StaffAccount {
+  id: string;
+  username: string;
+  full_name: string;
+  name?: string; // alias
+  email: string;
+  phone?: string;
+  role: AdminStaffRole;
+  is_active: boolean;
+  two_factor_enabled: boolean;
+  permissions: {
+    can_manage_prices: boolean;
+    can_manage_inventory: boolean;
+    can_manage_orders: boolean;
+    can_view_reports: boolean;
+    can_manage_users: boolean;
+    can_manage_marketing: boolean;
+  };
+  last_login?: string;
+  created_at: string;
+}
+
+export interface ActivityLogEntry {
+  id: string;
+  admin_name: string;
+  user_email?: string;
+  user_id?: string;
+  role: string;
+  action: string; // e.g. "Changed product price", "Dispatched order #1002"
+  target_type: "product" | "order" | "customer" | "pricing" | "inventory" | "settings";
+  entity_type?: string;
+  target_id?: string;
+  old_value?: string;
+  new_value?: string;
+  details?: any;
+  ip_address?: string;
+  created_at: string;
+}
+
+export interface LoginHistoryEntry {
+  id: string;
+  username: string;
+  user_email?: string;
+  role: string;
+  ip_address: string;
+  user_agent: string;
+  status: "success" | "failed";
+  timestamp: string;
+  created_at?: string;
+}
+
+// ----------------------------------------------------
+// 6. MARKETING FEATURES (COUPONS, REVIEWS, WISHLIST)
+// ----------------------------------------------------
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number; // e.g. 10 (%) or 500 (PKR)
+  min_order_amount?: number;
+  min_purchase?: number; // Alias for min_order_amount
+  max_discount_amount?: number;
+  max_discount?: number; // Alias for max_discount_amount
+  expiry_date?: string;
+  valid_from?: string;
+  valid_until?: string; // Alias for expiry_date
+  is_active: boolean;
+  usage_count: number;
+  max_uses?: number;
+  usage_limit?: number; // Alias for max_uses
+  applicable_tiers?: ("retail" | "technician" | "wholesale")[];
+}
+
+export interface ProductReview {
+  id: string;
+  product_id: string;
+  customer_id?: string;
+  customer_name?: string;
+  user_name?: string; // Alias for customer_name
+  user_email?: string;
+  shop_name?: string;
+  rating: number; // 1 to 5
+  review_text?: string;
+  comment?: string; // Alias for review_text
+  is_verified_buyer?: boolean;
+  verified_purchase?: boolean; // Alias for is_verified_buyer
+  is_approved: boolean;
+  created_at: string;
+}
+
+export interface WishlistItem {
+  id: string;
+  customer_id: string;
+  product_id: string;
+  product_name: string;
+  product_slug: string;
+  image_url?: string | null;
+  price: number;
+  created_at: string;
+}
+

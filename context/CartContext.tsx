@@ -1,16 +1,22 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
-import { CartItem, Product } from "@/lib/types";
+import { CartItem, Product, Coupon } from "@/lib/types";
+import { validateCoupon } from "@/lib/marketing";
 
 interface CartContextType {
   items: CartItem[];
   cartCount: number;
   cartSubtotal: number;
   deliveryCharges: number;
+  discountAmount: number;
+  appliedCoupon: Coupon | null;
+  couponError: string | null;
   cartTotal: number;
   orderNotes: string;
   setOrderNotes: (notes: string) => void;
+  applyCoupon: (code: string) => boolean;
+  removeCoupon: () => void;
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
@@ -31,6 +37,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
@@ -225,9 +233,51 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return 250;
   }, [cartSubtotal]);
 
+  const applyCoupon = (code: string): boolean => {
+    setCouponError(null);
+    let activeTier: "retail" | "technician" | "wholesale" = "retail";
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("zubair_customer_user");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const raw = (parsed.pricing_tier || parsed.role || "").toLowerCase().trim();
+          if (raw === "wholesale") activeTier = "wholesale";
+          else if (raw === "technician") activeTier = "technician";
+        }
+      } catch {}
+    }
+
+    const res = validateCoupon(code, cartSubtotal, activeTier);
+    if (!res.isValid) {
+      setCouponError(res.error || "Invalid coupon code.");
+      return false;
+    }
+
+    setAppliedCoupon(res.coupon || null);
+    return true;
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError(null);
+  };
+
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon || cartSubtotal === 0) return 0;
+    if (appliedCoupon.min_order_amount && cartSubtotal < appliedCoupon.min_order_amount) {
+      return 0;
+    }
+    if (appliedCoupon.discount_type === "percentage") {
+      const disc = Math.round((cartSubtotal * appliedCoupon.discount_value) / 100);
+      return appliedCoupon.max_discount_amount ? Math.min(disc, appliedCoupon.max_discount_amount) : disc;
+    }
+    return Math.min(cartSubtotal, appliedCoupon.discount_value);
+  }, [appliedCoupon, cartSubtotal]);
+
   const cartTotal = useMemo(() => {
-    return cartSubtotal + deliveryCharges;
-  }, [cartSubtotal, deliveryCharges]);
+    return Math.max(0, cartSubtotal + deliveryCharges - discountAmount);
+  }, [cartSubtotal, deliveryCharges, discountAmount]);
 
   return (
     <CartContext.Provider
@@ -236,6 +286,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cartCount,
         cartSubtotal,
         deliveryCharges,
+        discountAmount,
+        appliedCoupon,
+        couponError,
+        applyCoupon,
+        removeCoupon,
         cartTotal,
         orderNotes,
         setOrderNotes,

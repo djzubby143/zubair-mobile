@@ -12,6 +12,10 @@ import {
   CheckCircle2,
   Package,
   Lock,
+  Star,
+  MessageSquare,
+  Send,
+  Sparkles,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
@@ -19,7 +23,13 @@ import { resolveUserTier, sanitizeProductForTier } from "@/lib/pricingSecurity";
 import { getCustomProducts } from "@/lib/customProducts";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
-import { Product } from "@/lib/types";
+import { Product, ProductReview } from "@/lib/types";
+import {
+  getProductReviews,
+  addProductReview,
+  addRecentlyViewed,
+  getRecentlyViewed,
+} from "@/lib/marketing";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -31,6 +41,15 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Marketing states
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
+  const [newRating, setNewRating] = useState(5);
+  const [newReviewText, setNewReviewText] = useState("");
+  const [newReviewName, setNewReviewName] = useState(user?.full_name || "");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
 
   useEffect(() => {
     async function loadProduct() {
@@ -117,6 +136,39 @@ export default function ProductDetailPage() {
       loadProduct();
     }
   }, [slug, user]);
+
+  useEffect(() => {
+    if (product) {
+      addRecentlyViewed(product);
+      getProductReviews(product.id).then((r) => setReviews(r));
+      const recent = getRecentlyViewed().filter((p) => p.id !== product.id).slice(0, 4);
+      setRecentlyViewed(recent);
+    }
+  }, [product]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product || !newReviewText.trim()) return;
+    setReviewSubmitting(true);
+    try {
+      const created = await addProductReview({
+        product_id: product.id,
+        user_name: newReviewName.trim() || user?.full_name || "Valued Customer",
+        rating: newRating,
+        comment: newReviewText.trim(),
+        verified_purchase: !!user,
+        is_approved: true,
+      });
+      setReviews((prev) => [created, ...prev]);
+      setReviewSuccess(true);
+      setNewReviewText("");
+      setTimeout(() => setReviewSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const moq = product?.min_order_quantity && product.min_order_quantity > 0 ? product.min_order_quantity : 1;
   const productName = product?.name || "Mobile Spare Part";
@@ -432,6 +484,176 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Customer Reviews & Ratings Section */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+              <h2 className="text-lg font-black text-slate-900">Verified Customer Reviews & Feedback</h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Tested and reviewed by mobile technicians and repair shop owners across Pakistan.
+            </p>
+          </div>
+          <span className="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-700 rounded-lg">
+            {reviews.length} {reviews.length === 1 ? "Review" : "Reviews"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Reviews List (8 cols) */}
+          <div className="lg:col-span-8 space-y-4">
+            {reviews.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 border border-dashed rounded-xl">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-xs font-semibold">No reviews yet for this spare part.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Be the first to share your technician experience!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((r) => (
+                  <div key={r.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/60 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">{r.user_name}</span>
+                        {r.verified_purchase && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Verified Buyer
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(r.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-amber-400">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3.5 h-3.5 ${i < r.rating ? "fill-current" : "text-slate-300 fill-transparent"}`}
+                        />
+                      ))}
+                    </div>
+
+                    <p className="text-xs text-slate-700">{r.comment}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Submit Review Form (4 cols) */}
+          <div className="lg:col-span-4">
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <MessageSquare className="w-4 h-4 text-secondary" />
+                Leave Technician Feedback
+              </h3>
+
+              {reviewSuccess && (
+                <div className="p-2.5 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Review submitted successfully!
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitReview} className="space-y-2.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Your Rating</label>
+                  <div className="flex items-center gap-1.5 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        type="button"
+                        key={star}
+                        onClick={() => setNewRating(star)}
+                        className="cursor-pointer"
+                      >
+                        <Star
+                          className={`w-5 h-5 ${star <= newRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`}
+                        />
+                      </button>
+                    ))}
+                    <span className="text-xs font-bold text-slate-700 ml-2">{newRating} / 5</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Name / Shop Name</label>
+                  <input
+                    type="text"
+                    value={newReviewName}
+                    onChange={(e) => setNewReviewName(e.target.value)}
+                    placeholder="e.g. Aslam Telecom"
+                    className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Your Review *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={newReviewText}
+                    onChange={(e) => setNewReviewText(e.target.value)}
+                    placeholder="Display colors, touch fitting, flex durability..."
+                    className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={reviewSubmitting || !newReviewText.trim()}
+                  className="w-full py-2 bg-secondary hover:bg-secondary-dark text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Submit Review
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recently Viewed Products */}
+      {recentlyViewed.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-secondary" />
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+              Recently Viewed Spare Parts
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {recentlyViewed.map((rp) => (
+              <Link
+                key={rp.id}
+                href={`/product/${rp.slug || rp.id}`}
+                className="p-3 rounded-xl border border-slate-100 hover:border-slate-300 hover:shadow-sm transition-all group flex flex-col justify-between"
+              >
+                <div className="aspect-square bg-slate-50 rounded-lg overflow-hidden flex items-center justify-center p-2 mb-2">
+                  <img
+                    src={rp.image_url || "/placeholder.png"}
+                    alt={rp.name}
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800 line-clamp-2 group-hover:text-secondary">
+                    {rp.name}
+                  </p>
+                  <p className="text-xs font-black text-slate-900 mt-1">
+                    Rs. {(rp.retail_price || rp.price || 0).toLocaleString()}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

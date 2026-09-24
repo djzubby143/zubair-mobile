@@ -18,9 +18,12 @@ import {
   Sparkles,
   Tag,
   ArrowRight,
+  Heart,
+  Smartphone,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import AdvancedSearchBar from "@/components/AdvancedSearchBar";
+import NotificationDropdown from "@/components/NotificationDropdown";
 import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
 
@@ -381,6 +384,28 @@ export default function Header() {
             <PhoneCall className="w-3.5 h-3.5" />
             <span>03458032600</span>
           </a>
+
+          {/* Compatibility Engine Link */}
+          <Link
+            href="/compatibility"
+            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:text-[#dc2626] bg-slate-50 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
+            title="Search parts by phone model"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-[#dc2626]" />
+            <span>Phone Models</span>
+          </Link>
+
+          {/* Wishlist Link */}
+          <Link
+            href="/wishlist"
+            className="p-2 rounded-lg border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center bg-white shadow-2xs"
+            title="My Saved Wishlist"
+          >
+            <Heart className="w-4 h-4 text-slate-600 hover:text-rose-500" />
+          </Link>
+
+          {/* Notifications Dropdown */}
+          <NotificationDropdown recipientType="customer" />
 
           {/* Cart Icon Button */}
           <button

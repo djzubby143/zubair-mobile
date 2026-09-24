@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShoppingCart, Camera, Lock } from "lucide-react";
+import { ShoppingCart, Camera, Lock, Heart, Star } from "lucide-react";
 import { Product } from "@/lib/types";
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
+import { isInWishlist, toggleWishlistItem } from "@/lib/marketing";
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +17,26 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { isLoggedIn, user, loading: authLoading } = useAuth();
   const [isAdded, setIsAdded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isWished, setIsWished] = useState(false);
+
+  useEffect(() => {
+    const custId = user?.id || "guest-user";
+    setIsWished(isInWishlist(custId, product.id));
+
+    const handleWishlistUpdate = () => {
+      setIsWished(isInWishlist(custId, product.id));
+    };
+    window.addEventListener("zubair_wishlist_updated", handleWishlistUpdate);
+    return () => window.removeEventListener("zubair_wishlist_updated", handleWishlistUpdate);
+  }, [user, product.id]);
+
+  const handleToggleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const custId = user?.id || "guest-user";
+    const newState = toggleWishlistItem(custId, product);
+    setIsWished(newState);
+  };
 
   const isInStock = (product.stock_quantity ?? 0) > 0;
   const {
@@ -66,40 +87,66 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="bg-white rounded-lg border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden relative">
       {/* Product Image Area (Screenshot: light gray contain area or 'NO IMAGE AVAILABLE') */}
-      <Link
-        href={`/product/${product.slug}`}
-        className="block relative aspect-square w-full bg-[#f4f6f8] border-b border-slate-100 overflow-hidden group"
-      >
-        {minQty > 1 && (
-          <span className="absolute top-2 left-2 z-10 bg-amber-600 text-white text-[9.5px] font-black px-2 py-0.5 rounded-md shadow-xs tracking-wider uppercase">
-            Min: {minQty} pcs
-          </span>
-        )}
-        {displayImage ? (
-          <img
-            src={displayImage}
-            alt={product.name}
-            onError={() => setImgError(true)}
-            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          /* Exact 'NO IMAGE AVAILABLE' placeholder seen in screenshot */
-          <div className="w-full h-full flex flex-col items-center justify-center p-3 text-slate-400 select-none">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 border border-slate-300 rounded flex flex-col items-center justify-center bg-white/60 p-2 shadow-2xs">
-              <Camera className="w-7 h-7 sm:w-8 sm:h-8 text-slate-400 mb-1" />
-              <span className="text-[7.5px] font-black uppercase text-center text-slate-400 leading-tight">
-                NO IMAGE<br />AVAILABLE
-              </span>
+      <div className="relative aspect-square w-full bg-[#f4f6f8] border-b border-slate-100 overflow-hidden group">
+        <Link
+          href={`/product/${product.slug}`}
+          className="block w-full h-full"
+        >
+          {minQty > 1 && (
+            <span className="absolute top-2 left-2 z-10 bg-amber-600 text-white text-[9.5px] font-black px-2 py-0.5 rounded-md shadow-xs tracking-wider uppercase">
+              Min: {minQty} pcs
+            </span>
+          )}
+          {displayImage ? (
+            <img
+              src={displayImage}
+              alt={product.name}
+              onError={() => setImgError(true)}
+              className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-slate-400 select-none">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 border border-slate-300 rounded flex flex-col items-center justify-center bg-white/60 p-2 shadow-2xs">
+                <Camera className="w-7 h-7 sm:w-8 sm:h-8 text-slate-400 mb-1" />
+                <span className="text-[7.5px] font-black uppercase text-center text-slate-400 leading-tight">
+                  NO IMAGE<br />AVAILABLE
+                </span>
+              </div>
             </div>
-          </div>
-        )}
-      </Link>
+          )}
+        </Link>
 
-      {/* Product Info (Screenshot: Title, description, green price, Add to Cart) */}
+        {/* Wishlist Button */}
+        <button
+          type="button"
+          onClick={handleToggleWishlist}
+          className={`absolute top-2 right-2 z-10 p-1.5 rounded-full backdrop-blur-xs transition-all ${
+            isWished
+              ? "bg-rose-50 text-rose-600 border border-rose-200"
+              : "bg-white/80 text-slate-400 hover:text-rose-500 hover:bg-white"
+          }`}
+          title={isWished ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <Heart className={`w-3.5 h-3.5 ${isWished ? "fill-rose-500 text-rose-500" : ""}`} />
+        </button>
+      </div>
+
+      {/* Product Info */}
       <div className="p-3 sm:p-3.5 flex flex-col flex-1 justify-between space-y-2.5">
         <div className="space-y-1">
-          {/* Title: 2-line clamped uppercase bold (Screenshot Style) */}
+          {/* Quality Grade & Rating Bar */}
+          <div className="flex items-center justify-between text-[10px] text-slate-500 pb-0.5">
+            <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded text-[9.5px]">
+              {product.quality_grade || "Original"}
+            </span>
+            <span className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px]">
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              <span>5.0</span>
+            </span>
+          </div>
+
+          {/* Title */}
           <Link
             href={`/product/${product.slug}`}
             className="block text-slate-900 hover:text-[#dc2626] transition-colors"
@@ -112,7 +159,6 @@ export default function ProductCard({ product }: ProductCardProps) {
             </h3>
           </Link>
 
-          {/* Subtitle / Description (Screenshot: "No description available") */}
           <p className="text-[10px] text-slate-400 truncate">
             {product.short_description || "No description available"}
           </p>

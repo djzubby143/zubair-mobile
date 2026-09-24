@@ -20,8 +20,14 @@ import {
   UploadCloud,
   Boxes,
   BarChart3,
+  Tag,
+  Smartphone,
+  TrendingUp,
+  Percent,
+  ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import NotificationDropdown from "@/components/NotificationDropdown";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -82,8 +88,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Smart Pricing", href: "/admin/pricing", icon: Tag },
+    { name: "Compatibility", href: "/admin/compatibility", icon: Smartphone },
     { name: "Inventory", href: "/admin/inventory", icon: Boxes },
     { name: "Orders & Bills", href: "/admin/orders", icon: Receipt },
+    { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
+    { name: "Marketing", href: "/admin/marketing", icon: Percent },
+    { name: "Security & Staff", href: "/admin/security", icon: ShieldCheck },
     { name: "Reports & P&L", href: "/admin/reports", icon: BarChart3 },
     { name: "Hero Banner", href: "/admin/banner", icon: ImageIcon },
     { name: "Users", href: "/admin/users", icon: Users },
@@ -232,8 +243,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">{children}</div>
+      <main className="flex-1 overflow-y-auto">
+        {/* Admin Top Header Bar */}
+        <div className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+              <span className="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              ERP Core v2.0 Active
+            </span>
+            <span className="hidden sm:inline text-xs text-slate-400 font-medium">|</span>
+            <span className="hidden sm:inline text-xs text-slate-600 font-medium">Zubair Mobile Control Center</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <NotificationDropdown />
+            <div className="hidden sm:block text-right">
+              <p className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{userEmail}</p>
+              <p className="text-[10px] text-emerald-600 font-semibold uppercase">Super Admin</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">{children}</div>
+        </div>
       </main>
     </div>
   );

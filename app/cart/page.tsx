@@ -34,12 +34,19 @@ export default function CartPage() {
     cartSubtotal,
     deliveryCharges,
     cartTotal,
+    appliedCoupon,
+    discountAmount,
+    couponError,
+    applyCoupon,
+    removeCoupon,
     updateQuantity,
     removeFromCart,
     clearCart,
     isLoaded,
   } = useCart();
   const { isLoggedIn, user } = useAuth();
+
+  const [couponCodeInput, setCouponCodeInput] = useState("");
 
   // Customer Checkout Form State
   const [customerName, setCustomerName] = useState("");
@@ -516,6 +523,71 @@ export default function CartPage() {
                     {deliveryCharges === 0 ? "FREE (Rs. 5000+)" : `Rs. ${deliveryCharges}`}
                   </span>
                 </div>
+
+                {/* Coupon Code Voucher Entry */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span>Discount Voucher</span>
+                    {appliedCoupon && (
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-[11px] text-rose-600 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {appliedCoupon ? (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                        <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-300">
+                          {appliedCoupon.code}
+                        </span>
+                        <span>
+                          ({appliedCoupon.discount_type === "percentage" ? `${appliedCoupon.discount_value}% OFF` : `Rs. ${appliedCoupon.discount_value} OFF`})
+                        </span>
+                      </div>
+                      <span className="font-extrabold text-emerald-700">
+                        -Rs. {discountAmount.toLocaleString("en-PK")}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Coupon code (e.g. WELCOME500)"
+                        value={couponCodeInput}
+                        onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                        className="flex-1 text-xs font-mono font-bold uppercase p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-secondary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (couponCodeInput.trim()) {
+                            applyCoupon(couponCodeInput.trim());
+                            setCouponCodeInput("");
+                          }
+                        }}
+                        className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  )}
+
+                  {couponError && (
+                    <p className="text-[11px] font-semibold text-rose-600">{couponError}</p>
+                  )}
+                </div>
+
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-600 pt-1">
+                    <span>Coupon Savings:</span>
+                    <span>-Rs. {discountAmount.toLocaleString("en-PK")}</span>
+                  </div>
+                )}
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1 text-xs text-slate-500">
                   <p className="font-semibold text-[#111827]">Delivery Dispatch:</p>

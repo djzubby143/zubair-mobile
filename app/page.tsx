@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import HeroBanner from "@/components/HeroBanner";
+import FlashSaleBanner from "@/components/FlashSaleBanner";
 import { Product } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
@@ -342,7 +343,10 @@ function HomeContent() {
   };
 
   return (
-    <div className="max-w-[1700px] mx-auto px-2 sm:px-4 py-4">
+    <div className="max-w-[1700px] mx-auto px-2 sm:px-4 py-4 space-y-4">
+      {/* High-Impact Promotional Flash Sale Countdown Banner */}
+      <FlashSaleBanner />
+
       {/* Active category filter bar */}
       {selectedCategory !== "All" && (
         <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-2.5 flex items-center justify-between">

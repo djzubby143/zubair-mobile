@@ -21,6 +21,7 @@ export interface Order {
   total_items: number;
   total_amount: number;
   paid_amount?: number; // Amount customer has paid so far (for partial payments / khata)
+  payment_method?: string; // e.g. "cod", "jazzcash", "easypaisa", "bank"
   payment_status?: "unpaid" | "partial" | "paid"; // Payment status
   payment_notes?: string; // Optional payment transaction notes (e.g. JazzCash ref, Cargo COD balance)
   total_cost?: number; // Total Purchase Cost for Admin

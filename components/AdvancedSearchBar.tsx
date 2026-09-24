@@ -16,15 +16,23 @@ import {
   Sparkles,
   Lock,
 } from "lucide-react";
-import { Product } from "@/lib/types";
+import { Product, ParsedSearchIntent } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import {
   DEFAULT_CATALOG_PRODUCTS,
-  advancedSearchProducts,
 } from "@/lib/products";
+import {
+  aiSearchProducts,
+  getRecentSearches,
+  saveRecentSearch,
+  clearRecentSearches,
+  getSearchSuggestions,
+  POPULAR_SEARCHES,
+} from "@/lib/aiSearch";
 import { useCart } from "@/context/CartContext";
 import { useAuth, getEffectiveProductPrice } from "@/lib/auth";
 import { getCustomProducts, getDeletedProductKeys, isProductDeleted } from "@/lib/customProducts";
+import { History, TrendingUp, Zap } from "lucide-react";
 
 interface AdvancedSearchBarProps {
   className?: string;
@@ -45,6 +53,8 @@ export default function AdvancedSearchBar({
   const [isOpen, setIsOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>(DEFAULT_CATALOG_PRODUCTS);
   const [results, setResults] = useState<Product[]>([]);
+  const [detectedIntent, setDetectedIntent] = useState<ParsedSearchIntent | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [addedIds, setAddedIds] = useState<{ [id: string]: boolean }>({});
 
@@ -137,17 +147,23 @@ export default function AdvancedSearchBar({
     };
   }, []);
 
-  // Run smart search when query changes
+  // Load recent searches on mount
+  useEffect(() => {
+    setRecentSearches(getRecentSearches());
+  }, []);
+
+  // Run AI smart search when query changes
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
-      setIsOpen(false);
+      setDetectedIntent(null);
       setSelectedIndex(-1);
       return;
     }
 
-    const matches = advancedSearchProducts(query, products);
+    const { results: matches, intent } = aiSearchProducts(query, products);
     setResults(matches);
+    setDetectedIntent(intent);
     setIsOpen(true);
     setSelectedIndex(-1);
   }, [query, products]);
@@ -174,6 +190,18 @@ export default function AdvancedSearchBar({
       return;
     }
 
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (query.trim()) {
+        saveRecentSearch(query);
+        setRecentSearches(getRecentSearches());
+      }
+      if (selectedIndex >= 0 && selectedIndex < results.length) {
+        handleProductClick(results[selectedIndex]);
+      }
+      return;
+    }
+
     if (!isOpen || results.length === 0) return;
 
     if (e.key === "ArrowDown") {
@@ -182,11 +210,6 @@ export default function AdvancedSearchBar({
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (selectedIndex >= 0 && selectedIndex < results.length) {
-        handleProductClick(results[selectedIndex]);
-      }
     }
   };
 
@@ -216,6 +239,14 @@ export default function AdvancedSearchBar({
     }, 1800);
   };
 
+  const handleSelectSearchText = (text: string) => {
+    setQuery(text);
+    saveRecentSearch(text);
+    setRecentSearches(getRecentSearches());
+    setIsOpen(true);
+    inputRef.current?.focus();
+  };
+
   // WhatsApp Inquiry URL for unlisted or custom search requests
   const whatsappInquiryUrl = `https://wa.me/923458032600?text=${encodeURIComponent(
     `Assalam-o-Alaikum Zubair Mobile! Mujhe yeh spare part chahiye jo website par search kiya tha: "${query}"`
@@ -235,9 +266,7 @@ export default function AdvancedSearchBar({
           }
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => {
-            if (query.trim() && results.length > 0) setIsOpen(true);
-          }}
+          onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
           className={`w-full pl-9 pr-9 py-2 rounded-full border border-slate-300 focus:border-[#dc2626] bg-white focus:outline-none focus:ring-2 focus:ring-[#dc2626]/20 text-slate-800 placeholder:text-slate-400 shadow-2xs transition-all ${
             isMobile ? "text-xs" : "text-xs sm:text-sm"
@@ -264,21 +293,109 @@ export default function AdvancedSearchBar({
       {/* Floating Smart Search Dropdown */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-white rounded-2xl border-2 border-[#dc2626]/30 shadow-2xl overflow-hidden max-h-[85vh] sm:max-h-[520px] flex flex-col animate-in fade-in zoom-in-98 duration-100">
-          {/* Header Bar */}
-          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs">
-            <span className="font-bold text-slate-700 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#dc2626]" />
-              <span>
-                Found <strong>{results.length}</strong> matching parts for &quot;{query}&quot;
-              </span>
-            </span>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-[11px] text-slate-400 hover:text-slate-700 font-semibold"
-            >
-              ESC to close
-            </button>
-          </div>
+          {!query.trim() ? (
+            /* Zero-Query State: Recent Searches & Popular Searches */
+            <div className="p-4 space-y-4">
+              {recentSearches.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Recent Searches</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearRecentSearches();
+                        setRecentSearches([]);
+                      }}
+                      className="text-[10px] text-slate-400 hover:text-[#dc2626]"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recentSearches.map((term, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleSelectSearchText(term)}
+                        className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-full transition-colors font-medium flex items-center gap-1"
+                      >
+                        <Search className="w-3 h-3 text-slate-400" />
+                        <span>{term}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                  <TrendingUp className="w-3.5 h-3.5 text-[#dc2626]" />
+                  <span>Popular Mobile Parts Searches</span>
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {POPULAR_SEARCHES.map((pop, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectSearchText(pop)}
+                      className="text-xs bg-red-50/60 hover:bg-red-100 text-red-800 border border-red-200/60 px-3 py-1 rounded-full transition-colors font-medium"
+                    >
+                      {pop}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Header Bar */}
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#dc2626]" />
+                  <span>
+                    Found <strong>{results.length}</strong> matching parts for &quot;{query}&quot;
+                  </span>
+                </span>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-[11px] text-slate-400 hover:text-slate-700 font-semibold"
+                >
+                  ESC to close
+                </button>
+              </div>
+
+              {/* AI Detected Intent Banner */}
+              {detectedIntent && (detectedIntent.brand || detectedIntent.model || detectedIntent.partType) && (
+                <div className="px-4 py-2 bg-red-50/60 border-b border-red-100 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="font-bold text-[#dc2626] flex items-center gap-1">
+                    <Zap className="w-3 h-3 fill-[#dc2626]" />
+                    <span>AI Detected:</span>
+                  </span>
+                  {detectedIntent.brand && (
+                    <span className="bg-white border border-red-200 text-slate-800 px-2 py-0.5 rounded-full font-bold">
+                      Brand: {detectedIntent.brand}
+                    </span>
+                  )}
+                  {detectedIntent.model && (
+                    <span className="bg-white border border-red-200 text-slate-800 px-2 py-0.5 rounded-full font-bold">
+                      Model: {detectedIntent.model}
+                    </span>
+                  )}
+                  {detectedIntent.partType && (
+                    <span className="bg-white border border-red-200 text-slate-800 px-2 py-0.5 rounded-full font-bold">
+                      Part: {detectedIntent.partType}
+                    </span>
+                  )}
+                  {detectedIntent.qualityGrade && (
+                    <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                      {detectedIntent.qualityGrade}
+                    </span>
+                  )}
+                </div>
+              )}
 
           {/* Results List or Empty State */}
           <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
@@ -469,6 +586,8 @@ export default function AdvancedSearchBar({
                 <span>Ask on WhatsApp (03458032600)</span>
               </a>
             </div>
+          )}
+          </>
           )}
         </div>
       )}
