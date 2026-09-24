@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aiSearchProducts, getSmartSearchSuggestions } from "@/lib/aiSearch";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
-import { getCustomProducts } from "@/lib/customProducts";
+import { getCustomProducts, getDeletedProductKeys, isProductDeleted } from "@/lib/customProducts";
 import { resolveServerTier, sanitizeProductListForTier } from "@/lib/pricingSecurity";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
@@ -35,14 +35,39 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 1. Fetch products
-    let products: any[] = [];
-    const { data } = await supabase.from("products").select("*, category:categories(*)");
-    if (data && data.length > 0) {
-      products = data;
-    } else {
-      products = [...getCustomProducts(), ...DEFAULT_CATALOG_PRODUCTS];
+    const deleted = getDeletedProductKeys();
+    const productMap = new Map<string, any>();
+
+    // 1. Base catalog products
+    for (const p of DEFAULT_CATALOG_PRODUCTS) {
+      if (!isProductDeleted(p, deleted)) {
+        const key = (p.sku || p.slug || p.id).toLowerCase();
+        productMap.set(key, p);
+      }
     }
+
+    // 2. Custom products
+    for (const p of getCustomProducts()) {
+      if (!isProductDeleted(p, deleted)) {
+        const key = (p.sku || p.slug || p.id).toLowerCase();
+        productMap.set(key, p);
+      }
+    }
+
+    // 3. Remote Supabase products
+    try {
+      const { data } = await supabase.from("products").select("*, category:categories(*)");
+      if (data && data.length > 0) {
+        for (const p of data) {
+          if (!isProductDeleted(p, deleted)) {
+            const key = (p.sku || p.slug || p.id).toLowerCase();
+            productMap.set(key, p);
+          }
+        }
+      }
+    } catch {}
+
+    const products = Array.from(productMap.values());
 
     // 2. Sanitize for tier strictly preventing price leakage
     const sanitizedCatalog = sanitizeProductListForTier(products, tier);

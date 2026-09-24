@@ -36,12 +36,16 @@ export async function POST(req: NextRequest) {
 
     const cleanName = body.name.trim();
     const cleanSku = body.sku.trim().toUpperCase();
-    const numPrice = Number(body.price) || 0;
-    const numStock = Math.max(0, Number(body.stock_quantity) || 0);
 
-    if (numPrice < 0) {
+    if (body.price !== undefined && Number(body.price) < 0) {
       return NextResponse.json({ success: false, error: "Price cannot be negative." }, { status: 400 });
     }
+    if (body.stock_quantity !== undefined && Number(body.stock_quantity) < 0) {
+      return NextResponse.json({ success: false, error: "Stock quantity cannot be negative." }, { status: 400 });
+    }
+
+    const numPrice = Number(body.price) || 0;
+    const numStock = Number(body.stock_quantity) || 0;
 
     const customProducts = getServerCustomProducts();
 

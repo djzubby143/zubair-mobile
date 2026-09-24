@@ -36,7 +36,6 @@ export interface Product {
   featured?: boolean;
   is_active?: boolean;
 
-  // Mobile Spare Part Details
   brand?: string; // e.g. Samsung, Vivo, Oppo, Infinix, Tecno, Xiaomi, Realme, Apple
   model?: string; // e.g. A12, Y20, F11, Spark 6
   compatible_models?: string; // e.g. "A125F, A127F, M127F"

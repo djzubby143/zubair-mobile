@@ -1,5 +1,13 @@
 [
   {
+    "name": "Negative Stock Product",
+    "sku": "ZB-TEST-NEG-S",
+    "price": 200,
+    "stock_quantity": 0,
+    "min_order_quantity": 1,
+    "updated_at": "2026-09-24T17:02:15.543Z"
+  },
+  {
     "id": "p-sdk-sidekey-infinix-x683",
     "name": "Sidekey Infinix X683",
     "slug": "sidekey-infinix-x683",

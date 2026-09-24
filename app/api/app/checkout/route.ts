@@ -33,7 +33,11 @@ export async function POST(req: NextRequest) {
       idempotency_key,
     } = body;
 
-    if (!customer_name || !customerPhoneValid(customer_phone) || !items || !Array.isArray(items) || items.length === 0) {
+    const resolvedName = (customer_name || body.customer?.name || body.customer?.full_name || "").trim();
+    const resolvedPhone = (customer_phone || body.customer?.phone || "").trim();
+    const resolvedAddress = (customer_address || body.customer?.address || body.customer?.city || "Shop Pickup").trim();
+
+    if (!resolvedName || !customerPhoneValid(resolvedPhone) || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, error: "Customer name, valid phone number (min 10 digits), and cart items are required." },
         { status: 400 }
@@ -132,9 +136,9 @@ export async function POST(req: NextRequest) {
     const newOrder: Order & { idempotency_key?: string } = {
       id: clientKey || `ord-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       order_number: orderNumber,
-      customer_name: customer_name.trim(),
-      customer_phone: customer_phone.trim(),
-      customer_address: (customer_address || "Shop Pickup").trim(),
+      customer_name: resolvedName,
+      customer_phone: resolvedPhone,
+      customer_address: resolvedAddress,
       order_notes: (order_notes || "").trim(),
       items: verifiedItems,
       total_items: verifiedItems.reduce((sum: number, it: any) => sum + it.quantity, 0),
@@ -192,9 +196,9 @@ export async function POST(req: NextRequest) {
       recipient_type: "admin",
       type: "new_order",
       title: `New Order Received: #${orderNumber}`,
-      message: `${customer_name} placed order #${orderNumber} for Rs. ${finalTotal.toLocaleString()} (${verifiedItems.length} items).`,
+      message: `${resolvedName} placed order #${orderNumber} for Rs. ${finalTotal.toLocaleString()} (${verifiedItems.length} items).`,
       reference_id: newOrder.id,
-      data: { order_id: newOrder.id, order_number: orderNumber, total: finalTotal, phone: customer_phone },
+      data: { order_id: newOrder.id, order_number: orderNumber, total: finalTotal, phone: resolvedPhone },
     });
 
     return NextResponse.json({
@@ -202,7 +206,7 @@ export async function POST(req: NextRequest) {
       message: "Order placed successfully!",
       order: newOrder,
       whatsapp_link: `https://wa.me/923458032600?text=${encodeURIComponent(
-        `*New Mobile App Order #${orderNumber}*\nName: ${customer_name}\nTotal: Rs. ${finalTotal}\nItems: ${verifiedItems.length}`
+        `*New Mobile App Order #${orderNumber}*\nName: ${resolvedName}\nTotal: Rs. ${finalTotal}\nItems: ${verifiedItems.length}`
       )}`,
     });
   } catch (err: any) {

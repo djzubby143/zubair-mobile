@@ -21,17 +21,39 @@ export async function GET(req: NextRequest) {
     // Securely resolve pricing tier from caller's verified credentials
     const tier = await resolveServerTier(req);
 
-    // 1. Fetch from Supabase
-    let products: any[] = [];
-    const { data, error } = await supabase.from("products").select("*, category:categories(*)");
-    if (!error && data && data.length > 0) {
-      products = data;
-    } else {
-      const deleted = getDeletedProductKeys();
-      const custom = getCustomProducts().filter((p) => !isProductDeleted(p, deleted));
-      const catalog = DEFAULT_CATALOG_PRODUCTS.filter((p) => !isProductDeleted(p, deleted));
-      products = [...custom, ...catalog];
+    const deleted = getDeletedProductKeys();
+    const productMap = new Map<string, any>();
+
+    // 1. Base catalog products
+    for (const p of DEFAULT_CATALOG_PRODUCTS) {
+      if (!isProductDeleted(p, deleted)) {
+        const key = (p.sku || p.slug || p.id).toLowerCase();
+        productMap.set(key, p);
+      }
     }
+
+    // 2. Local/server custom products
+    for (const p of getCustomProducts()) {
+      if (!isProductDeleted(p, deleted)) {
+        const key = (p.sku || p.slug || p.id).toLowerCase();
+        productMap.set(key, p);
+      }
+    }
+
+    // 3. Remote Supabase products
+    try {
+      const { data, error } = await supabase.from("products").select("*, category:categories(*)");
+      if (!error && data && data.length > 0) {
+        for (const p of data) {
+          if (!isProductDeleted(p, deleted)) {
+            const key = (p.sku || p.slug || p.id).toLowerCase();
+            productMap.set(key, p);
+          }
+        }
+      }
+    } catch {}
+
+    const products = Array.from(productMap.values());
 
     // 2. Strict role-based pricing filter - unauthorized prices are stripped completely
     const sanitized = sanitizeProductListForTier(products, tier);
