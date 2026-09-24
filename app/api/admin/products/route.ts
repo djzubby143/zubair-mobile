@@ -34,20 +34,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Name and SKU are required." }, { status: 400 });
     }
 
+    const cleanName = body.name.trim();
+    const cleanSku = body.sku.trim().toUpperCase();
+    const numPrice = Number(body.price) || 0;
+    const numStock = Math.max(0, Number(body.stock_quantity) || 0);
+
+    if (numPrice < 0) {
+      return NextResponse.json({ success: false, error: "Price cannot be negative." }, { status: 400 });
+    }
+
     const customProducts = getServerCustomProducts();
-    const idx = customProducts.findIndex(
-      (p) =>
-        (p.id && p.id === body.id) ||
-        (p.sku && p.sku.toLowerCase() === body.sku.toLowerCase()) ||
-        (p.slug && p.slug.toLowerCase() === body.slug.toLowerCase())
+
+    // Check SKU Uniqueness against other products
+    const duplicateSku = customProducts.find(
+      (p) => p.id !== body.id && p.sku && p.sku.trim().toUpperCase() === cleanSku
+    ) || DEFAULT_CATALOG_PRODUCTS.find(
+      (p) => p.id !== body.id && p.sku && p.sku.trim().toUpperCase() === cleanSku
     );
+
+    if (duplicateSku) {
+      return NextResponse.json(
+        { success: false, error: `SKU "${cleanSku}" is already in use by product "${duplicateSku.name}".` },
+        { status: 409 }
+      );
+    }
+
+    const idx = customProducts.findIndex((p) => p.id && p.id === body.id);
+
+    const sanitizedProduct: Product = {
+      ...body,
+      name: cleanName,
+      sku: cleanSku,
+      price: numPrice,
+      stock_quantity: numStock,
+      min_order_quantity: Math.max(1, Number(body.min_order_quantity) || 1),
+      updated_at: new Date().toISOString(),
+    };
 
     let updatedList: Product[];
     if (idx !== -1) {
       updatedList = [...customProducts];
-      updatedList[idx] = { ...updatedList[idx], ...body, updated_at: new Date().toISOString() };
+      updatedList[idx] = { ...updatedList[idx], ...sanitizedProduct };
     } else {
-      updatedList = [body, ...customProducts];
+      updatedList = [sanitizedProduct, ...customProducts];
     }
 
     saveServerCustomProducts(updatedList);

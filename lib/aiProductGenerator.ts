@@ -92,13 +92,14 @@ Respond strictly in JSON format with two keys:
         const data = await res.json();
         const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawJson) {
-          const parsed = JSON.parse(rawJson);
+          const cleanedJson = rawJson.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+          const parsed = JSON.parse(cleanedJson);
           return {
-            shortDescription: parsed.shortDescription || "",
-            description: parsed.description || "",
-            keyFeatures: parsed.keyFeatures || [],
+            shortDescription: typeof parsed.shortDescription === "string" ? parsed.shortDescription.trim() : "",
+            description: typeof parsed.description === "string" ? parsed.description.trim() : "",
+            keyFeatures: Array.isArray(parsed.keyFeatures) ? parsed.keyFeatures : [],
             suggestedTitle: formatAITitle(input),
-            suggestedSku: `ZB-${brand.slice(0, 3).toUpperCase()}-${model.slice(0, 4).toUpperCase()}-${partType.slice(0, 3).toUpperCase()}`,
+            suggestedSku: `ZB-${brand.slice(0, 3).toUpperCase()}-${model.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, "") || "GEN"}-${partType.slice(0, 3).toUpperCase()}`,
           };
         }
       }

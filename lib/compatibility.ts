@@ -282,24 +282,29 @@ export function getCompatiblePartsForDevice(
     // Determine Part Category
     const pType = (product.part_type || product.category?.name || "").toLowerCase();
 
-    if (pType.includes("lcd") || pType.includes("unit") || pType.includes("screen") || pName.includes("lcd") || pName.includes("unit")) {
+    if (pType.includes("lcd") || pType.includes("display") || pType.includes("screen") || pName.includes("lcd") || pName.includes("unit") || pName.includes("display")) {
       categoryMap["LCD Unit"].push(product);
     } else if (pType.includes("battery") || pName.includes("battery") || pName.includes("cell")) {
       categoryMap["Battery"].push(product);
-    } else if (pType.includes("charging") || pType.includes("flex") || pName.includes("charging") || pName.includes("pin flex")) {
+    } else if (pType.includes("charging") || pType.includes("flex") || pName.includes("charging") || pName.includes("pin flex") || pName.includes("patta")) {
       categoryMap["Charging Flex"].push(product);
     } else if (pType.includes("camera") || pName.includes("camera") || pName.includes("lens")) {
       categoryMap["Camera"].push(product);
-    } else if (pType.includes("glass") || pType.includes("oca") || pName.includes("glass") || pName.includes("touch")) {
+    } else if (pType.includes("glass") || pType.includes("oca") || pName.includes("glass") || pName.includes("touch") || pName.includes("sheesha")) {
       categoryMap["OCA Glass"].push(product);
     } else if (pType.includes("key") || pType.includes("button") || pName.includes("side key") || pName.includes("volume")) {
       categoryMap["Side Key"].push(product);
-    } else if (pType.includes("ic") || pName.includes("power ic") || pName.includes("charging ic")) {
+    } else if (pType.includes("ic") || pName.includes("power ic") || pName.includes("charging ic") || pName.includes("audio ic")) {
       categoryMap["IC Parts"].push(product);
-    } else if (pType.includes("housing") || pType.includes("body") || pName.includes("back cover") || pName.includes("body")) {
+    } else if (pType.includes("housing") || pType.includes("body") || pName.includes("back cover") || pName.includes("casing")) {
       categoryMap["Housing / Body"].push(product);
+    } else if (pType.includes("speaker") || pType.includes("ringer") || pName.includes("speaker") || pName.includes("ringer") || pName.includes("earpiece")) {
+      categoryMap["Speaker / Ringer"].push(product);
     } else {
-      categoryMap["LCD Unit"].push(product);
+      // Default to LCD Unit only if name/type has screen/folder/front clues
+      if (pName.includes("folder") || pName.includes("combo") || pName.includes("panel")) {
+        categoryMap["LCD Unit"].push(product);
+      }
     }
   }
 
@@ -350,18 +355,56 @@ export function getDeviceParts(
 }
 
 export function registerDeviceModel(device: CompatibilityDevice): CompatibilityDevice {
+  const modelName = (device.model || device.model_name || "Device").trim();
+  const brandName = (device.brand || "Generic").trim();
+
   const newDev: CompatibilityDevice = {
     ...device,
-    model: device.model || device.model_name || "Device",
-    model_name: device.model_name || device.model,
-    compatible_models_alias: device.compatible_models_alias || device.aliases || [],
+    brand: brandName,
+    model: modelName,
+    model_name: modelName,
+    compatible_models_alias: Array.from(
+      new Set([
+        ...(device.compatible_models_alias || []),
+        ...(device.aliases || []),
+        modelName,
+      ])
+    ).filter(Boolean),
   };
-  DEFAULT_COMPATIBILITY_DEVICES.unshift(newDev);
+
+  // Prevent duplicate device records: check if device exists
+  const existingIdx = DEFAULT_COMPATIBILITY_DEVICES.findIndex(
+    (d) =>
+      d.brand.toLowerCase() === brandName.toLowerCase() &&
+      d.model.toLowerCase() === modelName.toLowerCase()
+  );
+
+  if (existingIdx !== -1) {
+    DEFAULT_COMPATIBILITY_DEVICES[existingIdx] = {
+      ...DEFAULT_COMPATIBILITY_DEVICES[existingIdx],
+      ...newDev,
+    };
+  } else {
+    DEFAULT_COMPATIBILITY_DEVICES.unshift(newDev);
+  }
+
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_COMPATIBILITY);
-      const list = stored ? JSON.parse(stored) : DEFAULT_COMPATIBILITY_DEVICES;
-      localStorage.setItem(STORAGE_KEY_COMPATIBILITY, JSON.stringify([newDev, ...list]));
+      let list: CompatibilityDevice[] = stored ? JSON.parse(stored) : [...DEFAULT_COMPATIBILITY_DEVICES];
+      const localIdx = list.findIndex(
+        (d) =>
+          d.brand.toLowerCase() === brandName.toLowerCase() &&
+          d.model.toLowerCase() === modelName.toLowerCase()
+      );
+      if (localIdx !== -1) {
+        list[localIdx] = { ...list[localIdx], ...newDev };
+      } else {
+        list.unshift(newDev);
+      }
+      localStorage.setItem(STORAGE_KEY_COMPATIBILITY, JSON.stringify(list));
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("zubair_compatibility_updated"));
     } catch {}
   }
   return newDev;

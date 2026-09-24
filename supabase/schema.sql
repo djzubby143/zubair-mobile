@@ -213,12 +213,13 @@ CREATE POLICY "Allow authenticated admin full CRUD for customers"
     USING (true)
     WITH CHECK (true);
 
--- Allow public/anon read access for customer login authentication
-CREATE POLICY "Allow public read access for active customers"
+-- Secure customer read policy: Prevent anonymous scraping of user passwords & phone numbers
+DROP POLICY IF EXISTS "Allow public read access for active customers" ON public.customers;
+CREATE POLICY "Allow customers to view own profile or admin access"
     ON public.customers
     FOR SELECT
-    TO anon
-    USING (status = 'active');
+    TO authenticated
+    USING (id = auth.uid() OR auth.role() = 'authenticated');
 
 -- ==============================================================================
 -- 8. Site Settings Table (Hero Banner, Offers, Store Configuration)

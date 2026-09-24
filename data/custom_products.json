@@ -1,1 +1,64 @@
-[]
+[
+  {
+    "id": "p-sdk-sidekey-infinix-x683",
+    "name": "Sidekey Infinix X683",
+    "slug": "sidekey-infinix-x683",
+    "sku": "ZB-SDK-INFINIX-X683",
+    "category_id": "f1f0fb31-2b9b-4666-9149-ea669e417a8e",
+    "category": {
+      "id": "f1f0fb31-2b9b-4666-9149-ea669e417a8e",
+      "name": "Sidekey",
+      "slug": "sidekey"
+    },
+    "price": 74,
+    "wholesale_price": 74,
+    "technician_price": 200,
+    "retail_price": 300,
+    "purchase_price": 55,
+    "min_order_quantity": 1,
+    "stock_quantity": 10,
+    "short_description": "Mobile spare part product",
+    "description": null,
+    "image_url": "/images/sidekey-placeholder.svg",
+    "is_active": true,
+    "featured": false,
+    "brand": "Samsung",
+    "part_type": "Charging Flex",
+    "quality_grade": "Original",
+    "warranty": "No Warranty",
+    "min_stock_level": 5,
+    "created_at": "2026-09-24T15:43:00.254Z",
+    "updated_at": "2026-09-24T15:43:00.254Z"
+  },
+  {
+    "id": "p-sdk-sidekey-g530",
+    "name": "side key G530",
+    "slug": "sidekey-g530",
+    "sku": "ZB-SDK-G530",
+    "category_id": "f1f0fb31-2b9b-4666-9149-ea669e417a8e",
+    "category": {
+      "id": "f1f0fb31-2b9b-4666-9149-ea669e417a8e",
+      "name": "Sidekey",
+      "slug": "sidekey"
+    },
+    "price": 75,
+    "wholesale_price": 75,
+    "technician_price": 200,
+    "retail_price": 300,
+    "purchase_price": 55,
+    "min_order_quantity": 1,
+    "stock_quantity": 20,
+    "short_description": "Mobile spare part product",
+    "description": null,
+    "image_url": "/images/sidekey-placeholder.svg",
+    "is_active": true,
+    "featured": false,
+    "brand": "Samsung",
+    "part_type": "Side Key",
+    "quality_grade": "Original",
+    "warranty": "No Warranty",
+    "min_stock_level": 5,
+    "created_at": "2026-09-24T15:42:30.646Z",
+    "updated_at": "2026-09-24T15:42:30.646Z"
+  }
+]

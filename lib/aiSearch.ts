@@ -57,9 +57,11 @@ const ROMAN_URDU_STOPWORDS = new Set([
   "ki",
   "ke",
   "ko",
+  "k",
   "wala",
   "wali",
   "wale",
+  "waly",
   "chahiye",
   "mil",
   "jaye",
@@ -72,10 +74,6 @@ const ROMAN_URDU_STOPWORDS = new Set([
   "rate",
   "price",
   "kya",
-  "original",
-  "orignal",
-  "copy",
-  "china",
   "best",
   "for",
   "in",
@@ -99,12 +97,8 @@ export function parseSearchIntent(rawQuery: string): ParsedSearchIntent {
   const cleanTokens: string[] = [];
 
   for (const token of rawTokens) {
-    if (ROMAN_URDU_STOPWORDS.has(token)) {
-      continue;
-    }
-
-    // Check Quality
-    if (token === "original" || token === "orig" || token === "og") {
+    // Check Quality FIRST before stopwords
+    if (token === "original" || token === "orignal" || token === "orig" || token === "og") {
       detectedQuality = "Original";
       continue;
     }
@@ -112,8 +106,12 @@ export function parseSearchIntent(rawQuery: string): ParsedSearchIntent {
       detectedQuality = "OEM";
       continue;
     }
-    if (token === "copy") {
+    if (token === "copy" || token === "china" || token === "local") {
       detectedQuality = "Copy";
+      continue;
+    }
+
+    if (ROMAN_URDU_STOPWORDS.has(token)) {
       continue;
     }
 
@@ -217,26 +215,48 @@ export function aiSearchProducts(query: string, allProducts: Product[]): {
     if (sku.includes(cleanQ)) score += 120;
 
     // 2. Intent matching
-    if (intent.brand && (brand.includes(intent.brand.toLowerCase()) || name.includes(intent.brand.toLowerCase()))) {
-      score += 40;
+    let brandMatches = false;
+    let modelMatches = false;
+    let partMatches = false;
+    let qualityMatches = false;
+
+    if (intent.brand) {
+      const bLower = intent.brand.toLowerCase();
+      if (brand.includes(bLower) || name.includes(bLower)) {
+        score += 40;
+        brandMatches = true;
+      } else if (brand && brand !== bLower) {
+        // Query explicitly wanted this brand, but product is a different brand
+        score -= 50;
+      }
     }
 
     if (intent.model) {
       const mLower = intent.model.toLowerCase();
       if (model.includes(mLower) || name.includes(mLower) || comp.includes(mLower) || sku.includes(mLower)) {
         score += 50;
+        modelMatches = true;
       }
     }
 
     if (intent.partType) {
       const syns = PART_SYNONYMS[intent.partType] || [];
       const matchesPart = syns.some((s) => name.includes(s) || partType.includes(s));
-      if (matchesPart) score += 45;
+      if (matchesPart) {
+        score += 50;
+        partMatches = true;
+      }
     }
 
     if (intent.qualityGrade && grade.includes(intent.qualityGrade.toLowerCase())) {
-      score += 25;
+      score += 40;
+      qualityMatches = true;
     }
+
+    // Compounding multi-attribute bonus (e.g. brand + model + part)
+    if (brandMatches && partMatches) score += 60;
+    if (brandMatches && modelMatches && partMatches) score += 100;
+    if (qualityMatches && (brandMatches || partMatches)) score += 40;
 
     // 3. Token matches
     for (const t of intent.tokens) {

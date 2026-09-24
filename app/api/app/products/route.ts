@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStoredCustomerUser } from "@/lib/auth";
-import { resolveUserTier, sanitizeProductListForTier } from "@/lib/pricingSecurity";
+import { resolveServerTier, sanitizeProductListForTier } from "@/lib/pricingSecurity";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 import { getCustomProducts, getDeletedProductKeys, isProductDeleted } from "@/lib/customProducts";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const tierParam = searchParams.get("tier");
-    const tier = (tierParam === "wholesale" || tierParam === "technician" || tierParam === "retail")
-      ? tierParam
-      : "retail";
+    const ip = getClientIp(req.headers);
+    const rl = checkRateLimit(`prods-${ip}`, { limit: 100, windowMs: 60000 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests. Please slow down." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
+    // Securely resolve pricing tier from caller's verified credentials
+    const tier = await resolveServerTier(req);
 
     // 1. Fetch from Supabase
     let products: any[] = [];
@@ -27,7 +33,7 @@ export async function GET(req: NextRequest) {
       products = [...custom, ...catalog];
     }
 
-    // 2. Strict role-based pricing filter
+    // 2. Strict role-based pricing filter - unauthorized prices are stripped completely
     const sanitized = sanitizeProductListForTier(products, tier);
 
     return NextResponse.json({

@@ -199,8 +199,18 @@ export async function saveOrder(order: Order): Promise<void> {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_ORDERS);
       const orders: Order[] = stored ? JSON.parse(stored) : [];
-      // Prepend so newest is first
-      orders.unshift(orderWithProfit);
+
+      // Deduplicate: If order already exists by ID or Order Number, update it instead of prepending
+      const existingIdx = orders.findIndex(
+        (o) => o.id === orderWithProfit.id || o.order_number === orderWithProfit.order_number
+      );
+
+      if (existingIdx !== -1) {
+        orders[existingIdx] = { ...orders[existingIdx], ...orderWithProfit };
+      } else {
+        orders.unshift(orderWithProfit);
+      }
+
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orders));
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new CustomEvent("zubair_orders_updated", { detail: orders }));

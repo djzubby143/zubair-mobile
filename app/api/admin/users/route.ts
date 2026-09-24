@@ -129,7 +129,14 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ success: true, users: mergedList });
+    // Sanitize users: Never expose passwords in API responses
+    const sanitizedUsers = mergedList.map((u) => {
+      const copy = { ...u };
+      delete (copy as any).password;
+      return copy;
+    });
+
+    return NextResponse.json({ success: true, users: sanitizedUsers });
   } catch (err: unknown) {
     const error = err as Error;
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

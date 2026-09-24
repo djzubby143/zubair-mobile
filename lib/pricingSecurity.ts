@@ -101,3 +101,67 @@ export function sanitizeProductForTier(product: Product, tier: RoleOrTier): Prod
 export function sanitizeProductListForTier(products: Product[], tier: RoleOrTier): Product[] {
   return products.map((p) => sanitizeProductForTier(p, tier));
 }
+
+/**
+ * Securely resolve pricing tier from incoming NextRequest headers/tokens.
+ * CRITICAL: Prevents unauthorized callers from passing ?tier=wholesale or ?tier=technician
+ * to leak restricted B2B wholesale prices.
+ */
+export async function resolveServerTier(req: any): Promise<RoleOrTier> {
+  try {
+    const authHeader = req.headers.get("authorization") || "";
+    const requestedTier = (req.nextUrl?.searchParams?.get("tier") || "").toLowerCase().trim();
+
+    // If no auth token provided, caller is an unauthenticated guest: STRICTLY RETAIL
+    if (!authHeader.startsWith("Bearer ")) {
+      return "retail";
+    }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) return "retail";
+
+    // Dynamic import to avoid circular dependencies
+    const { supabase } = await import("@/lib/supabase");
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authData?.user) {
+      return "retail";
+    }
+
+    const user = authData.user;
+
+    // Check if admin
+    const isAdmin =
+      user.email === "admin@zubairmobile.com" ||
+      user.email === "zubair@zubairmobile.pk" ||
+      user.user_metadata?.role === "admin";
+
+    if (isAdmin) {
+      if (requestedTier === "admin" || requestedTier === "wholesale" || requestedTier === "technician") {
+        return requestedTier as RoleOrTier;
+      }
+      return "admin";
+    }
+
+    // Lookup customer record in Supabase or server store
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("pricing_tier, role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const allowedTier = (customer?.pricing_tier || customer?.role || "retail").toLowerCase();
+
+    if (allowedTier === "wholesale") {
+      return requestedTier === "retail" ? "retail" : "wholesale";
+    }
+    if (allowedTier === "technician") {
+      return requestedTier === "retail" ? "retail" : "technician";
+    }
+
+    return "retail";
+  } catch (err) {
+    console.warn("Notice in resolveServerTier:", err);
+    return "retail";
+  }
+}

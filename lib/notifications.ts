@@ -91,9 +91,25 @@ export async function getNotifications(recipientType?: "admin" | "customer", rec
 export async function createNotification(
   payload: Omit<AppNotification, "id" | "created_at" | "is_read" | "recipient_type"> & { recipient_type?: "admin" | "customer" }
 ): Promise<AppNotification> {
+  // Deduplication check: Do not re-create if exact type + reference_id exists
+  if (payload.reference_id && typeof window !== "undefined") {
+    try {
+      const existing = await getNotifications();
+      const duplicate = existing.find(
+        (n) =>
+          n.type === payload.type &&
+          n.reference_id === payload.reference_id &&
+          n.recipient_type === (payload.recipient_type || "admin")
+      );
+      if (duplicate) {
+        return duplicate;
+      }
+    } catch {}
+  }
+
   const newNotif: AppNotification = {
     id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    recipient_type: "admin",
+    recipient_type: payload.recipient_type || "admin",
     ...payload,
     is_read: false,
     created_at: new Date().toISOString(),
@@ -115,6 +131,26 @@ export async function createNotification(
   }
 
   return newNotif;
+}
+
+/**
+ * Automatically trigger low stock alert
+ */
+export async function triggerLowStockNotification(
+  productId: string,
+  productName: string,
+  currentStock: number,
+  threshold: number = 5
+): Promise<void> {
+  await createNotification({
+    recipient_type: "admin",
+    title: `Low Stock Warning: ${productName}`,
+    message: `Stock for "${productName}" is down to ${currentStock} units (Threshold: ${threshold}). Please arrange restock.`,
+    type: "low_stock",
+    reference_id: `low-stock-${productId}`,
+    link_url: "/admin/inventory",
+    whatsapp_text: `*Zubair Mobile Stock Alert*\n${productName} has only ${currentStock} pcs left. Restock required.`,
+  });
 }
 
 /**

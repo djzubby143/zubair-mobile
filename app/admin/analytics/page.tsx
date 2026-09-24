@@ -18,6 +18,9 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { Order, Product, Customer } from "@/lib/types";
+import { getOrders } from "@/lib/orders";
+import { getCustomProducts } from "@/lib/customProducts";
+import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 
 export default function AnalyticsDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -36,18 +39,44 @@ export default function AnalyticsDashboardPage() {
           fetch("/api/admin/users").catch(() => null),
         ]);
 
+        let ordList: Order[] = [];
         if (ordersRes && ordersRes.ok) {
           const ordData = await ordersRes.json();
-          setOrders(Array.isArray(ordData) ? ordData : []);
+          ordList = Array.isArray(ordData) ? ordData : ordData.orders || [];
         }
+        if (ordList.length === 0) {
+          ordList = await getOrders();
+        }
+        setOrders(ordList);
+
+        let prodList: Product[] = [];
         if (prodsRes && prodsRes.ok) {
           const prodData = await prodsRes.json();
-          setProducts(Array.isArray(prodData) ? prodData : []);
+          if (Array.isArray(prodData)) {
+            prodList = prodData;
+          } else if (prodData.customProducts) {
+            prodList = [...prodData.customProducts, ...DEFAULT_CATALOG_PRODUCTS];
+          } else if (prodData.products) {
+            prodList = prodData.products;
+          }
         }
+        if (prodList.length === 0) {
+          prodList = [...getCustomProducts(), ...DEFAULT_CATALOG_PRODUCTS];
+        }
+        setProducts(prodList);
+
+        let custList: Customer[] = [];
         if (custRes && custRes.ok) {
           const custData = await custRes.json();
-          setCustomers(Array.isArray(custData) ? custData : []);
+          custList = Array.isArray(custData) ? custData : custData.users || [];
         }
+        if (custList.length === 0 && typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("zubair_mobile_customers");
+            if (raw) custList = JSON.parse(raw);
+          } catch {}
+        }
+        setCustomers(custList);
       } catch (err) {
         console.error("Error loading analytics data:", err);
       } finally {

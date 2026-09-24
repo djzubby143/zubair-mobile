@@ -20,7 +20,8 @@ import { Category } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { uploadProductImage } from "@/lib/storage";
 import { getLiveCategories } from "@/lib/categories";
-import { saveProduct } from "@/lib/customProducts";
+import { saveProduct, getCustomProducts } from "@/lib/customProducts";
+import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -237,6 +238,16 @@ export default function NewProductPage() {
     // Validation
     if (!name.trim() || !sku.trim() || !price || !stockQuantity) {
       setFormError("Please fill all required fields (Name, SKU, Wholesale Price, and Stock).");
+      return;
+    }
+
+    const cleanSku = sku.trim().toUpperCase();
+    const existingCustom = getCustomProducts();
+    const isSkuTaken =
+      existingCustom.some((p) => p.sku && p.sku.toUpperCase() === cleanSku) ||
+      DEFAULT_CATALOG_PRODUCTS.some((p) => p.sku && p.sku.toUpperCase() === cleanSku);
+    if (isSkuTaken) {
+      setFormError(`Product with SKU "${cleanSku}" already exists. Please choose a unique SKU.`);
       return;
     }
 

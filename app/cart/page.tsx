@@ -59,6 +59,7 @@ export default function CartPage() {
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
   const [showBillModal, setShowBillModal] = useState(false);
   const [isGeneratingJpeg, setIsGeneratingJpeg] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [paperWidth, setPaperWidth] = useState<ThermalPaperWidth>(68);
 
@@ -75,6 +76,7 @@ export default function CartPage() {
 
   const handleWhatsAppCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isPlacingOrder) return;
 
     // Validation
     const errors: { [key: string]: string } = {};
@@ -133,66 +135,71 @@ export default function CartPage() {
       customer_id: user?.id || user?.username || user?.phone || undefined,
     };
 
-    // Save order
-    await saveOrder(newOrder);
+    try {
+      setIsPlacingOrder(true);
+      // Save order
+      await saveOrder(newOrder);
 
-    // Construct WhatsApp message
-    const formattedSubtotal = cartSubtotal.toLocaleString("en-PK");
-    const formattedTotal = cartTotal.toLocaleString("en-PK");
-    const deliveryFeeLabel = deliveryCharges === 0 ? "FREE (Cargo Delivery)" : `Rs. ${deliveryCharges}`;
-    const rateTierLabel =
-      user?.role === "admin"
-        ? "Admin (تمام ریٹ)"
-        : user?.pricing_tier === "technician"
-        ? "Technician (ٹیکنیشن ریٹ)"
-        : user?.pricing_tier === "wholesale"
-        ? "Wholesale (ہول سیل ریٹ)"
-        : "Retail / Customer (پرچون ریٹ)";
-    const itemsManifest = items
-      .map((item) => {
-        const lineTotal = (item.price * item.quantity).toLocaleString("en-PK");
-        const skuPart = item.sku ? ` (SKU: ${item.sku})` : "";
-        return `${item.quantity}x ${item.name}${skuPart} - Rs. ${lineTotal}`;
-      })
-      .join("\n");
+      // Construct WhatsApp message
+      const formattedSubtotal = cartSubtotal.toLocaleString("en-PK");
+      const formattedTotal = cartTotal.toLocaleString("en-PK");
+      const deliveryFeeLabel = deliveryCharges === 0 ? "FREE (Cargo Delivery)" : `Rs. ${deliveryCharges}`;
+      const rateTierLabel =
+        user?.role === "admin"
+          ? "Admin (تمام ریٹ)"
+          : user?.pricing_tier === "technician"
+          ? "Technician (ٹیکنیشن ریٹ)"
+          : user?.pricing_tier === "wholesale"
+          ? "Wholesale (ہول سیل ریٹ)"
+          : "Retail / Customer (پرچون ریٹ)";
+      const itemsManifest = items
+        .map((item) => {
+          const lineTotal = (item.price * item.quantity).toLocaleString("en-PK");
+          const skuPart = item.sku ? ` (SKU: ${item.sku})` : "";
+          return `${item.quantity}x ${item.name}${skuPart} - Rs. ${lineTotal}`;
+        })
+        .join("\n");
 
-    const messageLines = [
-      `Assalam o Alaikum Zubair Mobile! I placed Order #${orderNumber}:`,
-      "------------------------------",
-      itemsManifest,
-      "------------------------------",
-      `Total Items: ${cartCount}`,
-      `Items Subtotal: Rs. ${formattedSubtotal}`,
-      `Delivery Charges: ${deliveryFeeLabel}`,
-      `Grand Total: Rs. ${formattedTotal}`,
-      "",
-      "Customer Details:",
-      `Name: ${customerName.trim()}`,
-      `Phone: ${customerPhone.trim()}`,
-      `Address / City: ${customerAddress.trim()}`,
-      `Rate Applied: ${rateTierLabel}`,
-    ];
+      const messageLines = [
+        `Assalam o Alaikum Zubair Mobile! I placed Order #${orderNumber}:`,
+        "------------------------------",
+        itemsManifest,
+        "------------------------------",
+        `Total Items: ${cartCount}`,
+        `Items Subtotal: Rs. ${formattedSubtotal}`,
+        `Delivery Charges: ${deliveryFeeLabel}`,
+        `Grand Total: Rs. ${formattedTotal}`,
+        "",
+        "Customer Details:",
+        `Name: ${customerName.trim()}`,
+        `Phone: ${customerPhone.trim()}`,
+        `Address / City: ${customerAddress.trim()}`,
+        `Rate Applied: ${rateTierLabel}`,
+      ];
 
-    if (orderNotes.trim()) {
-      messageLines.push(`Notes: ${orderNotes.trim()}`);
+      if (orderNotes.trim()) {
+        messageLines.push(`Notes: ${orderNotes.trim()}`);
+      }
+
+      messageLines.push("------------------------------");
+      messageLines.push("Please confirm my order and cargo dispatch.");
+
+      const rawMessage = messageLines.join("\n");
+      const encodedMessage = encodeURIComponent(rawMessage);
+      const waLink = `https://wa.me/923458032600?text=${encodedMessage}`;
+
+      setWhatsappUrl(waLink);
+      setPlacedOrder(newOrder);
+      setShowBillModal(true);
+
+      // Auto-download bill JPEG for convenience
+      generateReceiptJpeg(newOrder, paperWidth).catch((err) => console.warn("Auto-download JPEG:", err));
+
+      // Open WhatsApp
+      window.open(waLink, "_blank", "noopener,noreferrer");
+    } finally {
+      setIsPlacingOrder(false);
     }
-
-    messageLines.push("------------------------------");
-    messageLines.push("Please confirm my order and cargo dispatch.");
-
-    const rawMessage = messageLines.join("\n");
-    const encodedMessage = encodeURIComponent(rawMessage);
-    const waLink = `https://wa.me/923458032600?text=${encodedMessage}`;
-
-    setWhatsappUrl(waLink);
-    setPlacedOrder(newOrder);
-    setShowBillModal(true);
-
-    // Auto-download bill JPEG for convenience
-    generateReceiptJpeg(newOrder, paperWidth).catch((err) => console.warn("Auto-download JPEG:", err));
-
-    // Open WhatsApp
-    window.open(waLink, "_blank", "noopener,noreferrer");
   };
 
   const handleDownloadJpeg = async () => {
@@ -729,10 +736,11 @@ export default function CartPage() {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    disabled={isPlacingOrder}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <PhoneCall className="w-4 h-4" />
-                    <span>Send Order via WhatsApp</span>
+                    <PhoneCall className={`w-4 h-4 ${isPlacingOrder ? "animate-pulse" : ""}`} />
+                    <span>{isPlacingOrder ? "Placing Order..." : "Send Order via WhatsApp"}</span>
                   </button>
                   <p className="text-[10px] text-slate-400 text-center mt-2">
                     Clicking will open WhatsApp with your itemized bill pre-filled.

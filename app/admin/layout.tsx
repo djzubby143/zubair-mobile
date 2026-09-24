@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import NotificationDropdown from "@/components/NotificationDropdown";
+import { DEFAULT_STAFF, getStaffAccounts, StaffAccount } from "@/lib/security";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentStaff, setCurrentStaff] = useState<StaffAccount>(DEFAULT_STAFF[0]);
 
   useEffect(() => {
     async function checkAuth() {
@@ -44,12 +46,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } = await supabase.auth.getSession();
 
         if (!session) {
-          // If no active session, redirect to login
           router.replace("/login");
           return;
         }
 
-        setUserEmail(session.user?.email || "Admin");
+        const email = session.user?.email || "admin@zubairmobile.com";
+        setUserEmail(email);
+
+        // Resolve staff account permissions
+        const staffList = await getStaffAccounts();
+        const matched =
+          staffList.find(
+            (s) =>
+              s.email.toLowerCase() === email.toLowerCase() ||
+              s.username.toLowerCase() === email.toLowerCase()
+          ) ||
+          (email.includes("zubair") || email.includes("admin")
+            ? DEFAULT_STAFF[0]
+            : {
+                ...DEFAULT_STAFF[0],
+                email,
+                role: (session.user?.user_metadata?.role as any) || "super_admin",
+              });
+
+        setCurrentStaff(matched);
       } catch (err) {
         console.warn("Auth check error, redirecting to login:", err);
         router.replace("/login");
@@ -86,22 +106,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  const navItems = [
+  const allNavItems = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Smart Pricing", href: "/admin/pricing", icon: Tag },
-    { name: "Compatibility", href: "/admin/compatibility", icon: Smartphone },
-    { name: "Inventory", href: "/admin/inventory", icon: Boxes },
-    { name: "Orders & Bills", href: "/admin/orders", icon: Receipt },
-    { name: "Analytics", href: "/admin/analytics", icon: TrendingUp },
-    { name: "Marketing", href: "/admin/marketing", icon: Percent },
-    { name: "Security & Staff", href: "/admin/security", icon: ShieldCheck },
-    { name: "Reports & P&L", href: "/admin/reports", icon: BarChart3 },
-    { name: "Hero Banner", href: "/admin/banner", icon: ImageIcon },
-    { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Categories", href: "/admin/categories", icon: Layers },
-    { name: "Products", href: "/admin/products", icon: Package },
-    { name: "Import Products", href: "/admin/products/import", icon: UploadCloud },
+    { name: "Smart Pricing", href: "/admin/pricing", icon: Tag, permission: "can_manage_prices" },
+    { name: "Compatibility", href: "/admin/compatibility", icon: Smartphone, permission: "can_manage_inventory" },
+    { name: "Inventory", href: "/admin/inventory", icon: Boxes, permission: "can_manage_inventory" },
+    { name: "Orders & Bills", href: "/admin/orders", icon: Receipt, permission: "can_manage_orders" },
+    { name: "Analytics", href: "/admin/analytics", icon: TrendingUp, permission: "can_view_reports" },
+    { name: "Marketing", href: "/admin/marketing", icon: Percent, permission: "can_manage_marketing" },
+    { name: "Security & Staff", href: "/admin/security", icon: ShieldCheck, superAdminOnly: true },
+    { name: "Reports & P&L", href: "/admin/reports", icon: BarChart3, permission: "can_view_reports" },
+    { name: "Hero Banner", href: "/admin/banner", icon: ImageIcon, permission: "can_manage_marketing" },
+    { name: "Users", href: "/admin/users", icon: Users, permission: "can_manage_users" },
+    { name: "Categories", href: "/admin/categories", icon: Layers, permission: "can_manage_inventory" },
+    { name: "Products", href: "/admin/products", icon: Package, permission: "can_manage_inventory" },
+    { name: "Import Products", href: "/admin/products/import", icon: UploadCloud, permission: "can_manage_inventory" },
   ];
+
+  // Role-Based Navigation Filtering
+  const navItems = allNavItems.filter((item) => {
+    if (currentStaff.role === "super_admin") return true;
+    if (item.superAdminOnly) return false;
+    if (!item.permission) return true;
+    return !!(currentStaff.permissions as any)?.[item.permission];
+  });
+
+  // Role-Based Route Guard Check
+  const isAuthorized = (() => {
+    if (currentStaff.role === "super_admin" || pathname === "/admin") return true;
+    if (pathname.startsWith("/admin/pricing")) return currentStaff.permissions?.can_manage_prices;
+    if (
+      pathname.startsWith("/admin/inventory") ||
+      pathname.startsWith("/admin/products") ||
+      pathname.startsWith("/admin/categories") ||
+      pathname.startsWith("/admin/compatibility")
+    ) {
+      return currentStaff.permissions?.can_manage_inventory;
+    }
+    if (pathname.startsWith("/admin/orders")) return currentStaff.permissions?.can_manage_orders;
+    if (pathname.startsWith("/admin/analytics") || pathname.startsWith("/admin/reports")) {
+      return currentStaff.permissions?.can_view_reports;
+    }
+    if (pathname.startsWith("/admin/users")) return currentStaff.permissions?.can_manage_users;
+    if (pathname.startsWith("/admin/marketing") || pathname.startsWith("/admin/banner")) {
+      return currentStaff.permissions?.can_manage_marketing;
+    }
+    if (pathname.startsWith("/admin/security")) return false;
+    return true;
+  })();
 
   if (loading) {
     return (
@@ -258,14 +310,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-3">
             <NotificationDropdown />
             <div className="hidden sm:block text-right">
-              <p className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{userEmail}</p>
-              <p className="text-[10px] text-emerald-600 font-semibold uppercase">Super Admin</p>
+              <p className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{currentStaff.name || userEmail}</p>
+              <p className="text-[10px] text-emerald-600 font-semibold uppercase">{currentStaff.role.replace("_", " ")}</p>
             </div>
           </div>
         </div>
 
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">{children}</div>
+          <div className="max-w-7xl mx-auto">
+            {isAuthorized ? (
+              children
+            ) : (
+              <div className="p-8 bg-rose-50 border border-rose-200 rounded-2xl text-center max-w-lg mx-auto my-12 space-y-4">
+                <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-rose-900">Access Restricted</h3>
+                  <p className="text-xs text-rose-700 mt-1">
+                    Your staff role ({currentStaff.role.replace("_", " ")}) does not have permission to access this module.
+                  </p>
+                </div>
+                <Link
+                  href="/admin"
+                  className="inline-block px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all"
+                >
+                  Return to Dashboard
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

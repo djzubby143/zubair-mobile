@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { StaffAccount, ActivityLogEntry, LoginHistoryEntry, AdminStaffRole } from "@/lib/types";
+export type { StaffAccount, ActivityLogEntry, LoginHistoryEntry, AdminStaffRole };
 
 export const STORAGE_KEY_STAFF = "zubair_mobile_staff";
 export const STORAGE_KEY_ACTIVITY_LOGS = "zubair_mobile_activity_logs";

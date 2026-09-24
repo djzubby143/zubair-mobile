@@ -297,6 +297,16 @@ export default function EditProductPage() {
       return;
     }
 
+    const cleanSku = sku.trim().toUpperCase();
+    const existingCustom = getCustomProducts();
+    const isSkuTaken =
+      existingCustom.some((p) => p.id !== productId && p.sku && p.sku.toUpperCase() === cleanSku) ||
+      DEFAULT_CATALOG_PRODUCTS.some((p) => p.id !== productId && p.sku && p.sku.toUpperCase() === cleanSku);
+    if (isSkuTaken) {
+      setFormError(`Product with SKU "${cleanSku}" already exists on another item. Please choose a unique SKU.`);
+      return;
+    }
+
     const numPrice = parseFloat(price);
     const numStock = parseInt(stockQuantity, 10);
 

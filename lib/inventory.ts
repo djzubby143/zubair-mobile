@@ -526,6 +526,14 @@ export async function decreaseStockForOrder(order: Order): Promise<void> {
             updated_at: new Date().toISOString(),
           };
           hasChanges = true;
+
+          // Check low stock threshold
+          const threshold = current.min_stock_level ? Number(current.min_stock_level) : 5;
+          if (newStock <= threshold) {
+            import("@/lib/notifications").then(({ triggerLowStockNotification }) => {
+              triggerLowStockNotification(current.id, current.name, newStock, threshold).catch(() => {});
+            }).catch(() => {});
+          }
         }
       }
 
@@ -542,7 +550,7 @@ export async function decreaseStockForOrder(order: Order): Promise<void> {
     try {
       const { data: prodData } = await supabase
         .from("products")
-        .select("id, stock_quantity")
+        .select("id, name, stock_quantity, min_stock_level")
         .or(`id.eq.${item.id},sku.ilike.${item.sku || "none"}`)
         .maybeSingle();
 
@@ -555,6 +563,13 @@ export async function decreaseStockForOrder(order: Order): Promise<void> {
             updated_at: new Date().toISOString(),
           })
           .eq("id", prodData.id);
+
+        const threshold = prodData.min_stock_level ? Number(prodData.min_stock_level) : 5;
+        if (newStock <= threshold) {
+          import("@/lib/notifications").then(({ triggerLowStockNotification }) => {
+            triggerLowStockNotification(prodData.id, prodData.name || item.name, newStock, threshold).catch(() => {});
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       console.warn("Notice decreasing Supabase stock for order:", err);

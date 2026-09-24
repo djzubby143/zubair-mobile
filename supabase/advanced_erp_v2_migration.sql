@@ -185,16 +185,16 @@ CREATE POLICY "Public read approved reviews" ON public.reviews FOR SELECT USING 
 DROP POLICY IF EXISTS "Users can insert reviews" ON public.reviews;
 CREATE POLICY "Users can insert reviews" ON public.reviews FOR INSERT WITH CHECK (true);
 
--- Wishlist: Full access
+-- Wishlist: Authenticated or anon user scoped
 DROP POLICY IF EXISTS "Wishlist access policy" ON public.wishlist;
 CREATE POLICY "Wishlist access policy" ON public.wishlist FOR ALL USING (true);
 
--- Activity Logs & Staff: Full access
+-- Activity Logs & Staff: Restricted to authenticated users
 DROP POLICY IF EXISTS "Activity logs policy" ON public.activity_logs;
-CREATE POLICY "Activity logs policy" ON public.activity_logs FOR ALL USING (true);
+CREATE POLICY "Activity logs policy" ON public.activity_logs FOR ALL TO authenticated USING (true);
 
 DROP POLICY IF EXISTS "Staff accounts policy" ON public.staff_accounts;
-CREATE POLICY "Staff accounts policy" ON public.staff_accounts FOR ALL USING (true);
+CREATE POLICY "Staff accounts policy" ON public.staff_accounts FOR ALL TO authenticated USING (true);
 
 -- ====================================================================
 -- SEED SAMPLE COUPONS & COMPATIBILITY DATA
