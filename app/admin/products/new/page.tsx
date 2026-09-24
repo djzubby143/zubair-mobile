@@ -11,6 +11,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Wand2,
+  Loader2,
+  Image as ImageIcon,
+  RefreshCw,
 } from "lucide-react";
 import { Category } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
@@ -52,6 +56,13 @@ export default function NewProductPage() {
   const [barcode, setBarcode] = useState("");
   const [minStockLevel, setMinStockLevel] = useState("5");
   const [multipleImagesInput, setMultipleImagesInput] = useState("");
+
+  // AI Assistant States
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [generatingImg, setGeneratingImg] = useState(false);
+  const [aiSuccessMsg, setAiSuccessMsg] = useState<string | null>(null);
+  const [aiCustomImgPrompt, setAiCustomImgPrompt] = useState("");
+  const [showImgPromptInput, setShowImgPromptInput] = useState(false);
 
   // Image Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -130,10 +141,93 @@ export default function NewProductPage() {
 
   const handleRemoveImage = () => {
     setSelectedFile(null);
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(imagePreview);
+      } catch {}
     }
     setImagePreview(null);
+  };
+
+  // AI Assistant Handlers
+  const handleGenerateAIDescription = async () => {
+    if (!name.trim() && !partType) {
+      setFormError("Please enter a product title or part type first to generate an AI description.");
+      return;
+    }
+    setGeneratingDesc(true);
+    setFormError(null);
+    try {
+      const res = await fetch("/api/admin/ai/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          brand,
+          model,
+          partType,
+          qualityGrade,
+          warranty,
+          compatibleModels,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        if (data.data.shortDescription) setShortDescription(data.data.shortDescription);
+        if (data.data.description) setDescription(data.data.description);
+        if (!sku && data.data.suggestedSku) setSku(data.data.suggestedSku);
+        setAiSuccessMsg("✨ AI Description & Technical Specs generated successfully!");
+        setTimeout(() => setAiSuccessMsg(null), 4000);
+      } else {
+        setFormError(data.error || "Failed to generate AI description.");
+      }
+    } catch (err: any) {
+      setFormError(err.message || "Failed to generate AI description.");
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
+  const handleGenerateAIImage = async (customPrompt?: string) => {
+    setGeneratingImg(true);
+    setFormError(null);
+    try {
+      const res = await fetch("/api/admin/ai/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: customPrompt || name.trim(),
+          brand,
+          model,
+          partType,
+          qualityGrade,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.imageUrl) {
+        setSelectedFile(null);
+        setImagePreview(data.data.imageUrl);
+        setAiSuccessMsg("✨ AI Product Image generated successfully!");
+        setTimeout(() => setAiSuccessMsg(null), 4000);
+      } else {
+        setFormError(data.error || "Failed to generate AI image.");
+      }
+    } catch (err: any) {
+      setFormError(err.message || "Failed to generate AI image.");
+    } finally {
+      setGeneratingImg(false);
+    }
+  };
+
+  const handleMagicAutoFill = async () => {
+    if (!name.trim()) {
+      setFormError("Please enter a Product Name / Title first to run Magic Auto-Fill.");
+      return;
+    }
+    await Promise.all([
+      handleGenerateAIDescription(),
+      handleGenerateAIImage(),
+    ]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,7 +285,7 @@ export default function NewProductPage() {
     try {
       let finalImageUrl: string | null = null;
 
-      // 1. Upload Image to Supabase Storage if selected
+      // 1. Upload Image to Supabase Storage if selected file
       if (selectedFile) {
         const uploadResult = await uploadProductImage(selectedFile);
         if (uploadResult.url) {
@@ -199,6 +293,9 @@ export default function NewProductPage() {
         } else if (uploadResult.error) {
           console.warn("Storage upload failed, proceeding without uploaded URL:", uploadResult.error);
         }
+      } else if (imagePreview && imagePreview.startsWith("http")) {
+        // AI Generated / Remote image URL
+        finalImageUrl = imagePreview;
       }
 
       // 2. Prepare product record with category object and smart image fallback
@@ -282,7 +379,7 @@ export default function NewProductPage() {
       )}
 
       {/* Top Header & Breadcrumb */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Link
             href="/admin/products"
@@ -296,7 +393,29 @@ export default function NewProductPage() {
             <span>Add New Mobile Spare Part</span>
           </h1>
         </div>
+
+        <button
+          type="button"
+          onClick={handleMagicAutoFill}
+          disabled={generatingDesc || generatingImg}
+          className="px-4 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all transform hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+        >
+          {generatingDesc || generatingImg ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Wand2 className="w-4 h-4" />
+          )}
+          <span>{generatingDesc || generatingImg ? "Generating AI Details..." : "AI Magic Auto-Fill"}</span>
+        </button>
       </div>
+
+      {/* AI Success Alert */}
+      {aiSuccessMsg && (
+        <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl text-xs text-purple-900 font-semibold flex items-center gap-2 shadow-xs">
+          <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+          <span>{aiSuccessMsg}</span>
+        </div>
+      )}
 
       {/* Error Alert */}
       {formError && (
@@ -694,14 +813,69 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {/* Card 2: Image Upload (Supabase Storage) */}
+        {/* Card 2: Image Upload (Supabase Storage & AI Studio) */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Product Image (Supabase Storage: &apos;product-images&apos;)
-            </h2>
-            <span className="text-[11px] text-slate-400 font-medium">Max 5MB (JPG, PNG, WEBP)</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Product Image (Upload or AI Studio Generator)
+              </h2>
+              <span className="text-[11px] text-slate-400 font-medium">Upload file or generate realistic studio product photo</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleGenerateAIImage(aiCustomImgPrompt || undefined)}
+                disabled={generatingImg}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50 transition-all"
+              >
+                {generatingImg ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <ImageIcon className="w-3.5 h-3.5" />
+                )}
+                <span>{generatingImg ? "Generating AI Image..." : "✨ AI Generate Image"}</span>
+              </button>
+            </div>
           </div>
+
+          {/* Optional Prompt Input Toggle */}
+          <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+            <span>💡 Automatically creates clean white-background product shots from title & brand.</span>
+            <button
+              type="button"
+              onClick={() => setShowImgPromptInput(!showImgPromptInput)}
+              className="text-secondary font-bold hover:underline shrink-0 ml-2"
+            >
+              {showImgPromptInput ? "Hide Custom Prompt" : "Customize Prompt"}
+            </button>
+          </div>
+
+          {showImgPromptInput && (
+            <div className="p-3 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2">
+              <label className="text-[11px] font-bold text-purple-900 block">
+                Custom AI Image Prompt
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={aiCustomImgPrompt}
+                  onChange={(e) => setAiCustomImgPrompt(e.target.value)}
+                  placeholder={`e.g. ${name || "Samsung Galaxy A52 LCD screen assembly"} on white background, studio light`}
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-purple-200 bg-white text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleGenerateAIImage(aiCustomImgPrompt)}
+                  disabled={generatingImg}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  Generate
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             {imagePreview ? (
@@ -716,19 +890,31 @@ export default function NewProductPage() {
                 </div>
                 <div className="space-y-1.5 min-w-0 flex-1">
                   <p className="text-xs font-bold text-primary truncate">
-                    {selectedFile?.name || "Selected Image"}
+                    {selectedFile?.name || (imagePreview.startsWith("http") ? "AI Generated Studio Photo" : "Selected Image")}
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Ready to upload"}
+                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Ready to attach to product"}
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-semibold pt-1"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    <span>Remove / Replace image</span>
-                  </button>
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateAIImage(aiCustomImgPrompt || undefined)}
+                      disabled={generatingImg}
+                      className="inline-flex items-center gap-1 text-xs text-secondary hover:text-secondary-dark font-bold cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${generatingImg ? "animate-spin" : ""}`} />
+                      <span>Regenerate with AI</span>
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -756,9 +942,28 @@ export default function NewProductPage() {
 
         {/* Card 3: Descriptions & Toggles */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-slate-100">
-            Description & Store Visibility
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Description & Store Visibility
+              </h2>
+              <span className="text-[11px] text-slate-400 font-medium">Detailed specifications, technician notes & warranty terms</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGenerateAIDescription}
+              disabled={generatingDesc}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50 transition-all shrink-0"
+            >
+              {generatingDesc ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Wand2 className="w-3.5 h-3.5" />
+              )}
+              <span>{generatingDesc ? "Writing Description..." : "✨ AI Generate Description"}</span>
+            </button>
+          </div>
 
           <div className="space-y-4 text-xs">
             {/* Short Description */}
