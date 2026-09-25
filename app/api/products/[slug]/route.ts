@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
-import { sanitizeProductForTier, RoleOrTier } from "@/lib/pricingSecurity";
+import { sanitizeProductForTier, resolveServerTier, RoleOrTier } from "@/lib/pricingSecurity";
 import { Product } from "@/lib/types";
 
 import { getServerCustomProducts, getServerDeletedKeys } from "@/lib/serverProducts";
@@ -25,25 +25,8 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
     }
 
-    // Determine tier from header
-    const headerTier = req.headers.get("x-user-tier")?.toLowerCase() as RoleOrTier | undefined;
-    let tier: RoleOrTier = "guest";
-
-    if (headerTier && ["admin", "wholesale", "technician", "retail", "guest"].includes(headerTier)) {
-      tier = headerTier;
-    }
-
-    // Check token if present
-    const authHeader = req.headers.get("authorization");
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      try {
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (user) {
-          tier = "admin";
-        }
-      } catch {}
-    }
+    // Securely resolve pricing tier from caller's verified credentials
+    const tier = await resolveServerTier(req);
 
     // 1. Try server custom products first
     const customList = getServerCustomProducts();

@@ -2,7 +2,7 @@
   {
     "id": "34265b86-483a-42d1-95ea-20bf683ff696",
     "username": "umar",
-    "password": "ZM@123456",
+    "password_hash": "de70375788ae89fcc49233497f27699c6a6898f7bf7ed5ccb9f42e8c3e54ebba",
     "full_name": "Umar Technician",
     "shop_name": "Umar Mobile Lab",
     "phone": "03450000001",
@@ -18,7 +18,7 @@
   {
     "id": "c1000001-0000-4000-8000-000000000001",
     "username": "retailuser",
-    "password": "Password@123",
+    "password_hash": "c2c970d7f5d3faa0a78372af6ca860db583fcbad3d52745d891b22e499983e67",
     "full_name": "Retail Customer Test",
     "shop_name": "Retail Test Shop",
     "phone": "03001234567",
@@ -34,7 +34,7 @@
   {
     "id": "c1000002-0000-4000-8000-000000000002",
     "username": "wholesaleuser",
-    "password": "Password@123",
+    "password_hash": "c2c970d7f5d3faa0a78372af6ca860db583fcbad3d52745d891b22e499983e67",
     "full_name": "Wholesale Dealer Test",
     "shop_name": "Wholesale Telecommunications",
     "phone": "03007654321",
@@ -50,7 +50,7 @@
   {
     "id": "c1000003-0000-4000-8000-000000000003",
     "username": "technicianuser",
-    "password": "Password@123",
+    "password_hash": "c2c970d7f5d3faa0a78372af6ca860db583fcbad3d52745d891b22e499983e67",
     "full_name": "Technician Test",
     "shop_name": "Fix Mobile Care",
     "phone": "03009998877",

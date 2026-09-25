@@ -28,6 +28,8 @@ export interface Order {
   total_profit?: number; // Total Net Profit (total_amount - total_cost)
   delivery_charges?: number; // Courier / Cargo delivery fee
   delivery_notes?: string; // Special delivery notes or instructions
+  discount_amount?: number; // Verified server discount applied
+  coupon_code?: string; // Validated coupon code
   status: "pending" | "confirmed" | "packed" | "dispatched" | "delivered" | "cancelled";
   created_at: string;
   updated_at?: string;

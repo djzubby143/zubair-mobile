@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { CustomerUser } from "@/lib/types";
+import { verifyAdminRequest } from "@/lib/adminAuth";
 
 const IS_VERCEL = !!process.env.VERCEL;
 const DATA_DIR = IS_VERCEL ? path.join("/tmp", "zubair-data") : path.resolve(process.cwd(), "data");
@@ -14,6 +16,12 @@ const globalUsersStore = global as unknown as {
 
 if (!globalUsersStore.__zubair_customer_users) {
   globalUsersStore.__zubair_customer_users = [];
+}
+
+const PASSWORD_SALT = process.env.PASSWORD_SALT || "zm_secure_salt_2026_pk";
+
+function hashPassword(plain: string): string {
+  return crypto.createHash("sha256").update(plain + PASSWORD_SALT).digest("hex");
 }
 
 function ensureDataDir() {
@@ -28,6 +36,30 @@ function ensureDataDir() {
 
 const BUNDLED_USERS_FILE = path.resolve(process.cwd(), "data", "customer_users.json");
 
+function migrateLegacyPasswords(users: any[]): CustomerUser[] {
+  let modified = false;
+  const migrated = users.map((u) => {
+    const item = { ...u };
+    if (item.password && !item.password_hash) {
+      item.password_hash = hashPassword(item.password);
+      delete item.password;
+      modified = true;
+    } else if (item.password) {
+      delete item.password;
+      modified = true;
+    }
+    return item;
+  });
+
+  if (modified) {
+    try {
+      ensureDataDir();
+      fs.writeFileSync(USERS_FILE, JSON.stringify(migrated, null, 2), "utf-8");
+    } catch {}
+  }
+  return migrated;
+}
+
 function getServerUsers(): CustomerUser[] {
   try {
     ensureDataDir();
@@ -35,15 +67,17 @@ function getServerUsers(): CustomerUser[] {
       const raw = fs.readFileSync(USERS_FILE, "utf-8");
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        globalUsersStore.__zubair_customer_users = parsed;
-        return parsed;
+        const cleaned = migrateLegacyPasswords(parsed);
+        globalUsersStore.__zubair_customer_users = cleaned;
+        return cleaned;
       }
     } else if (IS_VERCEL && fs.existsSync(BUNDLED_USERS_FILE)) {
       const raw = fs.readFileSync(BUNDLED_USERS_FILE, "utf-8");
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        globalUsersStore.__zubair_customer_users = parsed;
-        return parsed;
+        const cleaned = migrateLegacyPasswords(parsed);
+        globalUsersStore.__zubair_customer_users = cleaned;
+        return cleaned;
       }
     }
   } catch (e) {
@@ -53,10 +87,17 @@ function getServerUsers(): CustomerUser[] {
 }
 
 function saveServerUsers(users: CustomerUser[]) {
-  globalUsersStore.__zubair_customer_users = users;
+  // Ensure no plaintext passwords are ever saved
+  const sanitized = users.map((u) => {
+    const item = { ...u };
+    delete (item as any).password;
+    return item;
+  });
+
+  globalUsersStore.__zubair_customer_users = sanitized;
   try {
     ensureDataDir();
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+    fs.writeFileSync(USERS_FILE, JSON.stringify(sanitized, null, 2), "utf-8");
   } catch (e) {
     // Handled in-memory on read-only serverless platforms
   }
@@ -64,8 +105,17 @@ function saveServerUsers(users: CustomerUser[]) {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // 1. Enforce Admin Authorization Guard
+    const auth = await verifyAdminRequest(req, "can_manage_users");
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, error: auth.error || "Unauthorized: Admin privileges required." },
+        { status: auth.status || 401 }
+      );
+    }
+
     const serverUsers = getServerUsers();
     const serverMap = new Map<string, CustomerUser>();
     for (const u of serverUsers) {
@@ -129,10 +179,11 @@ export async function GET() {
       }
     }
 
-    // Sanitize users: Never expose passwords in API responses
+    // Sanitize users: Never expose passwords or password hashes in API responses
     const sanitizedUsers = mergedList.map((u) => {
       const copy = { ...u };
       delete (copy as any).password;
+      delete (copy as any).password_hash;
       return copy;
     });
 
@@ -145,7 +196,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<CustomerUser>;
+    // 1. Enforce Admin Authorization Guard
+    const auth = await verifyAdminRequest(req, "can_manage_users");
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, error: auth.error || "Unauthorized: Admin privileges required." },
+        { status: auth.status || 401 }
+      );
+    }
+
+    const body = (await req.json()) as Partial<CustomerUser> & { password?: string };
     if (!body || (!body.username && !body.id && !body.phone)) {
       return NextResponse.json({ success: false, error: "User identifier required" }, { status: 400 });
     }
@@ -162,21 +222,31 @@ export async function POST(req: NextRequest) {
         (phoneKey && u.phone && u.phone.toLowerCase().trim() === phoneKey)
     );
 
+    // Compute password hash if new password supplied, never store plaintext
+    let newHash: string | undefined = undefined;
+    if (body.password && body.password.trim()) {
+      newHash = hashPassword(body.password.trim());
+    }
+
     let updatedRecord: CustomerUser;
     let updatedList: CustomerUser[];
     if (idx !== -1) {
+      const existing = currentUsers[idx];
       updatedRecord = {
-        ...currentUsers[idx],
+        ...existing,
         ...body,
         updated_at: new Date().toISOString(),
       };
+      if (newHash) {
+        (updatedRecord as any).password_hash = newHash;
+      }
+      delete (updatedRecord as any).password;
       updatedList = [...currentUsers];
       updatedList[idx] = updatedRecord;
     } else {
       updatedRecord = {
         id: body.id || `cust-${Date.now()}`,
         username: body.username || (body.phone ? `user_${body.phone}` : `user_${Date.now()}`),
-        password: body.password || "ZM@123456",
         full_name: body.full_name || "",
         shop_name: body.shop_name || "",
         phone: body.phone || "",
@@ -189,6 +259,8 @@ export async function POST(req: NextRequest) {
         created_at: body.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+      (updatedRecord as any).password_hash = newHash || hashPassword("ZM@DefaultPass2026");
+      delete (updatedRecord as any).password;
       updatedList = [updatedRecord, ...currentUsers];
     }
 
@@ -199,7 +271,6 @@ export async function POST(req: NextRequest) {
       const isUuid = updatedRecord.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(updatedRecord.id);
       const sbRecord: Record<string, unknown> = {
         username: updatedRecord.username.trim().toLowerCase(),
-        password: updatedRecord.password,
         full_name: updatedRecord.full_name,
         shop_name: updatedRecord.shop_name,
         phone: updatedRecord.phone,
@@ -212,18 +283,21 @@ export async function POST(req: NextRequest) {
       };
       if (isUuid) sbRecord.id = updatedRecord.id;
 
-      // Try with pricing_tier column first
       let res = await supabase.from("customers").upsert([{ ...sbRecord, pricing_tier: updatedRecord.pricing_tier }], {
         onConflict: isUuid ? "id" : "username",
       });
 
       if (res.error) {
-        // Retry without pricing_tier column if schema does not have it yet
         await supabase.from("customers").upsert([sbRecord], { onConflict: isUuid ? "id" : "username" });
       }
     } catch {}
 
-    return NextResponse.json({ success: true, user: updatedRecord });
+    // Never return password or password_hash to the client
+    const sanitizedReturn = { ...updatedRecord };
+    delete (sanitizedReturn as any).password;
+    delete (sanitizedReturn as any).password_hash;
+
+    return NextResponse.json({ success: true, user: sanitizedReturn });
   } catch (err: unknown) {
     const error = err as Error;
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -232,6 +306,15 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    // 1. Enforce Admin Authorization Guard
+    const auth = await verifyAdminRequest(req, "can_manage_users");
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, error: auth.error || "Unauthorized: Admin privileges required." },
+        { status: auth.status || 401 }
+      );
+    }
+
     let id: string | undefined;
     let username: string | undefined;
 
@@ -270,7 +353,7 @@ export async function DELETE(req: NextRequest) {
       }
     } catch {}
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: "User deleted successfully." });
   } catch (err: unknown) {
     const error = err as Error;
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

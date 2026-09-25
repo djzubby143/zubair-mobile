@@ -1,0 +1,103 @@
+[
+  {
+    "id": "ord-1790347923568-20",
+    "order_number": "ZM-923568",
+    "customer_name": "Rapid Clicker",
+    "customer_phone": "03009876543",
+    "customer_address": "Lahore",
+    "order_notes": "",
+    "items": [
+      {
+        "id": "p-flx-sam-2",
+        "name": "SAMSUNG A02S / A03S CHARGING FLEX BOARD",
+        "sku": "ZB-FLX-SA02S",
+        "price": 475,
+        "purchase_price": 260,
+        "quantity": 1
+      }
+    ],
+    "total_items": 1,
+    "total_amount": 725,
+    "delivery_charges": 250,
+    "discount_amount": 0,
+    "status": "pending",
+    "payment_method": "cod",
+    "payment_status": "unpaid",
+    "created_at": "2026-09-25T14:52:03.568Z",
+    "idempotency_key": "rapid-click-1790347923156"
+  },
+  {
+    "id": "ord-1790347922768-356",
+    "order_number": "ZM-922768",
+    "customer_name": "QA Price Tamper Test",
+    "customer_phone": "03001234567",
+    "customer_address": "Main Market, Hall Road, Lahore",
+    "order_notes": "",
+    "items": [
+      {
+        "id": "p-flx-sam-1",
+        "name": "SAMSUNG A12 CHARGING FLEX WITH IC",
+        "sku": "ZB-FLX-SA12",
+        "price": 438,
+        "purchase_price": 240,
+        "quantity": 2
+      }
+    ],
+    "total_items": 2,
+    "total_amount": 1126,
+    "delivery_charges": 250,
+    "discount_amount": 0,
+    "status": "pending",
+    "payment_method": "cod",
+    "payment_status": "unpaid",
+    "created_at": "2026-09-25T14:52:02.768Z",
+    "idempotency_key": "tamper-1790347922389"
+  },
+  {
+    "id": "ord-demo-1",
+    "order_number": "ZB-98241",
+    "customer_name": "Muhammad Ali",
+    "customer_phone": "03001234567",
+    "customer_address": "Shop No. 4, Mobile Market, Gondlanwala Road, Gujranwala",
+    "shop_name": "Ali Mobile Repairing",
+    "order_notes": "Urgent delivery via local cargo please",
+    "items": [
+      {
+        "id": "p-1",
+        "name": "VIVO Y20 SUNLONG BLACK UNIT",
+        "price": 2650,
+        "purchase_price": 2050,
+        "quantity": 2,
+        "sku": "ZB-LCD-V20S"
+      },
+      {
+        "id": "p-9",
+        "name": "VIVO Y20 IC CHARGING FLEX",
+        "price": 320,
+        "purchase_price": 220,
+        "quantity": 5,
+        "sku": "ZB-FLX-VY20"
+      },
+      {
+        "id": "p-6",
+        "name": "VIVO Y20 BLACK OCA GLASS",
+        "price": 180,
+        "purchase_price": 110,
+        "quantity": 10,
+        "sku": "ZB-OCA-VY20"
+      }
+    ],
+    "total_items": 17,
+    "total_amount": 8700,
+    "paid_amount": 5000,
+    "payment_status": "partial",
+    "payment_notes": "5,000 received via JazzCash. Remaining balance 3,700 on cargo.",
+    "total_cost": 6300,
+    "total_profit": 2400,
+    "status": "dispatched",
+    "cargo_name": "Daewoo Cargo Express",
+    "tracking_number": "DW-982410-LHR",
+    "dispatch_date": "2026-09-25T10:00:00.000Z",
+    "created_at": "2026-09-25T08:00:00.000Z"
+  }
+]
