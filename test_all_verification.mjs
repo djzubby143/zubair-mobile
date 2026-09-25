@@ -10,7 +10,10 @@ function makeRequest(url, options = {}) {
       port: parsedUrl.port,
       path: parsedUrl.pathname + parsedUrl.search,
       method: options.method || 'GET',
-      headers: options.headers || {},
+      headers: {
+        'x-forwarded-for': '192.168.1.100',
+        ...(options.headers || {})
+      },
     };
 
     const req = http.request(reqOptions, (res) => {

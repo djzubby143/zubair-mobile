@@ -138,6 +138,15 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. Unauthenticated Guest Tracking: MUST verify ownership with BOTH order_number AND matching phone
+    // Enforce dedicated strict rate limit on guest lookups to prevent brute force scraping
+    const guestLimit = checkRateLimit(`guest-track-${ip}`, { limit: 12, windowMs: 60000 });
+    if (!guestLimit.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many guest tracking requests. Please slow down." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     if (!orderNumber && !phone) {
       return NextResponse.json(
         {

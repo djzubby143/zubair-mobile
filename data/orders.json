@@ -1,59 +1,5 @@
 [
   {
-    "id": "ord-1790347923568-20",
-    "order_number": "ZM-923568",
-    "customer_name": "Rapid Clicker",
-    "customer_phone": "03009876543",
-    "customer_address": "Lahore",
-    "order_notes": "",
-    "items": [
-      {
-        "id": "p-flx-sam-2",
-        "name": "SAMSUNG A02S / A03S CHARGING FLEX BOARD",
-        "sku": "ZB-FLX-SA02S",
-        "price": 475,
-        "purchase_price": 260,
-        "quantity": 1
-      }
-    ],
-    "total_items": 1,
-    "total_amount": 725,
-    "delivery_charges": 250,
-    "discount_amount": 0,
-    "status": "pending",
-    "payment_method": "cod",
-    "payment_status": "unpaid",
-    "created_at": "2026-09-25T14:52:03.568Z",
-    "idempotency_key": "rapid-click-1790347923156"
-  },
-  {
-    "id": "ord-1790347922768-356",
-    "order_number": "ZM-922768",
-    "customer_name": "QA Price Tamper Test",
-    "customer_phone": "03001234567",
-    "customer_address": "Main Market, Hall Road, Lahore",
-    "order_notes": "",
-    "items": [
-      {
-        "id": "p-flx-sam-1",
-        "name": "SAMSUNG A12 CHARGING FLEX WITH IC",
-        "sku": "ZB-FLX-SA12",
-        "price": 438,
-        "purchase_price": 240,
-        "quantity": 2
-      }
-    ],
-    "total_items": 2,
-    "total_amount": 1126,
-    "delivery_charges": 250,
-    "discount_amount": 0,
-    "status": "pending",
-    "payment_method": "cod",
-    "payment_status": "unpaid",
-    "created_at": "2026-09-25T14:52:02.768Z",
-    "idempotency_key": "tamper-1790347922389"
-  },
-  {
     "id": "ord-demo-1",
     "order_number": "ZB-98241",
     "customer_name": "Muhammad Ali",

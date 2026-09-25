@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import crypto from "crypto";
 import { supabase } from "@/lib/supabase";
 import { CustomerUser } from "@/lib/types";
 import { verifyAdminRequest } from "@/lib/adminAuth";
+import { hashPasswordSync, isBcryptHash } from "@/lib/passwordAuth";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 const IS_VERCEL = !!process.env.VERCEL;
 const DATA_DIR = IS_VERCEL ? path.join("/tmp", "zubair-data") : path.resolve(process.cwd(), "data");
@@ -16,12 +17,6 @@ const globalUsersStore = global as unknown as {
 
 if (!globalUsersStore.__zubair_customer_users) {
   globalUsersStore.__zubair_customer_users = [];
-}
-
-const PASSWORD_SALT = process.env.PASSWORD_SALT || "zm_secure_salt_2026_pk";
-
-function hashPassword(plain: string): string {
-  return crypto.createHash("sha256").update(plain + PASSWORD_SALT).digest("hex");
 }
 
 function ensureDataDir() {
@@ -41,7 +36,7 @@ function migrateLegacyPasswords(users: any[]): CustomerUser[] {
   const migrated = users.map((u) => {
     const item = { ...u };
     if (item.password && !item.password_hash) {
-      item.password_hash = hashPassword(item.password);
+      item.password_hash = hashPasswordSync(item.password);
       delete item.password;
       modified = true;
     } else if (item.password) {
@@ -107,6 +102,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIp(req.headers);
+    const rl = checkRateLimit(`admin-users-get-${ip}`, { limit: 60, windowMs: 60000 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests. Please slow down." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     // 1. Enforce Admin Authorization Guard
     const auth = await verifyAdminRequest(req, "can_manage_users");
     if (!auth.authorized) {
@@ -196,6 +200,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req.headers);
+    const rl = checkRateLimit(`admin-users-post-${ip}`, { limit: 30, windowMs: 60000 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests. Please slow down." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     // 1. Enforce Admin Authorization Guard
     const auth = await verifyAdminRequest(req, "can_manage_users");
     if (!auth.authorized) {
@@ -222,10 +235,10 @@ export async function POST(req: NextRequest) {
         (phoneKey && u.phone && u.phone.toLowerCase().trim() === phoneKey)
     );
 
-    // Compute password hash if new password supplied, never store plaintext
+    // Compute password hash with bcrypt if new password supplied, never store plaintext
     let newHash: string | undefined = undefined;
     if (body.password && body.password.trim()) {
-      newHash = hashPassword(body.password.trim());
+      newHash = hashPasswordSync(body.password.trim());
     }
 
     let updatedRecord: CustomerUser;
@@ -259,7 +272,7 @@ export async function POST(req: NextRequest) {
         created_at: body.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      (updatedRecord as any).password_hash = newHash || hashPassword("ZM@DefaultPass2026");
+      (updatedRecord as any).password_hash = newHash || hashPasswordSync("ZM@DefaultPass2026");
       delete (updatedRecord as any).password;
       updatedList = [updatedRecord, ...currentUsers];
     }
@@ -306,6 +319,15 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const ip = getClientIp(req.headers);
+    const rl = checkRateLimit(`admin-users-del-${ip}`, { limit: 30, windowMs: 60000 });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many requests. Please slow down." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     // 1. Enforce Admin Authorization Guard
     const auth = await verifyAdminRequest(req, "can_manage_users");
     if (!auth.authorized) {

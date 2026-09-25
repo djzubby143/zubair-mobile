@@ -44,108 +44,36 @@ export default function LoginPage() {
     try {
       const loginId = email.trim();
 
-      // 1. Try Supabase Auth (for Admin e.g. zubair.sattar@gmail.com)
-      if (loginId.includes("@")) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: loginId,
-          password: password,
-        });
+      const response = await fetch("/api/app/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginId, password: password.trim() }),
+      });
 
-        if (!error && data.session) {
-          router.push("/admin");
-          return;
-        }
+      const resData = await response.json();
+
+      if (!response.ok || !resData.success) {
+        setErrorMessage(resData.error || "Invalid User ID / Email or Password. Please check your credentials.");
+        setLoading(false);
+        return;
       }
 
-      // 2. Try Customers Directory in Supabase (by username or phone or email)
-      try {
-        const { data: customerData } = await supabase
-          .from("customers")
-          .select("*")
-          .or(`username.ilike.${loginId},phone.eq.${loginId}`)
-          .eq("password", password.trim())
-          .maybeSingle();
-
-        if (customerData) {
-          if (customerData.status === "inactive") {
-            setErrorMessage(
-              "Your account is currently inactive. Please contact Zubair Mobile on WhatsApp: 0345-8032600."
-            );
-            setLoading(false);
-            return;
-          }
-
-          // Check local or role or notes override for pricing_tier
-          let resolvedTier: string = customerData.pricing_tier;
-          if (!resolvedTier) {
-            const local = typeof window !== "undefined" ? localStorage.getItem("zubair_mobile_customers") : null;
-            if (local) {
-              try {
-                const arr = JSON.parse(local);
-                const match = arr.find((u: { username?: string; pricing_tier?: string }) => u.username?.toLowerCase() === customerData.username?.toLowerCase());
-                if (match?.pricing_tier) resolvedTier = match.pricing_tier;
-              } catch {}
-            }
-          }
-          if (!resolvedTier && customerData.role && ["technician", "wholesale", "retail"].includes(customerData.role)) {
-            resolvedTier = customerData.role;
-          }
-          if (!resolvedTier && customerData.notes && customerData.notes.includes("tier:")) {
-            const m = customerData.notes.match(/tier:(wholesale|technician|retail)/);
-            if (m) resolvedTier = m[1];
-          }
-
-          const finalSession = {
-            ...customerData,
-            pricing_tier: resolvedTier || "retail",
-          };
-
-          // Save customer session
-          if (typeof window !== "undefined") {
-            localStorage.setItem("zubair_customer_user", JSON.stringify(finalSession));
-            window.dispatchEvent(new Event("storage"));
-          }
-          router.push("/");
-          return;
-        }
-      } catch (custErr) {
-        console.warn("Supabase customer lookup notice:", custErr);
+      // Route admin users to admin dashboard
+      if (resData.user?.role === "admin" || resData.user?.role === "super_admin") {
+        router.push("/admin");
+        return;
       }
 
-      // 3. Fallback: check cached/local customers
+      // Save customer session locally
       if (typeof window !== "undefined") {
-        const local = localStorage.getItem("zubair_mobile_customers");
-        if (local) {
-          try {
-            const list = JSON.parse(local);
-            const found = list.find(
-              (c: { username: string; phone: string; password: string; status: string }) =>
-                (c.username.toLowerCase() === loginId.toLowerCase() || c.phone === loginId) &&
-                c.password === password.trim()
-            );
-
-            if (found) {
-              if (found.status === "inactive") {
-                setErrorMessage(
-                  "Your account is currently inactive. Please contact Zubair Mobile on WhatsApp: 0345-8032600."
-                );
-                setLoading(false);
-                return;
-              }
-              const finalFound = {
-                ...found,
-                pricing_tier: found.pricing_tier || (found.role === "technician" || found.role === "wholesale" ? found.role : "retail"),
-              };
-              localStorage.setItem("zubair_customer_user", JSON.stringify(finalFound));
-              window.dispatchEvent(new Event("storage"));
-              router.push("/");
-              return;
-            }
-          } catch {}
+        localStorage.setItem("zubair_customer_user", JSON.stringify(resData.user));
+        if (resData.session?.access_token) {
+          localStorage.setItem("zubair_session_token", resData.session.access_token);
         }
+        window.dispatchEvent(new Event("storage"));
       }
 
-      setErrorMessage("Invalid User ID / Email or Password. Please check your credentials.");
+      router.push("/");
     } catch (err: unknown) {
       console.error("Login error:", err);
       setErrorMessage("An unexpected error occurred during login. Please try again.");
