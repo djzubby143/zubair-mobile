@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { saveOrder, Order, getOrders } from "@/lib/orders";
+import { Order, getOrders } from "@/lib/orders";
 import { createNotification } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { resolveServerTier } from "@/lib/pricingSecurity";
 import { DEFAULT_CATALOG_PRODUCTS } from "@/lib/products";
-import { getServerCustomProducts, saveServerCustomProducts } from "@/lib/serverProducts";
+import { getServerCustomProducts } from "@/lib/serverProducts";
 import { getServerOrders, saveServerOrder } from "@/lib/serverOrders";
-import { acquireCrossProcessLock } from "@/lib/atomicLock";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -131,12 +131,8 @@ export async function POST(req: NextRequest) {
 
     // Create execution promise
     const executionPromise = (async () => {
-      // 4. Acquire In-Process & Cross-Process Atomic Lock for Stock & Price Verification
+      // 4. Acquire Atomic Mutex Lock for In-Process Serialization
       const releaseMutex = await acquireCheckoutLock();
-      let releaseCrossProcessLock = () => {};
-      try {
-        releaseCrossProcessLock = await acquireCrossProcessLock("checkout", 12000);
-      } catch {}
 
       try {
         // Resolve verified server pricing tier
@@ -263,133 +259,58 @@ export async function POST(req: NextRequest) {
         const delivery = computedSubtotal >= 5000 ? 0 : 250;
         const finalTotal = Math.max(0, computedSubtotal + delivery - serverDiscount);
 
-        // Attempt database-level atomic transaction if Supabase RPC is provisioned
-        try {
-          const { data: rpcData, error: rpcError } = await supabase.rpc("process_atomic_checkout", {
-            p_order_id: effectiveIdempotencyKey.startsWith("ord-")
-              ? effectiveIdempotencyKey
-              : `ord-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            p_order_number: `ZM-${Date.now().toString().slice(-6)}`,
-            p_customer_name: resolvedName,
-            p_customer_phone: resolvedPhone,
-            p_customer_address: resolvedAddress,
-            p_total_amount: finalTotal,
-            p_delivery_charges: delivery,
-            p_discount_amount: serverDiscount,
-            p_payment_method: payment_method || "cod",
-            p_idempotency_key: effectiveIdempotencyKey,
-            p_items: verifiedItems,
-            p_order_notes: (order_notes || "").trim() || null,
-          });
-
-          if (!rpcError && rpcData?.success) {
-            const dbOrder = (rpcData.order || rpcData) as Order;
-            completedOrdersCache.set(effectiveIdempotencyKey, { order: dbOrder, timestamp: Date.now() });
-            saveServerOrder(dbOrder);
-            return dbOrder;
-          } else if (rpcError && rpcError.message && rpcError.message.includes("Insufficient stock")) {
-            throw new Error(rpcError.message);
-          }
-        } catch (rpcErr: any) {
-          if (rpcErr.message && rpcErr.message.includes("Insufficient stock")) {
-            throw rpcErr;
-          }
-        }
-
-        // C. Atomic Stock Decrement
-        // 1. Supabase products table
-        for (const vItem of verifiedItems) {
-          try {
-            const { data: current } = await supabase
-              .from("products")
-              .select("id, stock_quantity")
-              .or(`id.eq.${vItem.id},sku.eq.${vItem.sku || "none"}`)
-              .maybeSingle();
-
-            if (current) {
-              const currentStock = Number(current.stock_quantity) || 0;
-              if (currentStock < vItem.quantity) {
-                throw new Error(`Item "${vItem.name}" ran out of stock concurrently.`);
-              }
-              const updatedStock = currentStock - vItem.quantity;
-              await supabase.from("products").update({ stock_quantity: updatedStock }).eq("id", current.id);
-            }
-          } catch (stockErr: any) {
-            console.warn(`Stock decrement notice for ${vItem.id}:`, stockErr.message);
-          }
-        }
-
-        // 2. Server Custom Products
-        let customModified = false;
-        for (const vItem of verifiedItems) {
-          const idx = serverCustom.findIndex((p) => p.id === vItem.id || p.sku === vItem.sku);
-          if (idx !== -1) {
-            const prev = serverCustom[idx].stock_quantity || 0;
-            if (prev < vItem.quantity) {
-              throw new Error(`Item "${vItem.name}" ran out of stock concurrently.`);
-            }
-            serverCustom[idx] = {
-              ...serverCustom[idx],
-              stock_quantity: Math.max(0, prev - vItem.quantity),
-              updated_at: new Date().toISOString(),
-            };
-            customModified = true;
-          }
-        }
-        if (customModified) {
-          saveServerCustomProducts(serverCustom);
-        }
-
-        // D. Create & Save Order Record
-        const orderNumber = `ZM-${Date.now().toString().slice(-6)}`;
-        const newOrder: Order & { idempotency_key?: string } = {
-          id: effectiveIdempotencyKey.startsWith("ord-")
+        // Strict Database-Level Atomic Transaction
+        // If process_atomic_checkout RPC is unavailable or fails, checkout MUST fail safely without creating an order or changing stock.
+        const serverSupabase = getSupabaseServerClient();
+        const { data: rpcData, error: rpcError } = await serverSupabase.rpc("process_atomic_checkout", {
+          p_order_id: effectiveIdempotencyKey.startsWith("ord-")
             ? effectiveIdempotencyKey
             : `ord-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          order_number: orderNumber,
-          customer_name: resolvedName,
-          customer_phone: resolvedPhone,
-          customer_address: resolvedAddress,
-          order_notes: (order_notes || "").trim(),
-          items: verifiedItems,
-          total_items: verifiedItems.reduce((sum: number, it: any) => sum + it.quantity, 0),
-          total_amount: finalTotal,
-          delivery_charges: delivery,
-          discount_amount: serverDiscount,
-          coupon_code: cleanCoupon || undefined,
-          status: "pending",
-          payment_method: payment_method || "cod",
-          payment_status: "unpaid",
-          created_at: new Date().toISOString(),
-          idempotency_key: effectiveIdempotencyKey,
-        };
+          p_order_number: `ZM-${Date.now().toString().slice(-6)}`,
+          p_customer_name: resolvedName,
+          p_customer_phone: resolvedPhone,
+          p_customer_address: resolvedAddress,
+          p_total_amount: finalTotal,
+          p_delivery_charges: delivery,
+          p_discount_amount: serverDiscount,
+          p_payment_method: payment_method || "cod",
+          p_idempotency_key: effectiveIdempotencyKey,
+          p_items: verifiedItems,
+          p_order_notes: (order_notes || "").trim() || null,
+          p_pricing_tier: userTier,
+        });
 
-        await saveOrder(newOrder);
+        if (rpcError) {
+          throw new Error(`Database atomic checkout failed: ${rpcError.message}`);
+        }
+
+        if (!rpcData || !rpcData.success) {
+          throw new Error(rpcData?.error || "Database atomic checkout failed to complete.");
+        }
+
+        const dbOrder = (rpcData.order || rpcData) as Order;
+
+        // Cache completed order in memory and local server cache
+        completedOrdersCache.set(effectiveIdempotencyKey, {
+          order: dbOrder,
+          timestamp: Date.now(),
+        });
         try {
-          saveServerOrder(newOrder);
+          saveServerOrder(dbOrder);
         } catch {}
 
         // Dispatch Notification
         createNotification({
           recipient_type: "admin",
           type: "new_order",
-          title: `New Order Received: #${orderNumber}`,
-          message: `${resolvedName} placed order #${orderNumber} for Rs. ${finalTotal.toLocaleString()} (${verifiedItems.length} items).`,
-          reference_id: newOrder.id,
-          data: { order_id: newOrder.id, order_number: orderNumber, total: finalTotal, phone: resolvedPhone },
+          title: `New Order Received: #${dbOrder.order_number || dbOrder.id}`,
+          message: `${resolvedName} placed order #${dbOrder.order_number || dbOrder.id} for Rs. ${finalTotal.toLocaleString()} (${verifiedItems.length} items).`,
+          reference_id: dbOrder.id,
+          data: { order_id: dbOrder.id, order_number: dbOrder.order_number, total: finalTotal, phone: resolvedPhone },
         }).catch(() => {});
 
-        // Cache completed order
-        completedOrdersCache.set(effectiveIdempotencyKey, {
-          order: newOrder,
-          timestamp: Date.now(),
-        });
-
-        return newOrder;
+        return dbOrder;
       } finally {
-        try {
-          releaseCrossProcessLock();
-        } catch {}
         releaseMutex();
       }
     })();

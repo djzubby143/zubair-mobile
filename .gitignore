@@ -36,3 +36,7 @@ next-env.d.ts
 # archives
 *.zip
 /Zubair_Mobile_Production_Ready/
+
+# temporary
+supabase/.temp/
+
