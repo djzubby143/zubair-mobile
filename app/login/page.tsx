@@ -58,19 +58,22 @@ export default function LoginPage() {
         return;
       }
 
+      // Save session locally
+      if (typeof window !== "undefined") {
+        localStorage.setItem("zubair_customer_user", JSON.stringify(resData.user));
+        const token = resData.session?.access_token || resData.session?.token;
+        if (token) {
+          localStorage.setItem("zubair_session_token", token);
+          document.cookie = `sb-access-token=${token}; path=/; max-age=604800; SameSite=Lax`;
+        }
+        window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("zubair_customer_updated", { detail: resData.user }));
+      }
+
       // Route admin users to admin dashboard
       if (resData.user?.role === "admin" || resData.user?.role === "super_admin") {
         router.push("/admin");
         return;
-      }
-
-      // Save customer session locally
-      if (typeof window !== "undefined") {
-        localStorage.setItem("zubair_customer_user", JSON.stringify(resData.user));
-        if (resData.session?.access_token) {
-          localStorage.setItem("zubair_session_token", resData.session.access_token);
-        }
-        window.dispatchEvent(new Event("storage"));
       }
 
       router.push("/");

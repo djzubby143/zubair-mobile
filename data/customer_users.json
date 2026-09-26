@@ -1,5 +1,22 @@
 [
   {
+    "id": "admin-djzubby-001",
+    "username": "djzubby",
+    "email": "djzubby@zubairmobile.com",
+    "password_hash": "$2b$10$jO/RtASQ.lHh435fYyrXtuoNh.Ahm7H3/EfCcdfr2EKl7Eb6pk9fm",
+    "full_name": "Dj Zubby (Super Admin)",
+    "shop_name": "Zubair Mobile Head Office",
+    "phone": "03458032600",
+    "city": "Gujranwala",
+    "address": "Zubair Mobile Main Market",
+    "role": "super_admin",
+    "status": "active",
+    "pricing_tier": "wholesale",
+    "notes": "Super Admin Account",
+    "created_at": "2026-09-26T14:50:00.000Z",
+    "updated_at": "2026-09-26T14:50:00.000Z"
+  },
+  {
     "id": "34265b86-483a-42d1-95ea-20bf683ff696",
     "username": "umar",
     "password_hash": "$2b$10$GhI/ab7KDXncKo5nKduiAOICHqJfH9fKvjnUyzZdU1CrP7yyGN3X.",
