@@ -9,6 +9,8 @@ import { getServerCustomProducts } from "@/lib/serverProducts";
 import { getServerOrders, saveServerOrder } from "@/lib/serverOrders";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { createPersistentNotification } from "@/lib/serverNotifications";
+import { sendAdminOrderWhatsAppAlert } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -299,15 +301,34 @@ export async function POST(req: NextRequest) {
           saveServerOrder(dbOrder);
         } catch {}
 
-        // Dispatch Notification
-        createNotification({
+        // Dispatch Persistent Server Notification (Admin Panel + Unread Count)
+        createPersistentNotification({
           recipient_type: "admin",
           type: "new_order",
           title: `New Order Received: #${dbOrder.order_number || dbOrder.id}`,
           message: `${resolvedName} placed order #${dbOrder.order_number || dbOrder.id} for Rs. ${finalTotal.toLocaleString()} (${verifiedItems.length} items).`,
           reference_id: dbOrder.id,
-          data: { order_id: dbOrder.id, order_number: dbOrder.order_number, total: finalTotal, phone: resolvedPhone },
-        }).catch(() => {});
+          link_url: "/admin/orders",
+          whatsapp_text: `*Zubair Mobile Order Alert*\nOrder: #${dbOrder.order_number || dbOrder.id}\nCustomer: ${resolvedName}\nTotal: Rs. ${finalTotal.toLocaleString()}`,
+          data: {
+            order_id: dbOrder.id,
+            order_number: dbOrder.order_number,
+            total: finalTotal,
+            phone: resolvedPhone,
+            pricing_tier: userTier,
+          },
+        }).catch((e) => console.warn("Failed to create persistent server notification:", e));
+
+        // Automated Meta WhatsApp Business Cloud API Alert (Async, fail-safe)
+        sendAdminOrderWhatsAppAlert({
+          order_number: dbOrder.order_number || dbOrder.id,
+          customer_name: resolvedName,
+          customer_phone: resolvedPhone,
+          total_amount: finalTotal,
+          items: verifiedItems,
+          pricing_tier: userTier,
+          payment_method: payment_method || "cod",
+        }).catch((e) => console.warn("Failed to dispatch WhatsApp order alert:", e));
 
         return dbOrder;
       } finally {

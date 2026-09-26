@@ -86,17 +86,23 @@ export default function Header() {
       window.addEventListener("focus", handleFocus);
     }
 
-    // 4. Supabase Realtime Subscription for Categories
-    const channel = supabase
-      .channel("header-categories-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "categories" },
-        () => {
-          loadCategories();
-        }
-      )
-      .subscribe();
+    // 4. Supabase Realtime Subscription for Categories (safe unique channel instance)
+    const channelName = `header-cats-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "categories" },
+          () => {
+            loadCategories();
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn("Realtime category listener error:", err);
+    }
 
     return () => {
       if (typeof window !== "undefined") {
@@ -104,7 +110,11 @@ export default function Header() {
         window.removeEventListener("zubair_category_updated", handleCustomUpdate);
         window.removeEventListener("focus", handleFocus);
       }
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
     };
   }, []);
 

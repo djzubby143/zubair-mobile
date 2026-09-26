@@ -193,6 +193,118 @@ export interface DevicePartsGroup {
  * Given a device (or search string for a device), locate all matching spare parts
  * grouped cleanly by component type: LCD, Battery, Charging Flex, Camera, Glass, IC, etc.
  */
+function escapeRegex(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function isProductCompatibleWithDevice(
+  product: Product,
+  targetDevice: { brand: string; model: string; modelCode?: string; aliases?: string[] }
+): boolean {
+  if (product.is_active === false) return false;
+
+  const targetBrand = (targetDevice.brand || "").toLowerCase().trim();
+  const targetModel = (targetDevice.model || "").toLowerCase().trim();
+  const targetCode = (targetDevice.modelCode || "").toLowerCase().trim();
+  const pBrand = (product.brand || "").toLowerCase().trim();
+  const pName = (product.name || "").toLowerCase().trim();
+  const pModel = (product.model || "").toLowerCase().trim();
+
+  // 1. Strict Brand Filter
+  if (targetBrand) {
+    if (pBrand) {
+      const isApple = (targetBrand === "apple" || targetBrand === "iphone") && (pBrand === "apple" || pBrand === "iphone");
+      if (!isApple && pBrand !== targetBrand) {
+        return false;
+      }
+    } else {
+      // Product has no explicit brand field: check if targetBrand or its line appears in product name
+      const isApple = (targetBrand === "apple" || targetBrand === "iphone") && /\b(iphone|apple|ipad)\b/i.test(pName);
+      const hasBrand = new RegExp(`\\b${escapeRegex(targetBrand)}\\b`, "i").test(pName);
+      if (!isApple && !hasBrand) {
+        return false;
+      }
+    }
+  }
+
+  // 2. Collect all valid target model identifiers
+  const targetTermsSet = new Set<string>();
+  if (targetModel) targetTermsSet.add(targetModel);
+  if (targetCode) targetTermsSet.add(targetCode);
+  if (targetDevice.aliases) {
+    targetDevice.aliases.forEach((a) => {
+      const clean = String(a).toLowerCase().trim();
+      if (clean) targetTermsSet.add(clean);
+    });
+  }
+  const targetTermsList = Array.from(targetTermsSet);
+
+  // A. Check Explicit compatible_models (Highest Precedence)
+  const rawComp = product.compatible_models;
+  if (rawComp) {
+    const compList: string[] = [];
+    if (Array.isArray(rawComp)) {
+      compList.push(...rawComp.map((c) => String(c).toLowerCase().trim()));
+    } else if (typeof rawComp === "string" && rawComp.trim()) {
+      compList.push(
+        ...rawComp
+          .split(/[,;\n\/|]+/)
+          .map((s) => s.toLowerCase().trim())
+          .filter(Boolean)
+      );
+    }
+
+    for (const comp of compList) {
+      for (const term of targetTermsList) {
+        if (comp === term || (comp.length >= 3 && term.includes(comp)) || (term.length >= 3 && comp.includes(term))) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // B. Check product.model
+  if (pModel) {
+    for (const term of targetTermsList) {
+      if (pModel === term || pModel === term.replace(/^(samsung|apple|vivo|oppo|infinix|tecno|xiaomi|realme)\s+/i, "")) {
+        return true;
+      }
+    }
+  }
+
+  // C. Title matching with word boundaries & Incompatible Modifier Filter
+  const targetHasPro = /\bpro\b/i.test(targetModel);
+  const targetHasMax = /\bmax\b/i.test(targetModel);
+  const targetHasPlus = /\b(plus|\+)\b/i.test(targetModel);
+  const targetHasNote = /\bnote\b/i.test(targetModel);
+  const targetHasUltra = /\bultra\b/i.test(targetModel);
+
+  const titleHasPro = /\bpro\b/i.test(pName);
+  const titleHasMax = /\bmax\b/i.test(pName);
+  const titleHasPlus = /\b(plus|\+)\b/i.test(pName);
+  const titleHasNote = /\bnote\b/i.test(pName);
+  const titleHasUltra = /\bultra\b/i.test(pName);
+
+  if (!targetHasPro && titleHasPro) return false;
+  if (!targetHasMax && titleHasMax) return false;
+  if (!targetHasPlus && titleHasPlus) return false;
+  if (!targetHasNote && titleHasNote) return false;
+  if (!targetHasUltra && titleHasUltra) return false;
+
+  // Now check exact word boundaries for target tokens
+  for (const term of targetTermsList) {
+    const cleanTerm = term.replace(/^(samsung|apple|vivo|oppo|infinix|tecno|xiaomi|realme)\s+/i, "").trim();
+    if (cleanTerm.length >= 2) {
+      const boundaryRegex = new RegExp(`(^|[^a-z0-9])${escapeRegex(cleanTerm)}([^a-z0-9]|$)`, "i");
+      if (boundaryRegex.test(pName) || (product.sku && boundaryRegex.test(product.sku))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export function getCompatiblePartsForDevice(
   device: CompatibilityDevice | string,
   allProducts: Product[]
@@ -201,39 +313,49 @@ export function getCompatiblePartsForDevice(
   groups: DevicePartsGroup[];
   totalParts: number;
 } {
+  const safeProducts = Array.isArray(allProducts) ? allProducts : [];
   let targetModel = "";
   let targetBrand = "";
+  let targetCode = "";
   let aliases: string[] = [];
   let series = "";
 
   if (typeof device === "string") {
-    targetModel = device.trim().toLowerCase();
-    // Try to locate in known list
+    const query = device.trim().toLowerCase();
     const found = DEFAULT_COMPATIBILITY_DEVICES.find(
       (d) =>
-        d.model.toLowerCase() === targetModel ||
-        d.compatible_models_alias?.some((a) => a.toLowerCase() === targetModel)
+        (d.model || "").toLowerCase() === query ||
+        (d.model_name || "").toLowerCase() === query ||
+        d.compatible_models_alias?.some((a) => (a || "").toLowerCase() === query)
     );
     if (found) {
-      targetModel = found.model;
-      targetBrand = found.brand;
+      targetModel = found.model || found.model_name || "";
+      targetBrand = found.brand || "";
       series = found.series || "";
-      aliases = found.compatible_models_alias || [];
+      aliases = (found.compatible_models_alias || []).filter(Boolean);
+      targetCode = found.model_code || aliases[0] || "";
     } else {
+      targetModel = device.trim();
       aliases = [targetModel];
     }
-  } else {
-    targetModel = device.model;
-    targetBrand = device.brand;
+  } else if (device && typeof device === "object") {
+    targetModel = device.model || device.model_name || "";
+    targetBrand = device.brand || "";
     series = device.series || "";
-    aliases = [device.model, ...(device.compatible_models_alias || [])];
+    targetCode = device.model_code || (device.compatible_models_alias && device.compatible_models_alias[0]) || "";
+    aliases = [
+      targetModel,
+      ...(device.compatible_models_alias || []),
+      ...(device.aliases || []),
+    ].filter(Boolean);
   }
 
-  // Tokenize model keywords for fuzzy matching
-  const searchTerms = [
-    targetModel.toLowerCase(),
-    ...aliases.map((a) => a.toLowerCase().trim()),
-  ].filter(Boolean);
+  const targetDeviceObj = {
+    brand: targetBrand,
+    model: targetModel,
+    modelCode: targetCode,
+    aliases,
+  };
 
   // Group buckets
   const categoryMap: { [cat in SparePartCategory]: Product[] } = {
@@ -248,31 +370,13 @@ export function getCompatiblePartsForDevice(
     "Speaker / Ringer": [],
   };
 
-  for (const product of allProducts) {
-    if (product.is_active === false) continue;
+  for (const product of safeProducts) {
+    if (!isProductCompatibleWithDevice(product, targetDeviceObj)) {
+      continue;
+    }
 
+    const pBrand = (typeof product.brand === "string" ? product.brand : (product.brand as any)?.name || "").toLowerCase().trim();
     const pName = (product.name || "").toLowerCase();
-    const pModel = (product.model || "").toLowerCase();
-    const pBrand = (product.brand || "").toLowerCase();
-    const pComp = Array.isArray(product.compatible_models)
-      ? product.compatible_models.join(" ").toLowerCase()
-      : (product.compatible_models || "").toLowerCase();
-    const pSku = (product.sku || "").toLowerCase();
-
-    // Determine if product matches target model or any alias
-    const matchesModel = searchTerms.some((term) => {
-      // Clean term
-      const cleanTerm = term.replace(/^(samsung|apple|vivo|oppo|infinix|tecno|xiaomi|realme)\s+/i, "");
-      return (
-        pName.includes(term) ||
-        pName.includes(cleanTerm) ||
-        pModel.includes(cleanTerm) ||
-        pComp.includes(cleanTerm) ||
-        pSku.includes(cleanTerm)
-      );
-    });
-
-    if (!matchesModel) continue;
 
     // Filter by Brand if known
     if (targetBrand && pBrand && pBrand !== targetBrand.toLowerCase()) {

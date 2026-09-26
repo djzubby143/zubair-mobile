@@ -51,7 +51,8 @@ export default function SmartPricingPage() {
       const res = await fetch("/api/admin/products");
       if (!res.ok) throw new Error("Failed to load products");
       const data = await res.json();
-      setProducts(data);
+      const list = Array.isArray(data) ? data : data.products || data.customProducts || [];
+      setProducts(list);
 
       const history = await getPriceHistory(undefined, 30);
       setHistoryList(history);
@@ -67,12 +68,14 @@ export default function SmartPricingPage() {
     fetchData();
   }, []);
 
+  const productList = Array.isArray(products) ? products : [];
+
   // Compute available brands & categories
   const brands = Array.from(
     new Set(
-      products
+      productList
         .map((p) => {
-          const match = p.name.match(/^(Samsung|iPhone|Apple|Vivo|Oppo|Infinix|Xiaomi|Tecno|Realme|Redmi|Huawei|Google|OnePlus)/i);
+          const match = p?.name?.match(/^(Samsung|iPhone|Apple|Vivo|Oppo|Infinix|Xiaomi|Tecno|Realme|Redmi|Huawei|Google|OnePlus)/i);
           return match ? match[0] : null;
         })
         .filter(Boolean) as string[]
@@ -81,15 +84,15 @@ export default function SmartPricingPage() {
 
   const categories = Array.from(
     new Set(
-      products
-        .map((p) => (typeof p.category === "object" && p.category ? p.category.name : (p.category as any)))
+      productList
+        .map((p) => (typeof p?.category === "object" && p?.category ? p.category.name : (p?.category as any)))
         .filter(Boolean) as string[]
     )
   ).sort();
 
   // Preview computation
   const previewProducts = getBulkPricePreview(
-    products,
+    productList,
     selectedBrand === "all" ? undefined : selectedBrand,
     selectedCategory === "all" ? undefined : selectedCategory,
     targetTier,
@@ -121,7 +124,7 @@ export default function SmartPricingPage() {
 
     try {
       const result = await applyBulkPriceUpdate(
-        products,
+        productList,
         {
           brand: selectedBrand === "all" ? undefined : selectedBrand,
           category: selectedCategory === "all" ? undefined : selectedCategory,
@@ -134,17 +137,25 @@ export default function SmartPricingPage() {
         "Super Admin"
       );
 
-      // Persist changes through API
-      for (const prod of result.updatedProducts) {
-        await fetch(`/api/admin/products/${prod.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            retail_price: prod.retail_price,
-            wholesale_price: prod.wholesale_price,
-            technician_price: prod.technician_price,
-          }),
-        }).catch((e) => console.warn(`Failed saving ${prod.id}:`, e));
+      // Persist changes to server via batch pricing endpoint
+      const batchRes = await fetch("/api/admin/pricing/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          updates: result.updatedProducts.map((p) => ({
+            id: p.id,
+            sku: p.sku,
+            retail_price: p.retail_price,
+            wholesale_price: p.wholesale_price,
+            technician_price: p.technician_price,
+          })),
+          reason,
+          changed_by: "Super Admin",
+        }),
+      });
+
+      if (!batchRes.ok) {
+        throw new Error("Failed to persist price updates to server");
       }
 
       setSuccessMsg(
