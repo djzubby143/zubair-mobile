@@ -5,7 +5,7 @@ export interface LiveCategory {
   name: string;
   slug: string;
   subcategories: string[];
-  description?: string; // Add this line
+  description?: string;
 }
 
 export const DEFAULT_CATEGORIES: LiveCategory[] = [
@@ -24,22 +24,8 @@ export const DEFAULT_CATEGORIES: LiveCategory[] = [
 ];
 
 export async function getLiveCategories(): Promise<LiveCategory[]> {
-  try {
-    const { data, error } = await supabase.from('categories').select('*');
-    if (error || !data || data.length === 0) {
-      return DEFAULT_CATEGORIES;
-    }
-    // Format the Supabase data and ensure id/slug always exist
-    return data.map((item: any) => ({
-      id: item.id || `cat-${Math.random().toString(36).substring(2, 9)}`,
-      name: item.name,
-      slug: item.slug || item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      subcategories: Array.isArray(item.subcategories) ? item.subcategories : []
-    }));
-  } catch (err) {
-    console.warn("Falling back to default categories:", err);
-    return DEFAULT_CATEGORIES;
-  }
+  // Bypassing Supabase temporarily to force the 12 hardcoded categories to display
+  return DEFAULT_CATEGORIES;
 }
 
 export function broadcastCategoryChange(updatedCategories?: LiveCategory[]) {
