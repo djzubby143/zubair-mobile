@@ -45,6 +45,7 @@ function HomeContent() {
   const [sortBy, setSortBy] = useState<string>("default");
   const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
   const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 24;
   const [loading, setLoading] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [activeHoverCategory, setActiveHoverCategory] = useState<LiveCategory | null>(null);
@@ -692,44 +693,49 @@ function HomeContent() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {filteredProducts.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+ <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {filteredProducts
+                .slice((currentPage - 1) * 24, currentPage * 24)
+                .map((product, index) => (
+                  <ProductCard key={product.id} product={product} index={index} />
               ))}
             </div>
           )}
 
-          {/* Bottom Pagination: 1 2 3 4 5 6 7 8 9 > */}
-          <div className="flex items-center justify-center gap-1 py-8">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((pageNum) => (
+          {/* Dynamic Bottom Pagination */}
+          {Math.ceil(filteredProducts.length / 24) > 1 && (
+            <div className="flex items-center justify-center gap-1 py-8">
               <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`w-7 h-7 rounded text-xs font-semibold flex items-center justify-center transition-colors ${
-                  currentPage === pageNum
-                    ? "bg-[#dc2626] text-white shadow-2xs font-bold"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
               >
-                {pageNum}
+                <ChevronLeft className="w-4 h-4" />
               </button>
-            ))}
 
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(9, p + 1))}
-              className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 text-xs"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+              {Array.from({ length: Math.ceil(filteredProducts.length / 24) }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-7 h-7 rounded text-xs font-semibold flex items-center justify-center transition-colors ${
+                    currentPage === pageNum
+                      ? "bg-[#dc2626] text-white shadow-2xs font-bold"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === Math.ceil(filteredProducts.length / 24)}
+                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(filteredProducts.length / 24), p + 1))}
+                className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 disabled:opacity-30 text-xs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </main>
       </div>
     </div>
