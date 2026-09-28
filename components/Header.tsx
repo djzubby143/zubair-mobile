@@ -1,621 +1,69 @@
-"use client";
-
-import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  ShoppingCart,
-  User,
-  PhoneCall,
-  Menu,
-  X,
-  MapPin,
-  LogOut,
-  Layers,
-  ChevronDown,
-  ChevronRight,
-  Search,
-  Sparkles,
-  Tag,
-  ArrowRight,
-  Heart,
-  Smartphone,
-} from "lucide-react";
-import { useCart } from "@/context/CartContext";
-import AdvancedSearchBar from "@/components/AdvancedSearchBar";
-import NotificationDropdown from "@/components/NotificationDropdown";
-import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from "@/lib/categories";
-import { supabase } from "@/lib/supabase";
+import Link from 'next/link';
+import { User, ShoppingCart, LogIn } from 'lucide-react';
+import AdvancedSearchBar from './AdvancedSearchBar';
 
 export default function Header() {
-  const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [customerUser, setCustomerUser] = useState<{ full_name: string; shop_name: string; avatar_url?: string | null } | null>(null);
-  const { cartCount, isLoaded, openCart } = useCart();
-
-  // Categories Hover Mega-Menu State
-  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
-  const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
-  const [categoryFilterQuery, setCategoryFilterQuery] = useState("");
-  const [headerHoverCategory, setHeaderHoverCategory] = useState<LiveCategory | null>(null);
-  const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const loadCategories = async () => {
-    try {
-      const data = await getLiveCategories();
-      if (data && data.length > 0) {
-        setCategories(data);
-      }
-    } catch (err) {
-      console.warn("Could not load categories in header:", err);
-    }
-  };
-
-  useEffect(() => {
-    // 1. Initial Load
-    loadCategories();
-
-    // 2. Load customer session
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("zubair_customer_user");
-      if (stored) {
-        try {
-          setCustomerUser(JSON.parse(stored));
-        } catch {}
-      }
-    }
-
-    // 3. Realtime event listeners for instant category updates
-    const handleStorageUpdate = (e: StorageEvent) => {
-      if (!e.key || e.key === "zubair_mobile_categories" || e.key === "zubair_mobile_subcategories_map") {
-        loadCategories();
-      }
-    };
-
-    const handleCustomUpdate = () => {
-      loadCategories();
-    };
-
-    const handleFocus = () => {
-      loadCategories();
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("storage", handleStorageUpdate);
-      window.addEventListener("zubair_category_updated", handleCustomUpdate);
-      window.addEventListener("focus", handleFocus);
-    }
-
-    // 4. Supabase Realtime Subscription for Categories
-    const channel = supabase
-      .channel("header-categories-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "categories" },
-        () => {
-          loadCategories();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("storage", handleStorageUpdate);
-        window.removeEventListener("zubair_category_updated", handleCustomUpdate);
-        window.removeEventListener("focus", handleFocus);
-      }
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const handleMouseEnter = () => {
-    if (dropdownTimerRef.current) {
-      clearTimeout(dropdownTimerRef.current);
-    }
-    setCategoriesDropdownOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    dropdownTimerRef.current = setTimeout(() => {
-      setCategoriesDropdownOpen(false);
-      setHeaderHoverCategory(null);
-      setCategoryFilterQuery("");
-    }, 200);
-  };
-
-  const handleCustomerLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("zubair_customer_user");
-      setCustomerUser(null);
-      window.location.reload();
-    }
-  };
-
-  const selectCategory = (catName: string) => {
-    setCategoriesDropdownOpen(false);
-    setHeaderHoverCategory(null);
-    setCategoryFilterQuery("");
-    setMobileMenuOpen(false);
-    if (catName === "All") {
-      router.push("/");
-    } else {
-      router.push(`/?category=${encodeURIComponent(catName)}`);
-    }
-  };
-
-  const filteredCategories = categories.filter((c) =>
-    c.name.toLowerCase().includes(categoryFilterQuery.toLowerCase().trim())
-  );
-
   return (
-    <header className="sticky top-0 z-40 w-full bg-white shadow-xs border-b border-slate-200">
-      {/* Top micro banner (Jet Black from Logo with Red & Emerald Accents) */}
-      <div className="bg-[#111827] text-white text-xs py-1 px-4 hidden sm:block border-b border-red-600/40">
-        <div className="max-w-[1700px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[11px] text-slate-300">
-            <MapPin className="w-3.5 h-3.5 text-[#dc2626]" />
-            <span>Shop No. B16, Chand Plaza, Garjakhi Darwaza, Gujranwala</span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-300 font-medium">
-              Wholesale Mobile Spare Parts & Expert Repair Services
-            </span>
-          </div>
-          <div className="flex items-center gap-4 text-[11px]">
-            <a
-              href="https://wa.me/923458032600"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[#25D366] hover:text-white transition-colors font-semibold"
-            >
-              <PhoneCall className="w-3 h-3 text-[#25D366]" />
-              <span>WhatsApp: 03458032600</span>
+    <header className="sticky top-0 z-50 w-full bg-white shadow-sm border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto gap-4 md:gap-8">
+        
+        {/* Left: Logo */}
+        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+          <img src="/logo.jpg" alt="Zubair Mobile Logo" className="w-10 h-10 md:w-12 md:h-12 rounded object-contain" />
+        </Link>
+
+        {/* Middle: Search Bar */}
+        <div className="flex-1 max-w-3xl hidden sm:block">
+          <AdvancedSearchBar />
+        </div>
+
+        {/* Right: Socials & Actions */}
+        <div className="flex items-center gap-4 sm:gap-5 flex-shrink-0">
+          
+          {/* Social Icons (Hidden on very small mobile to save space) */}
+          <div className="hidden lg:flex items-center gap-3 border-r border-gray-200 pr-5">
+            {/* WhatsApp */}
+            <a href="https://wa.me/923458032600" className="hover:scale-110 transition-transform text-[#25D366]">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            </a>
+            {/* YouTube */}
+            <a href="#" className="hover:scale-110 transition-transform text-[#FF0000]">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </a>
+            {/* TikTok */}
+            <a href="#" className="hover:scale-110 transition-transform text-black">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.01.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 2.78-1.15 5.54-3.33 7.37-1.84 1.54-4.29 2.22-6.65 1.77-2.66-.52-5.11-2.45-6.07-5.01-.98-2.61-.63-5.69 1.11-7.89 1.75-2.22 4.67-3.32 7.42-2.82v4.06c-1.39-.41-2.96-.33-4.23.44-1.28.78-2.07 2.3-1.89 3.8.17 1.48 1.17 2.82 2.56 3.3 1.42.5 3.05.27 4.25-.63 1.12-.85 1.73-2.27 1.71-3.69-.02-3.17-.01-6.35-.01-9.52l.01-14.01z"/></svg>
+            </a>
+            {/* Instagram */}
+            <a href="#" className="hover:scale-110 transition-transform text-[#E1306C]">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.64-.07-4.85s.01-3.58.07-4.85C2.38 3.85 3.9 2.3 7.15 2.15c1.27-.06 1.65-.07 4.85-.07m0-2.16C8.74 0 8.33.01 7.05.07 2.76.26.26 2.77.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.19 4.28 2.69 6.79 6.98 6.98 1.28.06 1.69.07 4.95.07s3.67-.01 4.95-.07c4.28-.19 6.79-2.69 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.19-4.28-2.69-6.79-6.98-6.98-1.28-.06-1.69-.07-4.95-.07zM12 5.84A6.16 6.16 0 1018.16 12 6.16 6.16 0 0012 5.84zm0 10.16A4 4 0 1116 12a4 4 0 01-4 4zm5.22-9.4a1.08 1.08 0 11-2.16 0 1.08 1.08 0 012.16 0z"/></svg>
+            </a>
+            {/* Facebook */}
+            <a href="#" className="hover:scale-110 transition-transform text-[#1877F2]">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
             </a>
           </div>
-        </div>
-      </div>
 
-      {/* Main Top Bar (Matches Screenshot with User's Official Logo) */}
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3 sm:gap-4">
-        {/* Left: Official Logo + Categories Dropdown + Search Bar */}
-        <div className="flex items-center gap-3 sm:gap-5 flex-1 max-w-3xl">
-          {/* Official Brand Logo */}
-          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 shrink-0 group">
-            <div className="relative h-11 w-11 sm:h-14 sm:w-14 shrink-0 rounded-lg overflow-hidden border border-slate-200 shadow-xs bg-white p-0.5 group-hover:scale-105 transition-transform">
-              <img
-                src="/logo.jpg"
-                alt="Zubair Mobile Repair Services"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="flex flex-col justify-center">
-              <span className="font-black text-base sm:text-xl tracking-tight text-[#111827] leading-none">
-                ZUBAIR <span className="text-[#dc2626]">MOBILE</span>
-              </span>
-              <span className="bg-[#dc2626] text-white text-[8px] sm:text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded mt-1 w-fit">
-                REPAIR SERVICES & PARTS
-              </span>
-            </div>
+          {/* Login / Profile */}
+          <Link href="/login" className="flex items-center gap-1.5 text-slate-700 hover:text-red-600 font-semibold">
+            <LogIn className="w-5 h-5" />
+            <span className="hidden sm:inline">Login</span>
           </Link>
 
-          {/* Categories Hover Dropdown Menu Button ("jab cursor category par ly kar jao") */}
-          <div
-            className="relative hidden md:block"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <button
-              type="button"
-              onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-[#dc2626] text-[#111827] hover:text-white rounded-lg font-bold text-xs transition-colors shadow-2xs border border-slate-200 hover:border-[#dc2626] cursor-pointer"
-              title="Hover to view all categories and sub-categories"
-            >
-              <Layers className="w-4 h-4 text-[#dc2626] hover:text-white group-hover:text-white transition-colors" />
-              <span>Categories</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  categoriesDropdownOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {/* Hover Floating Mega-Menu with Side Sub-Categories Flyout */}
-            {categoriesDropdownOpen && (
-              <div
-                className="absolute top-full left-0 mt-1.5 flex z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-              >
-                {/* Primary Categories List Panel */}
-                <div className="w-80 max-h-[520px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-                  {/* Header & Quick Filter */}
-                  <div className="p-3 bg-slate-50 border-b border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#111827] uppercase tracking-wider flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-[#dc2626]" />
-                        All Categories ({categories.length})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => selectCategory("All")}
-                        className="text-[11px] text-[#dc2626] hover:underline font-bold"
-                      >
-                        View All
-                      </button>
-                    </div>
-
-                    {/* Filter input */}
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search category (e.g. LCD, Sidekey)..."
-                        value={categoryFilterQuery}
-                        onChange={(e) => setCategoryFilterQuery(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 bg-white text-xs rounded-md border border-slate-200 focus:outline-none focus:border-[#dc2626] text-slate-800 placeholder-slate-400"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Categories List */}
-                  <div className="overflow-y-auto max-h-[400px] p-1.5 divide-y divide-slate-50">
-                    {filteredCategories.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-slate-400">
-                        No category matches &quot;{categoryFilterQuery}&quot;
-                      </div>
-                    ) : (
-                      filteredCategories.map((cat) => {
-                        const hasSub = cat.subcategories && cat.subcategories.length > 0;
-                        const isHovered =
-                          headerHoverCategory?.name.toLowerCase() ===
-                          cat.name.toLowerCase();
-
-                        return (
-                          <div
-                            key={cat.id || cat.name}
-                            onMouseEnter={() => setHeaderHoverCategory(cat)}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => selectCategory(cat.name)}
-                              className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-lg text-xs font-medium transition-all group/item ${
-                                isHovered
-                                  ? "bg-red-50 text-[#dc2626] font-bold"
-                                  : "text-slate-700 hover:text-[#dc2626] hover:bg-red-50/80"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span
-                                  className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors ${
-                                    isHovered
-                                      ? "bg-[#dc2626] text-white"
-                                      : "bg-slate-100 text-slate-600 group-hover/item:bg-[#dc2626] group-hover/item:text-white"
-                                  }`}
-                                >
-                                  {cat.name.charAt(0).toUpperCase()}
-                                </span>
-                                <div className="truncate">
-                                  <p className="font-semibold truncate text-[#111827] group-hover/item:text-[#dc2626]">
-                                    {cat.name}
-                                  </p>
-                                  {cat.description && (
-                                    <p className="text-[10px] text-slate-400 truncate max-w-[180px]">
-                                      {cat.description}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              {hasSub ? (
-                                <ChevronRight
-                                  className={`w-3.5 h-3.5 shrink-0 transition-transform ${
-                                    isHovered
-                                      ? "text-[#dc2626] translate-x-1"
-                                      : "text-slate-300 group-hover/item:text-[#dc2626]"
-                                  }`}
-                                />
-                              ) : null}
-                            </button>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {/* Sub-Category Flyout Side Menu for Header */}
-                {headerHoverCategory &&
-                  headerHoverCategory.subcategories &&
-                  headerHoverCategory.subcategories.length > 0 && (
-                    <div className="ml-1.5 w-60 bg-white rounded-xl shadow-2xl border border-slate-200 p-2.5 max-h-[520px] overflow-y-auto animate-in fade-in slide-in-from-left-2 duration-150">
-                      <div className="pb-2 mb-2 border-b border-slate-100 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                            Sub-Categories
-                          </span>
-                          <h4 className="text-xs font-black text-[#111827] uppercase truncate max-w-[140px]">
-                            {headerHoverCategory.name}
-                          </h4>
-                        </div>
-                        <span className="text-[10px] bg-red-50 text-[#dc2626] font-bold px-2 py-0.5 rounded-full border border-red-100">
-                          {headerHoverCategory.subcategories.length} Types
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => selectCategory(headerHoverCategory.name)}
-                        className="w-full text-left px-2.5 py-1.5 mb-1.5 rounded-lg text-[11px] font-bold text-[#dc2626] bg-red-50/60 hover:bg-red-50 transition-colors flex items-center justify-between group/all"
-                      >
-                        <span>View All {headerHoverCategory.name}</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover/all:translate-x-1 transition-transform" />
-                      </button>
-
-                      <div className="space-y-1">
-                        {headerHoverCategory.subcategories.map((sub, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => selectCategory(sub)}
-                            className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-[#dc2626] transition-all flex items-center justify-between group/sub"
-                          >
-                            <span className="truncate">{sub}</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover/sub:text-[#dc2626] group-hover/sub:translate-x-0.5 transition-all shrink-0" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-            )}
-          </div>
-
-          {/* Advanced Search Bar with Instant Dropdown, Images & Details */}
-          <AdvancedSearchBar className="flex-1 max-w-lg hidden sm:block" />
-        </div>
-
-        {/* Right: Cart Button + Login Button */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* WhatsApp Direct CTA */}
-          <a
-            href="https://wa.me/923458032600"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-2xs transition-colors"
-          >
-            <PhoneCall className="w-3.5 h-3.5" />
-            <span>03458032600</span>
-          </a>
-
-          {/* Compatibility Engine Link */}
-          <Link
-            href="/compatibility"
-            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:text-[#dc2626] bg-slate-50 hover:bg-red-50 rounded-lg border border-slate-200 transition-colors"
-            title="Search parts by phone model"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-[#dc2626]" />
-            <span>Phone Models</span>
-          </Link>
-
-          {/* Wishlist Link */}
-          <Link
-            href="/wishlist"
-            className="p-2 rounded-lg border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center bg-white shadow-2xs"
-            title="My Saved Wishlist"
-          >
-            <Heart className="w-4 h-4 text-slate-600 hover:text-rose-500" />
-          </Link>
-
-          {/* Notifications Dropdown */}
-          <NotificationDropdown recipientType="customer" />
-
-          {/* Cart Icon Button */}
-          <button
-            type="button"
-            onClick={openCart}
-            className="relative p-2 rounded-lg border border-red-200 hover:border-[#dc2626] text-[#dc2626] hover:bg-red-50 transition-colors flex items-center justify-center bg-white shadow-2xs cursor-pointer"
-            aria-label="Shopping Cart"
-            title="Open Shopping Cart"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="absolute -top-1.5 -right-1.5 bg-[#dc2626] text-white text-[10px] font-bold h-4.5 w-4.5 rounded-full flex items-center justify-center shadow-xs">
-              {isLoaded ? cartCount : 0}
+          {/* Cart */}
+          <Link href="/cart" className="relative flex items-center text-slate-700 hover:text-red-600">
+            <ShoppingCart className="w-6 h-6" />
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
+              0
             </span>
-          </button>
-
-          {/* Customer / Admin Login Status */}
-          {customerUser ? (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:border-red-300 bg-slate-50/80 hover:bg-red-50/50 transition-colors group"
-                title="View My Profile & Order Tracking"
-              >
-                <div className="w-6 h-6 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-red-200">
-                  {customerUser.avatar_url ? (
-                    <img src={customerUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-3.5 h-3.5" />
-                  )}
-                </div>
-                <div className="hidden sm:flex flex-col text-left">
-                  <span className="text-[11px] font-bold text-[#111827] leading-tight group-hover:text-[#dc2626] transition-colors flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="truncate max-w-[120px]">{customerUser.shop_name || customerUser.full_name}</span>
-                  </span>
-                  <span className="text-[9.5px] text-slate-500 font-medium">Orders & Tracking</span>
-                </div>
-              </Link>
-              <button
-                type="button"
-                onClick={handleCustomerLogout}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-red-300 text-slate-500 hover:text-[#dc2626] text-xs font-semibold bg-white shadow-2xs transition-colors"
-                title="Log Out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            </div>
-          ) : (
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-red-200 hover:border-[#dc2626] text-[#dc2626] hover:bg-red-50 text-xs font-semibold transition-colors bg-white shadow-2xs"
-            >
-              <User className="w-4 h-4 text-[#dc2626]" />
-              <span>Login</span>
-            </Link>
-          )}
-
-          {/* Mobile menu trigger */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="sm:hidden p-1.5 rounded-lg text-slate-600 hover:text-[#dc2626] hover:bg-slate-100"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Mobile Search Bar with Advanced Search Dropdown */}
-      <div className="sm:hidden px-4 pb-3">
-        <AdvancedSearchBar isMobile={true} />
+      {/* Mobile Search - Rendered Below on Small Screens */}
+      <div className="block sm:hidden px-4 pb-3 w-full">
+         <AdvancedSearchBar />
       </div>
-
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="sm:hidden fixed inset-0 z-50 flex">
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-2xs"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <div className="relative ml-auto w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 p-5 space-y-4 overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <img src="/logo.jpg" alt="Logo" className="w-8 h-8 object-contain" />
-                <span className="font-bold text-base text-[#111827]">
-                  ZUBAIR <span className="text-[#dc2626]">MOBILE</span>
-                </span>
-              </div>
-              <button onClick={() => setMobileMenuOpen(false)}>
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-
-            <div className="space-y-1 text-sm">
-              <Link
-                href="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-slate-700 font-semibold hover:text-[#dc2626]"
-              >
-                Home / Catalog
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  openCart();
-                }}
-                className="w-full flex items-center justify-between py-2 text-slate-700 font-semibold hover:text-[#dc2626] text-left cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-[#dc2626]" />
-                  <span>My Cart</span>
-                </span>
-                <span className="bg-[#dc2626] text-white text-xs px-2 py-0.5 rounded-full">
-                  {cartCount}
-                </span>
-              </button>
-              {customerUser ? (
-                <Link
-                  href="/profile"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between py-2 text-[#dc2626] font-bold"
-                >
-                  <span className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded-full bg-red-100 text-[#dc2626] flex items-center justify-center overflow-hidden border border-red-200 shrink-0">
-                      {customerUser.avatar_url ? (
-                        <img src={customerUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <User className="w-3 h-3" />
-                      )}
-                    </div>
-                    <span>My Profile & Tracking</span>
-                  </span>
-                  <span className="bg-red-50 text-[#dc2626] text-[10px] px-2 py-0.5 rounded-full border border-red-200">
-                    Live
-                  </span>
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block py-2 text-slate-700 font-semibold hover:text-[#dc2626]"
-                >
-                  Customer / Admin Login
-                </Link>
-              )}
-            </div>
-
-            {/* Mobile Categories Accordion with Subcategories */}
-            <div className="pt-2 border-t border-slate-100">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Categories & Types ({categories.length})
-              </p>
-              <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
-                <button
-                  type="button"
-                  onClick={() => selectCategory("All")}
-                  className="w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  All Categories
-                </button>
-                {categories.map((cat) => (
-                  <div key={cat.id || cat.name} className="space-y-0.5">
-                    <button
-                      type="button"
-                      onClick={() => selectCategory(cat.name)}
-                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-semibold text-slate-700 hover:bg-red-50 hover:text-[#dc2626]"
-                    >
-                      <span>{cat.name}</span>
-                      {cat.subcategories && cat.subcategories.length > 0 && (
-                        <span className="text-[10px] text-slate-400 font-normal">
-                          {cat.subcategories.length} types
-                        </span>
-                      )}
-                    </button>
-                    {cat.subcategories && cat.subcategories.length > 0 && (
-                      <div className="pl-4 space-y-0.5">
-                        {cat.subcategories.map((sub, sIdx) => (
-                          <button
-                            key={sIdx}
-                            type="button"
-                            onClick={() => selectCategory(sub)}
-                            className="w-full text-left px-2 py-1 text-[11px] text-slate-500 hover:text-[#dc2626] hover:bg-red-50/50 rounded flex items-center gap-1.5"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                            <span>{sub}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <a
-                href="https://wa.me/923458032600"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#25D366] text-white rounded-lg text-xs font-bold shadow-xs"
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>WhatsApp: 03458032600</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
