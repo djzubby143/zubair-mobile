@@ -1,8 +1,96 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { User, ShoppingCart, LogIn } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ShoppingCart, LogIn, LogOut, User } from 'lucide-react';
 import AdvancedSearchBar from './AdvancedSearchBar';
+import { useCart } from '@/context/CartContext';
+import { supabase } from '@/lib/supabase';
+import { getLiveCategories, LiveCategory, DEFAULT_CATEGORIES } from '@/lib/categories';
 
 export default function Header() {
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [customerUser, setCustomerUser] = useState<{ full_name: string; shop_name: string; avatar_url?: string | null } | null>(null);
+  const { cartCount, isLoaded, openCart } = useCart();
+
+  // Categories Hover Mega-Menu State
+  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
+  const [categories, setCategories] = useState<LiveCategory[]>(DEFAULT_CATEGORIES);
+  const [categoryFilterQuery, setCategoryFilterQuery] = useState("");
+  const [headerHoverCategory, setHeaderHoverCategory] = useState<LiveCategory | null>(null);
+  const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadCategories = async () => {
+    try {
+      const data = await getLiveCategories();
+      if (data && data.length > 0) {
+        setCategories(data);
+      }
+    } catch (err) {
+      console.warn("Could not load categories in header:", err);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Initial Load
+    loadCategories();
+
+    // 2. Load customer session
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("zubair_customer_user");
+      if (stored) {
+        try {
+          setCustomerUser(JSON.parse(stored));
+        } catch {}
+      }
+    }
+
+    // 3. Realtime event listeners for instant category updates
+    const handleStorageUpdate = (e: StorageEvent) => {
+      if (!e.key || e.key === "zubair_mobile_categories" || e.key === "zubair_mobile_subcategories_map") {
+        loadCategories();
+      }
+    };
+
+    const handleCustomUpdate = () => loadCategories();
+    const handleFocus = () => loadCategories();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", handleStorageUpdate);
+      window.addEventListener("zubair_category_updated", handleCustomUpdate);
+      window.addEventListener("focus", handleFocus);
+    }
+
+    // 4. Supabase Realtime Subscription for Categories
+    const channel = supabase
+      .channel("header-categories-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "categories" },
+        () => loadCategories()
+      )
+      .subscribe();
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("storage", handleStorageUpdate);
+        window.removeEventListener("zubair_category_updated", handleCustomUpdate);
+        window.removeEventListener("focus", handleFocus);
+      }
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleCustomerLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("zubair_customer_user");
+      setCustomerUser(null);
+      window.location.reload();
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white shadow-sm border-b border-gray-200">
       <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto gap-4 md:gap-8">
@@ -32,7 +120,7 @@ export default function Header() {
             </a>
             {/* TikTok */}
             <a href="#" className="hover:scale-110 transition-transform text-black">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.01.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 2.78-1.15 5.54-3.33 7.37-1.84 1.54-4.29 2.22-6.65 1.77-2.66-.52-5.11-2.45-6.07-5.01-.98-2.61-.63-5.69 1.11-7.89 1.75-2.22 4.67-3.32 7.42-2.82v4.06c-1.39-.41-2.96-.33-4.23.44-1.28.78-2.07 2.3-1.89 3.8.17 1.48 1.17 2.82 2.56 3.3 1.42.5 3.05.27 4.25-.63 1.12-.85 1.73-2.27 1.71-3.69-.02-3.17-.01-6.35-.01-9.52l.01-14.01z"/></svg>
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.01.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-1.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 2.78-1.15 5.54-3.33 7.37-1.84 1.54-4.29 2.22-6.65 1.77-2.66-.52-5.11-2.45-6.07-5.01-.98-2.61-.63-5.69 1.11-7.89 1.75-2.22 4.67-3.32 7.42-2.82v4.06c-1.39-.41-2.96-.33-4.23.44-1.28.78-2.07 2.3-1.89 3.8.17 1.48 1.17 2.82 2.56 3.3 1.42.5 3.05.27 4.25-.63 1.12-.85 1.73-2.27 1.71-3.69-.02-3.17-.01-6.35-.01-9.52l.01-14.01z"/></svg>
             </a>
             {/* Instagram */}
             <a href="#" className="hover:scale-110 transition-transform text-[#E1306C]">
@@ -44,19 +132,30 @@ export default function Header() {
             </a>
           </div>
 
-          {/* Login / Profile */}
-          <Link href="/login" className="flex items-center gap-1.5 text-slate-700 hover:text-red-600 font-semibold">
-            <LogIn className="w-5 h-5" />
-            <span className="hidden sm:inline">Login</span>
-          </Link>
+          {/* Dynamic Login / Profile Logic */}
+          {customerUser ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-800 hidden sm:block border-r border-gray-200 pr-3">
+                {customerUser.full_name}
+              </span>
+              <button onClick={handleCustomerLogout} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 transition-colors">
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <Link href="/login" className="flex items-center gap-1.5 text-slate-700 hover:text-red-600 font-semibold transition-colors">
+              <LogIn className="w-5 h-5" />
+              <span className="hidden sm:inline">Login</span>
+            </Link>
+          )}
 
-          {/* Cart */}
-          <Link href="/cart" className="relative flex items-center text-slate-700 hover:text-red-600">
+          {/* Dynamic Cart Logic */}
+          <button onClick={openCart} className="relative flex items-center text-slate-700 hover:text-red-600 transition-colors">
             <ShoppingCart className="w-6 h-6" />
             <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border border-white">
-              0
+              {isLoaded ? cartCount : 0}
             </span>
-          </Link>
+          </button>
         </div>
       </div>
 

@@ -44,10 +44,13 @@ export default function PhoneCompatibilityExplorer() {
       try {
         const [devs, prodsRes] = await Promise.all([
           getSupportedDevices(),
-          fetch("/api/products").then((r) => r.json()).catch(() => []),
+          fetch("/api/products").then((r) => r.json()).catch(() => null),
         ]);
         setDevices(devs);
-        setProducts(Array.isArray(prodsRes) ? prodsRes : []);
+        const prods = Array.isArray(prodsRes)
+          ? prodsRes
+          : prodsRes?.products || [];
+        setProducts(prods);
 
         const initialDev = devs.find((d) => d.brand.toLowerCase() === "samsung") || devs[0];
         if (initialDev) setSelectedDevice(initialDev);

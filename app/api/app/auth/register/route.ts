@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Name, email, and password are required" }, { status: 400 });
     }
 
-    const tierRequested = customer_type === "wholesale" || customer_type === "technician" ? customer_type : "retail";
+    const requestedTier = customer_type === "wholesale" || customer_type === "technician" ? customer_type : "retail";
+    // Security: Self-registration is strictly locked to 'retail'. 
+    // Higher tiers (wholesale, technician) require manual admin approval and verification.
+    const effectiveTier = "retail";
 
     // Supabase Auth sign up
     const { data, error } = await supabase.auth.signUp({
@@ -23,8 +26,9 @@ export async function POST(req: NextRequest) {
           full_name,
           phone,
           shop_name,
-          customer_type: tierRequested,
-          pricing_tier: tierRequested,
+          customer_type: effectiveTier,
+          pricing_tier: effectiveTier,
+          requested_tier: requestedTier,
         },
       },
     });
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: error?.message || "Registration failed" }, { status: 400 });
     }
 
-    // Insert customer row
+    // Insert customer row strictly as retail
     await supabase.from("customers").upsert({
       id: data.user.id,
       name: full_name,
@@ -42,18 +46,19 @@ export async function POST(req: NextRequest) {
       shop_name: shop_name || "",
       shop_address: shop_address || "",
       city: city || "Gujranwala",
-      customer_type: tierRequested,
-      pricing_tier: tierRequested,
-      is_approved: tierRequested === "retail", // auto-approve retail, admin verifies wholesale/tech
+      customer_type: effectiveTier,
+      pricing_tier: effectiveTier,
+      requested_tier: requestedTier,
+      is_approved: true, // Retail is auto-approved; admin approval needed for upgrade
     });
 
     // Send admin notification
     await createNotification({
       recipient_type: "admin",
       type: "customer_registration",
-      title: `New ${tierRequested.toUpperCase()} Registration: ${full_name}`,
-      message: `${full_name} (${phone || email}) registered as ${tierRequested} from ${city || "Pakistan"}.`,
-      data: { user_id: data.user.id, email, phone, tier: tierRequested },
+      title: `New Customer Registration: ${full_name} (${requestedTier === "retail" ? "Retail" : `Requested ${requestedTier}`})`,
+      message: `${full_name} (${phone || email}) registered. Assigned: retail. Requested: ${requestedTier}. City: ${city || "Pakistan"}.`,
+      data: { user_id: data.user.id, email, phone, assigned_tier: effectiveTier, requested_tier: requestedTier },
     });
 
     return NextResponse.json({
@@ -62,9 +67,11 @@ export async function POST(req: NextRequest) {
         id: data.user.id,
         email: data.user.email,
         full_name,
-        pricing_tier: tierRequested,
+        pricing_tier: effectiveTier,
       },
-      message: "Registration successful. Welcome to Zubair Mobile!",
+      message: requestedTier !== "retail" 
+        ? "Account created with standard Retail access. Your wholesale/technician application has been submitted to admin for verification."
+        : "Registration successful. Welcome to Zubair Mobile!",
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

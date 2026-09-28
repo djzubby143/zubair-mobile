@@ -49,7 +49,10 @@ export default function AdminCompatibilityPage() {
 
         const res = await fetch("/api/admin/products");
         if (res.ok) {
-          const prods: Product[] = await res.json();
+          const resJson = await res.json();
+          const prods: Product[] = Array.isArray(resJson)
+            ? resJson
+            : resJson.products || resJson.customProducts || [];
           setProducts(prods);
         }
       } catch (err) {

@@ -8,6 +8,7 @@ import {
   saveServerCustomProducts,
   saveServerDeletedKey,
 } from "@/lib/serverProducts";
+import { isProductDeleted } from "@/lib/customProducts";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,53 @@ export async function GET() {
     const custom = getServerCustomProducts();
     const deleted = getServerDeletedKeys();
 
+    // 1. Fetch live products from Supabase
+    let dbData: any[] = [];
+    try {
+      const { data } = await supabase
+        .from("products")
+        .select("*, category:categories(*)")
+        .order("created_at", { ascending: false });
+      if (data) dbData = data;
+    } catch {}
+
+    // 2. Merge: Custom Products > Supabase DB Products > Default Catalog
+    const mergedMap = new Map<string, Product>();
+
+    for (const item of custom) {
+      if (item.is_active !== false) {
+        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+        if (!isProductDeleted(item, deleted)) {
+          mergedMap.set(key, item);
+        }
+      }
+    }
+
+    if (dbData && dbData.length > 0) {
+      for (const item of dbData) {
+        const key = (item.sku || item.slug || item.id || item.name).toLowerCase();
+        if (!isProductDeleted(item as Product, deleted) && !mergedMap.has(key)) {
+          mergedMap.set(key, item as Product);
+        }
+      }
+    }
+
+    const existingItems = Array.from(mergedMap.values());
+    for (const def of DEFAULT_CATALOG_PRODUCTS) {
+      const key = (def.sku || def.slug || def.id || def.name).toLowerCase();
+      const nameKey = def.name.toLowerCase();
+      const isDeleted = isProductDeleted(def, deleted);
+      const exists = existingItems.some((val) => val.name.toLowerCase() === nameKey);
+      if (!isDeleted && !mergedMap.has(key) && !exists) {
+        mergedMap.set(key, def);
+      }
+    }
+
+    const allMerged = Array.from(mergedMap.values());
+
     return NextResponse.json({
       success: true,
+      products: allMerged,
       customProducts: custom,
       deletedKeys: Array.from(deleted),
     });
@@ -105,6 +151,14 @@ export async function POST(req: NextRequest) {
         image_url: body.image_url || null,
         is_active: body.is_active !== undefined ? body.is_active : true,
         featured: body.featured || false,
+        brand: body.brand || null,
+        model: body.model || null,
+        compatible_models: body.compatible_models || null,
+        part_type: body.part_type || null,
+        quality_grade: body.quality_grade || null,
+        warranty: body.warranty || null,
+        barcode: body.barcode || null,
+        min_stock_level: body.min_stock_level || 5,
       };
       if (isUuid) sbRecord.id = body.id;
 

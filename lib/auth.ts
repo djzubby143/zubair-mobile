@@ -298,9 +298,15 @@ export async function updateCustomerProfile(updatedData: {
     const stored = localStorage.getItem("zubair_customer_user");
     const current: AuthUser = stored ? JSON.parse(stored) : {};
 
+    // Security: customers cannot self-escalate tier or role via profile update
+    const { pricing_tier: _ignoredTier, role: _ignoredRole, ...safeProfileData } = updatedData as any;
+
     const updatedUser: AuthUser = {
       ...current,
-      ...updatedData,
+      ...safeProfileData,
+      // Maintain strictly verified existing pricing tier and role
+      pricing_tier: current.pricing_tier || "retail",
+      role: current.role || "customer",
     };
 
     localStorage.setItem("zubair_customer_user", JSON.stringify(updatedUser));
@@ -317,7 +323,7 @@ export async function updateCustomerProfile(updatedData: {
             (current.phone && c.phone === current.phone)
         );
         if (idx !== -1) {
-          list[idx] = { ...list[idx], ...updatedData };
+          list[idx] = { ...list[idx], ...safeProfileData };
           localStorage.setItem("zubair_mobile_customers", JSON.stringify(list));
         }
       } catch (err) {
@@ -329,9 +335,9 @@ export async function updateCustomerProfile(updatedData: {
     if (current.id || current.username) {
       try {
         if (current.id) {
-          await supabase.from("customers").update(updatedData).eq("id", current.id);
+          await supabase.from("customers").update(safeProfileData).eq("id", current.id);
         } else if (current.username) {
-          await supabase.from("customers").update(updatedData).eq("username", current.username);
+          await supabase.from("customers").update(safeProfileData).eq("username", current.username);
         }
       } catch (err) {
         console.warn("Supabase customer update notice:", err);

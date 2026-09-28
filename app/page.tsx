@@ -210,17 +210,23 @@ function HomeContent() {
       window.addEventListener("focus", handleFocus);
     }
 
-    // Supabase Realtime channel for live sync
-    const catChannel = supabase
-      .channel("home-categories-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "categories" },
-        () => {
-          loadAllData();
-        }
-      )
-      .subscribe();
+    // Supabase Realtime channel for live sync (safe unique channel instance)
+    const catChannelName = `home-cats-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    let catChannel: any = null;
+    try {
+      catChannel = supabase
+        .channel(catChannelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "categories" },
+          () => {
+            loadAllData();
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn("Realtime home category listener error:", err);
+    }
 
     return () => {
       if (typeof window !== "undefined") {
@@ -228,7 +234,11 @@ function HomeContent() {
         window.removeEventListener("zubair_category_updated", handleCustomUpdate);
         window.removeEventListener("focus", handleFocus);
       }
-      supabase.removeChannel(catChannel);
+      if (catChannel) {
+        try {
+          supabase.removeChannel(catChannel);
+        } catch {}
+      }
     };
   }, []);
 

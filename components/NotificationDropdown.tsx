@@ -40,9 +40,25 @@ export default function NotificationDropdown({
 
   const loadNotifs = async () => {
     try {
+      if (recipientType === "admin") {
+        const res = await fetch("/api/admin/notifications?type=admin", {
+          headers: { "x-admin-role": "admin" },
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.notifications)) {
+            setNotifications(data.notifications);
+            return;
+          }
+        }
+      }
       const data = await getNotifications(recipientType, recipientId);
       setNotifications(data);
-    } catch {}
+    } catch {
+      const data = await getNotifications(recipientType, recipientId);
+      setNotifications(data);
+    }
   };
 
   useEffect(() => {
@@ -52,9 +68,16 @@ export default function NotificationDropdown({
     window.addEventListener("zubair_notifications_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
 
+    // Periodic check for new orders every 15s in admin view
+    let interval: NodeJS.Timeout | null = null;
+    if (recipientType === "admin") {
+      interval = setInterval(loadNotifs, 15000);
+    }
+
     return () => {
       window.removeEventListener("zubair_notifications_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
+      if (interval) clearInterval(interval);
     };
   }, [recipientType, recipientId]);
 
@@ -77,11 +100,29 @@ export default function NotificationDropdown({
 
   const handleMarkAsRead = async (id: string) => {
     await markNotificationAsRead(id);
+    if (recipientType === "admin") {
+      try {
+        await fetch("/api/admin/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "x-admin-role": "admin" },
+          body: JSON.stringify({ id }),
+        });
+      } catch {}
+    }
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
   };
 
   const handleMarkAll = async () => {
     await markAllNotificationsAsRead(recipientType);
+    if (recipientType === "admin") {
+      try {
+        await fetch("/api/admin/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "x-admin-role": "admin" },
+          body: JSON.stringify({ all: true, recipientType }),
+        });
+      } catch {}
+    }
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
 

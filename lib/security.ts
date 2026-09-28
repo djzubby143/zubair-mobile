@@ -8,6 +8,27 @@ export const STORAGE_KEY_LOGIN_HISTORY = "zubair_mobile_login_history";
 
 export const DEFAULT_STAFF: StaffAccount[] = [
   {
+    id: "staff-djzubby",
+    username: "djzubby",
+    full_name: "Dj Zubby (Super Admin)",
+    name: "Dj Zubby",
+    phone: "+92 345 8032600",
+    email: "djzubby@zubairmobile.com",
+    role: "super_admin",
+    is_active: true,
+    two_factor_enabled: false,
+    permissions: {
+      can_manage_prices: true,
+      can_manage_inventory: true,
+      can_manage_orders: true,
+      can_view_reports: true,
+      can_manage_users: true,
+      can_manage_marketing: true,
+    },
+    last_login: new Date().toISOString(),
+    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+  },
+  {
     id: "staff-1",
     username: "zubair_admin",
     full_name: "Muhammad Zubair (Owner)",

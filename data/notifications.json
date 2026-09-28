@@ -1,0 +1,30 @@
+[
+  {
+    "id": "notif-1790433884056-ranuk",
+    "title": "New Wholesale Order Received: #ZM-998822",
+    "message": "Zubair Mobile Repair placed an order for Rs. 48,000 (4 items).",
+    "type": "new_order",
+    "recipient_type": "admin",
+    "reference_id": "order-test-998822",
+    "link_url": "/admin/orders",
+    "whatsapp_text": "New wholesale order ZM-998822 for Rs. 48,000",
+    "data": {
+      "order_number": "ZM-998822",
+      "total": 48000
+    },
+    "is_read": true,
+    "created_at": "2026-09-26T14:44:44.056Z"
+  },
+  {
+    "id": "notif-seed-1",
+    "recipient_type": "admin",
+    "title": "New Wholesale Order Received",
+    "message": "Order #ZB-1002 placed by Ali Mobile Repair Center for Rs. 24,500.",
+    "type": "new_order",
+    "reference_id": "order-1002",
+    "is_read": false,
+    "link_url": "/admin/orders",
+    "whatsapp_text": "New order ZB-1002 received for Rs. 24,500",
+    "created_at": "2026-09-26T14:14:44.038Z"
+  }
+]

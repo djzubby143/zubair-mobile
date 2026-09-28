@@ -41,33 +41,60 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     async function checkAuth() {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        let authEmail: string | null = null;
+        let authRole: string | null = null;
 
-        if (!session) {
+        // 1. Check local admin session in localStorage
+        if (typeof window !== "undefined") {
+          try {
+            const stored = localStorage.getItem("zubair_customer_user");
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (
+                parsed &&
+                (parsed.role === "admin" ||
+                  parsed.role === "super_admin" ||
+                  parsed.username === "djzubby" ||
+                  parsed.email?.toLowerCase().includes("djzubby"))
+              ) {
+                authEmail = parsed.email || `${parsed.username}@zubairmobile.com`;
+                authRole = parsed.role || "super_admin";
+              }
+            }
+          } catch {}
+        }
+
+        // 2. Check Supabase Auth session if not logged in via local admin
+        if (!authEmail) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (session && session.user) {
+            authEmail = session.user.email || "admin@zubairmobile.com";
+            authRole = (session.user.user_metadata?.role as any) || "super_admin";
+          }
+        }
+
+        if (!authEmail) {
           router.replace("/login");
           return;
         }
 
-        const email = session.user?.email || "admin@zubairmobile.com";
-        setUserEmail(email);
+        setUserEmail(authEmail);
 
         // Resolve staff account permissions
         const staffList = await getStaffAccounts();
         const matched =
           staffList.find(
             (s) =>
-              s.email.toLowerCase() === email.toLowerCase() ||
-              s.username.toLowerCase() === email.toLowerCase()
-          ) ||
-          (email.includes("zubair") || email.includes("admin")
-            ? DEFAULT_STAFF[0]
-            : {
-                ...DEFAULT_STAFF[0],
-                email,
-                role: (session.user?.user_metadata?.role as any) || "super_admin",
-              });
+              s.email.toLowerCase() === authEmail!.toLowerCase() ||
+              s.username.toLowerCase() === authEmail!.toLowerCase()
+          ) || {
+            ...DEFAULT_STAFF[0],
+            email: authEmail,
+            role: (authRole as any) || "super_admin",
+          };
 
         setCurrentStaff(matched);
       } catch (err) {
@@ -84,8 +111,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session) {
-        router.replace("/login");
+      if (event === "SIGNED_OUT") {
+        const stored = typeof window !== "undefined" ? localStorage.getItem("zubair_customer_user") : null;
+        if (!stored) {
+          router.replace("/login");
+        }
       } else if (session) {
         setUserEmail(session.user?.email || "Admin");
       }
@@ -98,6 +128,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("zubair_customer_user");
+        localStorage.removeItem("zubair_session_token");
+        document.cookie = "sb-access-token=; path=/; max-age=0";
+      }
       await supabase.auth.signOut();
     } catch (err) {
       console.error("Logout error:", err);

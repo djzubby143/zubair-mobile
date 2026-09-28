@@ -168,14 +168,29 @@ export default function AdminUsersPage() {
   });
   const [showModalPassword, setShowModalPassword] = useState(false);
 
+  // Get admin session authorization headers
+  const getAdminAuthHeaders = async (): Promise<Record<string, string>> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        return { Authorization: `Bearer ${session.access_token}` };
+      }
+    } catch {}
+    return {};
+  };
+
   // Load Users from API / Supabase
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // 1. Fetch from server API first
+      // 1. Fetch from server API first with admin credentials
       let apiUsers: CustomerUser[] = [];
       try {
-        const res = await fetch("/api/admin/users", { cache: "no-store" });
+        const authHeaders = await getAdminAuthHeaders();
+        const res = await fetch("/api/admin/users", {
+          headers: { ...authHeaders },
+          cache: "no-store",
+        });
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.users) && json.users.length > 0) {
@@ -549,9 +564,10 @@ export default function AdminUsersPage() {
 
         // Sync with server API
         try {
+          const authHeaders = await getAdminAuthHeaders();
           fetch("/api/admin/users", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { ...authHeaders, "Content-Type": "application/json" },
             body: JSON.stringify(newRecord),
           });
         } catch {}
@@ -582,9 +598,10 @@ export default function AdminUsersPage() {
 
     // Sync with server API immediately
     try {
+      const authHeaders = await getAdminAuthHeaders();
       fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify(updatedUser),
       });
     } catch {}
@@ -635,8 +652,10 @@ export default function AdminUsersPage() {
     localStorage.setItem("zubair_mobile_customers", JSON.stringify(updatedList));
 
     try {
+      const authHeaders = await getAdminAuthHeaders();
       fetch(`/api/admin/users?id=${id}&username=${userToDelete?.username || ""}`, {
         method: "DELETE",
+        headers: { ...authHeaders },
       });
     } catch {}
 
@@ -649,7 +668,7 @@ export default function AdminUsersPage() {
 
   // Copy Login Credentials
   const handleCopyCredentials = (user: CustomerUser) => {
-    const text = `Zubair Mobile Login:\nUser ID: ${user.username}\nPassword: ${user.password}\nPortal: http://localhost:3000/login`;
+    const text = `Zubair Mobile B2B Portal:\nUser ID: ${user.username}\nPortal: http://localhost:3000/login\n(Password is encrypted for security)`;
     navigator.clipboard.writeText(text);
     setCopiedId(user.id);
     setTimeout(() => setCopiedId(null), 2500);
@@ -669,7 +688,7 @@ export default function AdminUsersPage() {
       `Aapka *Zubair Mobile* B2B wholesale portal account activate kar diya gaya hai:`,
       `---------------------------------------`,
       `👤 *User ID:* ${user.username}`,
-      `🔑 *Password:* ${user.password}`,
+      `🔑 *Password:* ${user.password || "(Stored securely - use your assigned password or request a reset)"}`,
       `📍 *City:* ${user.city}`,
       `🌐 *Login Link:* http://localhost:3000/login`,
       `---------------------------------------`,
@@ -944,27 +963,24 @@ export default function AdminUsersPage() {
                             <KeyRound className="w-3 h-3 text-[#dc2626]" />
                             {user.username}
                           </span>
-                          <div className="flex items-center gap-1">
-                            <span className="font-mono text-[11px] font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 min-w-[70px] text-center">
-                              {isPassVisible ? user.password : "••••••••"}
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              Encrypted
                             </span>
                             <button
                               type="button"
-                              onClick={() => togglePasswordVisibility(user.id)}
-                              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                              title={isPassVisible ? "Hide password" : "Show password"}
+                              onClick={() => handleOpenEditModal(user)}
+                              className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 hover:underline px-1 py-0.5"
+                              title="Reset Password"
                             >
-                              {isPassVisible ? (
-                                <EyeOff className="w-3.5 h-3.5" />
-                              ) : (
-                                <Eye className="w-3.5 h-3.5" />
-                              )}
+                              Reset
                             </button>
                             <button
                               type="button"
                               onClick={() => handleCopyCredentials(user)}
-                              className="p-1 rounded text-slate-400 hover:text-[#dc2626] hover:bg-slate-100"
-                              title="Copy ID & Password"
+                              className="p-1 rounded text-slate-400 hover:text-[#dc2626] hover:bg-slate-100 ml-auto"
+                              title="Copy Login ID"
                             >
                               {isCopied ? (
                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
