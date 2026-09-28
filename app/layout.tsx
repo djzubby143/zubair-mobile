@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+// CSS is processed by Next.js at build time and has no runtime TypeScript module.
+// @ts-expect-error Next.js handles this side-effect stylesheet import.
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
