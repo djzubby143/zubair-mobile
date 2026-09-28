@@ -8,6 +8,9 @@ import CartDrawer from "@/components/CartDrawer";
 import InstallPwaPrompt from "@/components/InstallPwaPrompt";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { CartProvider } from "@/context/CartContext";
+import ScrollToTop from '@/components/ScrollToTop';
+
+
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +69,7 @@ export default function RootLayout({
           <InstallPwaPrompt />
           <MobileBottomNav />
         </CartProvider>
+        <ScrollToTop />
       </body>
     </html>
   );
